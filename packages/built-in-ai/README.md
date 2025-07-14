@@ -130,8 +130,7 @@ import { builtInAI, BuiltInAIChatLanguageModel } from 'built-in-ai';
 
 function ChatComponent() {
   const { error, status, sendMessage, messages, regenerate, stop } = useChat({
-    transport: new HybridChatTransport(), // Import custom Transport - don't use api route
-    maxSteps: 3,
+    transport: new HybridChatTransport(), // Import custom Transport impl. - don't use api route
   });
 
   return (
