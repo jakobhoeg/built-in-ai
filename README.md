@@ -1,135 +1,196 @@
-# Turborepo starter
+# Built-in AI provider for Vercel AI SDK
 
-This Turborepo starter is maintained by the Turborepo core team.
+A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to server-side models using the Vercel AI SDK. This library enables you to leverage **Chrome** and **Edge's** built-in AI features (Prompt API) while also easily switching models.
 
-## Using this example
+## Why This Package?
 
-Run the following command:
+While there is an [existing package](https://github.com/jeasonstudio/chrome-ai) that attempted to provide similar functionality, it has been inactive for the past year with no maintenance or updates.
 
-```sh
-npx create-turbo@latest
+This package was created to provide a reliable, actively maintained solution for integrating browser-based AI capabilities with modern web applications, ensuring ongoing support and compatibility with the latest browser AI features.
+
+Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, providing the *missing piece* needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
+
+## Installation
+
+> NOTE: This only works with v5 of the Vercel AI SDK. Make sure your project is migrated to use this package.
+
+```bash
+npm install built-in-ai
 ```
 
-## What's inside?
+## Browser Requirements
 
-This Turborepo includes the following packages/apps:
+1. You need Chrome (v. 128 or higher) or Edge Dev/Canary (v. 138.0.3309.2 or higher)
 
-### Apps and Packages
+2. Enable these experimental flags:
+    - If you're using Chrome:
+      1. Go to chrome://flags/#prompt-api-for-gemini-nano and set it to Enabled
+      2. Go to chrome://flags/#optimization-guide-on-device-model and set it to Enabled BypassPrefRequirement
+      3. Go to chrome://components and click Check for Update on Optimization Guide On Device Model
+    - If you're using Edge:
+      1. Go to edge://flags/#prompt-api-for-phi-mini and set it to Enabled
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+For more information, check out [this guide](https://developer.chrome.com/docs/extensions/ai/prompt-api)
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Basic Usage
 
-### Utilities
+### Simple Chat
 
-This Turborepo has some additional tools already setup for you:
+```typescript
+import { streamText } from 'ai';
+import { builtInAI } from 'built-in-ai';
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+const result = streamText({
+  model: builtInAI(),
+  messages: [
+    { role: 'user', content: 'Hello, how are you?' }
+  ],
+});
 
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+## Hybrid Chat Transport
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+For the full implementation, check this out: [`/examples/next-hybrid`](/examples/next-hybrid/)
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+Since the Built-in AI is a client-side API, it cannot be used in traditional API routes in Next.js. Instead, we need to create a custom class that implements the `ChatTransport` interface.
 
-### Develop
+Because the Prompt API is not yet widely available across all browsers, this implementation includes a fallback mechanism that uses a server-side API route when browser AI is unavailable. 
 
-To develop all apps and packages, run the following command:
+```typescript
 
-```
-cd my-turborepo
+import {
+  ChatTransport,
+  UIMessage,
+  UIMessageChunk,
+  streamText,
+  convertToModelMessages,
+  DefaultChatTransport,
+} from 'ai';
+import { builtInAI, BuiltInAIChatLanguageModel } from 'built-in-ai';
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+export class HybridChatTransport implements ChatTransport<UIMessage> {
+  private serverTransport: DefaultChatTransport<UIMessage>;
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+  constructor(serverApiEndpoint: string = '/api/chat') {
+    this.serverTransport = new DefaultChatTransport<UIMessage>({
+      api: serverApiEndpoint,
+    });
+  }
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+  async sendMessages(options: {
+    chatId: string;
+    messages: UIMessage[];
+    abortSignal: AbortSignal | undefined;
+    trigger: 'submit-user-message' | 'submit-tool-result' | 'regenerate-assistant-message';
+    messageId: string | undefined;
+  }): Promise<ReadableStream<UIMessageChunk>> {
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+    // Check Browser AI availability
+    if (!BuiltInAIChatLanguageModel.isAvailable()) {
+      console.log('Browser AI not available, using server fallback');
+      return this.serverTransport.sendMessages(options);
+    }
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+    try {
+      // Browser AI is available, try to use it
+      const prompt = convertToModelMessages(options.messages);
 
-### Remote Caching
+      const result = streamText({
+        model: builtInAI(),
+        messages: prompt,
+        abortSignal: options.abortSignal,
+      });
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+      return result.toUIMessageStream();
+    } catch (error) {
+      console.log('Browser AI failed unexpectedly, falling back to server:', error);
+      return this.serverTransport.sendMessages(options);
+    }
+  }
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+  async reconnectToStream(options: {
+    chatId: string;
+  }): Promise<ReadableStream<UIMessageChunk> | null> {
+    return this.serverTransport.reconnectToStream(options);
+  }
+}
 ```
 
-## Useful Links
+### Vercel AI SDK `useChat` hook implementation
 
-Learn more about the power of Turborepo:
+We can then use your `HybridChatTransport` in the `useChat` hook:
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+```typescript
+import { useChat } from 'ai/react';
+import { builtInAI, BuiltInAIChatLanguageModel } from 'built-in-ai';
+
+function ChatComponent() {
+  const { error, status, sendMessage, messages, regenerate, stop } = useChat({
+    transport: new HybridChatTransport(), // Import custom Transport impl. - don't use api route
+  });
+
+  return (
+    <div>
+      // See examples/next-hybrid for complete UI implementation
+    </div>
+  );
+}
+```
+
+## API Reference
+
+### `builtInAI(options?)`
+
+Creates a browser AI language model instance.
+
+**Parameters:**
+- `options` (optional): Configuration options for the model
+  - `temperature?: number` - Controls randomness (0-1)
+  - `topK?: number` - Limits vocabulary selection
+
+**Returns:** `BuiltInAIChatLanguageModel` instance
+
+### `BuiltInAIChatLanguageModel`
+
+The main language model class that implements the AI SDK's `LanguageModelV2` interface.
+
+#### Static Methods
+
+- `isAvailable(): boolean` - Checks if browser AI is available
+
+#### Instance Methods
+
+- `doGenerate(options)` - Generate a single response
+- `doStream(options)` - Generate a streaming response
+
+### Error Handling
+
+The library provides specific error types for better error handling:
+
+- `LoadSettingError` - Thrown when there are issues with model loading
+- `UnsupportedFunctionalityError` - Thrown when using unsupported features
+
+## Supported Features
+
+### Supported
+- Text generation
+- Streaming responses
+- Temperature control
+- TopK sampling
+- Response format constraints (JSON)
+- Abort signals
+
+### Needs to be implemented
+- Tool calling
+- File inputs
+- Token counting
+- Custom stop sequences
+- Presence/frequency penalties
+
+## Contributing
+
+Contributions are more than welcome!
