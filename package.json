@@ -1,5 +1,5 @@
 {
-  "name": "built-in-ai-provider",
+  "name": "built-in-ai",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -18,7 +18,7 @@
   },
   "packageManager": "npm@10.7.0",
   "workspaces": [
-    "apps/*",
+    "examples/*",
     "packages/*"
   ]
 }
