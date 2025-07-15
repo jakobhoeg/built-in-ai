@@ -26,7 +26,7 @@
   "scripts": {
     "build": "npm run test:run && tsup",
     "dev": "tsup --watch",
-    "clean": "rm -rf dist",
+    "clean": "powershell -Command \"if (Test-Path dist) { Remove-Item -Recurse -Force dist }\"",
     "prepublishOnly": "npm run clean && npm run build",
     "test": "vitest",
     "test:watch": "vitest --watch",
