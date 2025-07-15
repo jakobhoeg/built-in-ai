@@ -26,7 +26,7 @@
   "scripts": {
     "build": "npm run test:run && tsup",
     "dev": "tsup --watch",
-    "clean": "powershell -Command \"if (Test-Path dist) { Remove-Item -Recurse -Force dist }\"",
+    "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build",
     "test": "vitest",
     "test:watch": "vitest --watch",
@@ -58,6 +58,7 @@
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.0.0",
     "ai": "5.0.0-beta.18",
+    "rimraf": "^5.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "vitest": "^1.0.0",
