@@ -4,12 +4,12 @@
 
 A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) while also easily switching models.
 
-Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, providing the *missing piece* needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
+Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, which has been the *missing piece* needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
 
 ## Installation
 
 > [!NOTE]
-> This only works with the new v5 of the Vercel AI SDK. Make sure your project is migrated to use this package.
+> This only works with the new v5 soon to release (beta) of the Vercel AI SDK.
 
 ```bash
 npm install built-in-ai
