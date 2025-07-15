@@ -1,4 +1,6 @@
+
 # Built-in AI provider for Vercel AI SDK
+<img src="../../npm-header.png">
 
 A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to server-side models using the Vercel AI SDK. This library enables you to leverage **Chrome** and **Edge's** built-in AI features (Prompt API) while also easily switching models.
 
@@ -12,7 +14,8 @@ Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/doc
 
 ## Installation
 
-> NOTE: This only works with v5 of the Vercel AI SDK. Make sure your project is migrated to use this package.
+> [!NOTE]
+> This only works with v5 of the Vercel AI SDK. Make sure your project is migrated to use this package.
 
 ```bash
 npm install built-in-ai
