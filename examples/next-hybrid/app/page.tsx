@@ -1,7 +1,7 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { HybridChatTransport } from '@/util/hybrid-chat-transport';
+import { ClientSideChatTransport } from '@/util/client-side-chat-transport';
 import {
   AIMessage,
   AIMessageAvatar,
@@ -22,16 +22,45 @@ import {
   AIInputButton,
 } from '@/components/ai/input';
 import { Button } from '@/components/ui/button';
-import { PlusIcon, MicIcon, GlobeIcon, StopCircleIcon, RefreshCcw, Copy } from 'lucide-react';
-import { useState } from 'react';
+import { PlusIcon, MicIcon, GlobeIcon, RefreshCcw, Copy } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
+import { BuiltInAIChatLanguageModel } from 'built-in-ai';
+import { DefaultChatTransport, UIMessage } from 'ai';
+import { toast } from 'sonner';
 
 export default function Chat() {
+  const isBuiltInAIAvailable = BuiltInAIChatLanguageModel.isAvailable();
+
   const { error, status, sendMessage, messages, regenerate, stop } = useChat({
-    transport: new HybridChatTransport(),
+    transport: isBuiltInAIAvailable ? new ClientSideChatTransport() : new DefaultChatTransport<UIMessage>({
+      api: '/api/chat',
+    }),
+    onError(error) {
+      toast.error(error.message)
+    }
   });
 
   const [input, setInput] = useState('');
+
+  // For showcase purposes: show if built-in ai model is supported once page loads
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isBuiltInAIAvailable) {
+        toast.success('Using the built-in AI model', {
+          description: 'Your conversations will be processed locally in your browser',
+          duration: 5000,
+        });
+      } else {
+        toast.info('Using server-side AI model', {
+          description: 'Your browser doesnt support the Prompt API. Your conversations are processed on the server',
+          duration: 5000,
+        });
+      }
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
+  }, [isBuiltInAIAvailable]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +80,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto">
+    <div className="flex flex-col h-[calc(100dvh)] max-w-4xl mx-auto">
       <header>
         <div className="flex items-center justify-between p-4">
           <h1 className="text-lg font-semibold">built-in-ai</h1>
