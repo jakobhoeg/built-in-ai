@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'packages/built-in-ai/**'
   pull_request:
     branches:
       - main
+    paths:
+      - 'packages/built-in-ai/**'
 
 jobs:
   publish:
