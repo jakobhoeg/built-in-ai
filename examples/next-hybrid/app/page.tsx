@@ -25,12 +25,13 @@ import { Button } from '@/components/ui/button';
 import { PlusIcon, MicIcon, GlobeIcon, RefreshCcw, Copy } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
-import { BuiltInAIChatLanguageModel } from 'built-in-ai';
+import { isBuiltInAIModelAvailable } from 'built-in-ai';
 import { DefaultChatTransport, UIMessage } from 'ai';
 import { toast } from 'sonner';
 
+const isBuiltInAIAvailable = isBuiltInAIModelAvailable();
+
 export default function Chat() {
-  const isBuiltInAIAvailable = BuiltInAIChatLanguageModel.isAvailable();
 
   const { error, status, sendMessage, messages, regenerate, stop } = useChat({
     transport: isBuiltInAIAvailable ? new ClientSideChatTransport() : new DefaultChatTransport<UIMessage>({
