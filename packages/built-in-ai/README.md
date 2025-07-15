@@ -6,6 +6,9 @@ A TypeScript library that provides access to browser-based AI capabilities with 
 
 Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, which has been the *missing piece* needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
 
+> [!IMPORTANT]
+> This package is under constant development as the Prompt API matures, and may contain errors and incompatible changes.
+
 ## Installation
 
 > [!NOTE]
@@ -17,7 +20,8 @@ npm install built-in-ai
 
 ## Browser Requirements
 
-To use the Prompt API in Chrome or Edge, these are the requirements:
+> [!IMPORTANT]
+> The Prompt API is currently experimental and will change as it matures. The below enablement guide of the API might also change in the future.
 
 1. You need Chrome (v. 128 or higher) or Edge Dev/Canary (v. 138.0.3309.2 or higher)
 
