@@ -14,6 +14,14 @@ export type BuiltInAIChatModelId = 'text';
 
 export interface BuiltInAIChatSettings extends LanguageModelCreateOptions { }
 
+/**
+ * Check if the Prompt API is available
+ * @returns true if the browser supports the built-in AI API, false otherwise
+ */
+export function isBuiltInAIModelAvailable(): boolean {
+  return typeof LanguageModel !== 'undefined';
+}
+
 type BuiltInAIConfig = {
   provider: string;
   modelId: BuiltInAIChatModelId;
@@ -76,14 +84,6 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       modelId,
       options,
     };
-  }
-
-  /**
-   * Static method to check if the Prompt API is available
-   * @returns true or false
-   */
-  static isAvailable(): boolean {
-    return typeof LanguageModel !== 'undefined';
   }
 
   private async getSession(
