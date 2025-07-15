@@ -25,7 +25,7 @@ jobs:
       - name: Check the version
         id: check
         run: |
-          CURRENT_VERSION=$(jq -r .version package.json)
+          CURRENT_VERSION=$(jq -r .version packages/built-in-ai/package.json)
           echo "Current version: $CURRENT_VERSION"
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "Latest tag: $LATEST_TAG"
@@ -46,8 +46,9 @@ jobs:
         run: npm run build
         if: steps.check.outputs.version_changed == 'true'
       
-      - name: Publish
+      - name: Publish built-in-ai package
         if: steps.check.outputs.version_changed == 'true'
+        working-directory: packages/built-in-ai
         run: npm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
