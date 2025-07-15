@@ -7,7 +7,7 @@ import {
 /**
  * Create a new BuiltInAIChatLanguageModel.
  * @param modelId 'text'
- * @param settings Options for the model, including optional fallback model
+ * @param settings Options for the model
  */
 export function builtInAI(
   modelId?: BuiltInAIChatModelId,
