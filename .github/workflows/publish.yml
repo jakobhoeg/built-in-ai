@@ -4,12 +4,15 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
@@ -24,6 +27,7 @@ jobs:
 
       - name: Check the version
         id: check
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           CURRENT_VERSION=$(jq -r .version packages/built-in-ai/package.json)
           echo "Current version: $CURRENT_VERSION"
@@ -44,7 +48,7 @@ jobs:
 
       - name: Build
         run: npm run build
-        if: steps.check.outputs.version_changed == 'true'
+        if: github.event_name == 'pull_request' || steps.check.outputs.version_changed == 'true'
       
       - name: Publish built-in-ai package
         if: steps.check.outputs.version_changed == 'true'
