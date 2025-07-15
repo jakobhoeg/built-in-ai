@@ -21,7 +21,7 @@ npm install built-in-ai
 ## Browser Requirements
 
 > [!IMPORTANT]
-> The Prompt API is currently experimental and will change as it matures. The below enablement guide of the API might also change in the future.
+> The Prompt API is currently experimental and might change as it matures. The below enablement guide of the API might also change in the future.
 
 1. You need Chrome (v. 128 or higher) or Edge Dev/Canary (v. 138.0.3309.2 or higher)
 
