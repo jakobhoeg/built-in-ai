@@ -71,7 +71,7 @@ Look [here](/packages/built-in-ai/README.md) for more usage examples and API ref
 - Response format constraints (JSON)
 - Abort signals
 
-### Needs to be implemented
+### Needs to be implemented (when implemented in the Prompt API)
 - Tool calling
 - Multimodality (images)
 - Token counting
@@ -84,6 +84,6 @@ Contributions are more than welcome!
 
 ## Why This Package?
 
-While there is an [existing package](https://github.com/jeasonstudio/chrome-ai) that attempted to provide similar functionality, it has been inactive for the past year with no maintenance or updates.
+While there is an [existing package](https://github.com/jeasonstudio/chrome-ai) that attempted to provide similar functionality, it has been inactive for the past year with no maintenance or updates.  We're grateful for their initial exploration and the foundation they provided for the community.
 
 This package was created to provide a reliable, actively maintained solution for integrating browser-based AI capabilities with modern web applications, ensuring ongoing support and compatibility with the latest browser AI features.

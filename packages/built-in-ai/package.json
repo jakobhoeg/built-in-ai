@@ -1,6 +1,6 @@
 {
   "name": "built-in-ai",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Browser Built-in AI API provider for Vercel AI SDK v5+ (Chrome & Edge)",
   "author": {
     "name": "Jakob Hoeg Mørk",
@@ -48,7 +48,8 @@
   "license": "MIT",
   "dependencies": {
     "@ai-sdk/provider": "^2.0.0-beta.1",
-    "@ai-sdk/provider-utils": "^3.0.0-beta.2"
+    "@ai-sdk/provider-utils": "^3.0.0-beta.2",
+    "@mediapipe/tasks-text": "^0.10.22-rc.20250304"
   },
   "peerDependencies": {
     "ai": ">=5.0.0-beta.0"
