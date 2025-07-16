@@ -15,6 +15,16 @@
         "!.next/cache/**"
       ]
     },
+    "build:test": {
+      "dependsOn": [
+        "^build:test"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
     "test": {
       "dependsOn": [
         "^build",
