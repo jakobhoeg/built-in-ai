@@ -46,7 +46,7 @@ For more information, check out [this guide](https://developer.chrome.com/docs/e
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "built-in-ai";
+import { builtInAI } from "@built-in-ai/core";
 
 const result = streamText({
   model: builtInAI(),

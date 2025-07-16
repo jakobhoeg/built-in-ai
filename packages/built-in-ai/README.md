@@ -41,7 +41,7 @@ For more information, check out [this guide](https://developer.chrome.com/docs/e
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "built-in-ai";
+import { builtInAI } from "@built-in-ai/core";
 
 const result = streamText({
   model: builtInAI(),
@@ -57,7 +57,7 @@ for await (const chunk of result.textStream) {
 
 ```typescript
 import { embed } from "ai";
-import { builtInAI } from "built-in-ai";
+import { builtInAI } from "@built-in-ai/core";
 
 const result = await embed({
   model: builtInAI("embedding"),
@@ -84,7 +84,7 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
 } from 'ai';
-import { builtInAI, BuiltInAIChatLanguageModel } from 'built-in-ai';
+import { builtInAI, BuiltInAIChatLanguageModel } from '@built-in-ai/core';
 
 export class ClientSideChatTransport implements ChatTransport<UIMessage> {
   async sendMessages(options: {
@@ -122,7 +122,7 @@ We can then provide the `useChat` hook with our `ClientSideChatTransport` AND pr
 'use client'
 
 import { useChat } from 'ai/react';
-import { isBuiltInAIModelAvailable } from 'built-in-ai';
+import { isBuiltInAIModelAvailable } from '@built-in-ai/core';
 
 const isBuiltInAIAvailable = isBuiltInAIModelAvailable();
 
