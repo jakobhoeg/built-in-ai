@@ -55,6 +55,20 @@ for await (const chunk of result.textStream) {
 }
 ```
 
+### Text Embeddings
+
+```typescript
+import { embed } from 'ai';
+import { builtInAI } from 'built-in-ai';
+
+const result = await embed({
+  model: builtInAI('embedding'),
+  value: 'Hello, world!'
+});
+
+console.log(result.embedding); // [0.1, 0.2, 0.3, ...]
+```
+
 ## Hybrid example
 
 For the full implementation look here: [`/examples/next-hybrid`](/examples/next-hybrid/)
@@ -104,7 +118,7 @@ export class ClientSideChatTransport implements ChatTransport<UIMessage> {
 
 ### Vercel AI SDK `useChat` hook implementation
 
-We can then use provide the `useChat` hook with our `ClientSideChatTransport` AND provide a fallback server-side implementation (`DefaultChatTransport`) that uses an api route:
+We can then provide the `useChat` hook with our `ClientSideChatTransport` AND provide a fallback server-side implementation (`DefaultChatTransport`) that uses an api route:
 
 ```typescript:page.tsx
 'use client'
@@ -133,34 +147,28 @@ export default function Chat() {
 
 ### `builtInAI(modelId?, settings?)`
 
-Creates a browser AI language model instance.
+Creates a browser AI model instance for chat or embeddings.
 
-**Parameters:**
+**Chat Models:**
 - `modelId` (optional): The model identifier, defaults to 'text'
-- `settings` (optional): Configuration options for the model
+- `settings` (optional): Configuration options for the chat model
   - `temperature?: number` - Controls randomness (0-1)
   - `topK?: number` - Limits vocabulary selection
 
 **Returns:** `BuiltInAIChatLanguageModel` instance
 
+**For Embedding Models:**
+- `modelId`: Must be 'embedding'
+- `settings` (optional): Configuration options for the embedding model
+  - `wasmLoaderPath?: string` - Path to WASM loader (default: CDN hosted)
+  - `wasmBinaryPath?: string` - Path to WASM binary (default: CDN hosted)
+  - `modelAssetPath?: string` - Path to model asset file (default: CDN hosted)
+  - `l2Normalize?: boolean` - Whether to normalize with L2 norm (default: false)
+  - `quantize?: boolean` - Whether to quantize embeddings to bytes (default: false)
+  - `delegate?: 'CPU' | 'GPU'` - Backend to use for inference
+
+**Returns:** `BuiltInAIEmbeddingModel` instance
+
 ### `isBuiltInAIModelAvailable(): boolean`
 
 Standalone function that checks if browser AI is available.
-
-**Returns:** `boolean` - true if the browser supports the built-in AI API, false otherwise
-
-### `BuiltInAIChatLanguageModel`
-
-The main language model class that implements the AI SDK's `LanguageModelV2` interface.
-
-#### Instance Methods
-
-- `doGenerate(options)` - Generate a single response
-- `doStream(options)` - Generate a streaming response
-
-### Error Handling
-
-The library provides specific error types for better error handling:
-
-- `LoadSettingError` - Thrown when there are issues with model loading
-- `UnsupportedFunctionalityError` - Thrown when using unsupported features
