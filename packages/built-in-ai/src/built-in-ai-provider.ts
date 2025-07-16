@@ -2,11 +2,11 @@ import {
   BuiltInAIChatLanguageModel,
   BuiltInAIChatModelId,
   BuiltInAIChatSettings,
-} from './built-in-ai-language-model';
+} from "./built-in-ai-language-model";
 import {
   BuiltInAIEmbeddingModel,
   BuiltInAIEmbeddingModelSettings,
-} from './built-in-ai-embedding-model';
+} from "./built-in-ai-embedding-model";
 
 /**
  * Create a new BuiltInAIChatLanguageModel.
@@ -15,7 +15,7 @@ import {
  */
 export function builtInAI(
   modelId?: BuiltInAIChatModelId,
-  settings?: BuiltInAIChatSettings
+  settings?: BuiltInAIChatSettings,
 ): BuiltInAIChatLanguageModel;
 
 /**
@@ -24,17 +24,19 @@ export function builtInAI(
  * @param settings Options for the embedding model
  */
 export function builtInAI(
-  modelId: 'embedding',
-  settings?: BuiltInAIEmbeddingModelSettings
+  modelId: "embedding",
+  settings?: BuiltInAIEmbeddingModelSettings,
 ): BuiltInAIEmbeddingModel;
 
-export function builtInAI(modelId: unknown = 'text', settings: unknown = {}) {
-  if (modelId === 'embedding') {
-    return new BuiltInAIEmbeddingModel(settings as BuiltInAIEmbeddingModelSettings);
+export function builtInAI(modelId: unknown = "text", settings: unknown = {}) {
+  if (modelId === "embedding") {
+    return new BuiltInAIEmbeddingModel(
+      settings as BuiltInAIEmbeddingModelSettings,
+    );
   }
 
   return new BuiltInAIChatLanguageModel(
     modelId as BuiltInAIChatModelId,
-    settings as BuiltInAIChatSettings
+    settings as BuiltInAIChatSettings,
   );
-} 
+}

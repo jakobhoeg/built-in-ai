@@ -1,6 +1,6 @@
-import { openai } from '@ai-sdk/openai';
-import { convertToModelMessages, streamText, UIMessage } from 'ai';
-import z from 'zod';
+import { openai } from "@ai-sdk/openai";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+import z from "zod";
 
 export const maxDuration = 30;
 
@@ -10,18 +10,20 @@ export async function POST(req: Request) {
   const prompt = convertToModelMessages(messages);
 
   const result = streamText({
-    model: openai('gpt-4o'),
+    model: openai("gpt-4o"),
     messages: prompt,
     tools: {
       getWeatherInformation: {
-        description: 'Get the weather for a location',
+        description: "Get the weather for a location",
         inputSchema: z.object({
-          location: z.string().describe('City and country, e.g. Paris, FR'),
-          format: z.enum(['celsius', 'fahrenheit']).describe('Temperature unit'),
+          location: z.string().describe("City and country, e.g. Paris, FR"),
+          format: z
+            .enum(["celsius", "fahrenheit"])
+            .describe("Temperature unit"),
         }),
         execute: async ({ location, format }) => {
-          console.log('TOOL EXECUTED');
-          return `Mock weather in ${location}: 25°${format === 'celsius' ? 'C' : 'F'} and sunny.`;
+          console.log("TOOL EXECUTED");
+          return `Mock weather in ${location}: 25°${format === "celsius" ? "C" : "F"} and sunny.`;
         },
       },
     },
