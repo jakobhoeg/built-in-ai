@@ -1,5 +1,5 @@
-import { EmbeddingModelV2, EmbeddingModelV2Embedding } from '@ai-sdk/provider';
-import { TextEmbedder } from '@mediapipe/tasks-text';
+import { EmbeddingModelV2, EmbeddingModelV2Embedding } from "@ai-sdk/provider";
+import { TextEmbedder } from "@mediapipe/tasks-text";
 
 export interface BuiltInAIEmbeddingModelSettings {
   /**
@@ -37,26 +37,26 @@ export interface BuiltInAIEmbeddingModelSettings {
   /**
    * Overrides the default backend to use for the provided model.
    */
-  delegate?: 'CPU' | 'GPU';
+  delegate?: "CPU" | "GPU";
 }
 
 // See more:
 // - https://github.com/google-ai-edge/mediapipe
 // - https://ai.google.dev/edge/mediapipe/solutions/text/text_embedder/web_js
 export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
-  readonly specificationVersion = 'v2';
-  readonly provider = 'google-mediapipe';
-  readonly modelId: string = 'embedding';
+  readonly specificationVersion = "v2";
+  readonly provider = "google-mediapipe";
+  readonly modelId: string = "embedding";
   readonly supportsParallelCalls = true;
   readonly maxEmbeddingsPerCall = undefined;
 
   private settings: BuiltInAIEmbeddingModelSettings = {
     wasmLoaderPath:
-      'https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/text_wasm_internal.js',
+      "https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/text_wasm_internal.js",
     wasmBinaryPath:
-      'https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/text_wasm_internal.wasm',
+      "https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/text_wasm_internal.wasm",
     modelAssetPath:
-      'https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/universal_sentence_encoder.tflite',
+      "https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/universal_sentence_encoder.tflite",
     l2Normalize: false,
     quantize: false,
   };
@@ -66,7 +66,7 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
   public constructor(settings: BuiltInAIEmbeddingModelSettings = {}) {
     this.settings = { ...this.settings, ...settings };
     this.modelAssetBuffer = fetch(this.settings.modelAssetPath!).then(
-      (response) => response.body!.getReader()
+      (response) => response.body!.getReader(),
     )!;
     this.textEmbedder = this.getTextEmbedder();
   }
@@ -84,7 +84,7 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
         },
         l2Normalize: this.settings.l2Normalize,
         quantize: this.settings.quantize,
-      }
+      },
     );
   };
 
@@ -97,7 +97,7 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
   }> => {
     // Note: abortSignal is not supported by MediaPipe TextEmbedder
     if (options.abortSignal?.aborted) {
-      throw new Error('Operation was aborted');
+      throw new Error("Operation was aborted");
     }
 
     const embedder = await this.textEmbedder;
@@ -110,10 +110,10 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
     return {
       embeddings,
       rawResponse: {
-        model: 'universal_sentence_encoder',
-        provider: 'google-mediapipe',
-        processed_texts: options.values.length
-      }
+        model: "universal_sentence_encoder",
+        provider: "google-mediapipe",
+        processed_texts: options.values.length,
+      },
     };
   };
 }

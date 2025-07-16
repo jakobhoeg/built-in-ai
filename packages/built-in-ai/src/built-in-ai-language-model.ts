@@ -8,18 +8,18 @@ import {
   LanguageModelV2StreamPart,
   LoadSettingError,
   UnsupportedFunctionalityError,
-} from '@ai-sdk/provider';
+} from "@ai-sdk/provider";
 
-export type BuiltInAIChatModelId = 'text';
+export type BuiltInAIChatModelId = "text";
 
-export interface BuiltInAIChatSettings extends LanguageModelCreateOptions { }
+export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {}
 
 /**
  * Check if the Prompt API is available
  * @returns true if the browser supports the built-in AI API, false otherwise
  */
 export function isBuiltInAIModelAvailable(): boolean {
-  return typeof LanguageModel !== 'undefined';
+  return typeof LanguageModel !== "undefined";
 }
 
 type BuiltInAIConfig = {
@@ -29,34 +29,34 @@ type BuiltInAIConfig = {
 };
 
 function getStringContent(prompt: LanguageModelV2Prompt): string {
-  let result = '';
+  let result = "";
 
   for (const message of prompt) {
     switch (message.role) {
-      case 'system':
+      case "system":
         result += `${message.content}\n`;
         break;
-      case 'assistant':
+      case "assistant":
         for (const part of message.content) {
-          if (part.type === 'text') {
+          if (part.type === "text") {
             result += `model\n${part.text}\n`;
-          } else if (part.type === 'tool-call') {
+          } else if (part.type === "tool-call") {
             // TODO: Implement
           }
         }
         break;
-      case 'user':
+      case "user":
         for (const part of message.content) {
-          if (part.type === 'text') {
+          if (part.type === "text") {
             result += `user\n${part.text}\n`;
-          } else if (part.type === 'file') {
+          } else if (part.type === "file") {
             throw new UnsupportedFunctionalityError({
-              functionality: 'file input'
+              functionality: "file input",
             });
           }
         }
         break;
-      case 'tool':
+      case "tool":
         // TODO: Implement
         break;
     }
@@ -67,16 +67,16 @@ function getStringContent(prompt: LanguageModelV2Prompt): string {
 }
 
 export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
-  readonly specificationVersion = 'v2';
+  readonly specificationVersion = "v2";
   readonly modelId: BuiltInAIChatModelId;
-  readonly provider = 'browser-ai';
+  readonly provider = "browser-ai";
 
   private readonly config: BuiltInAIConfig;
   private session!: LanguageModel;
 
   constructor(
     modelId: BuiltInAIChatModelId,
-    options: BuiltInAIChatSettings = {}
+    options: BuiltInAIChatSettings = {},
   ) {
     this.modelId = modelId;
     this.config = {
@@ -87,11 +87,12 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
   }
 
   private async getSession(
-    options?: LanguageModelCreateOptions
+    options?: LanguageModelCreateOptions,
   ): Promise<LanguageModel> {
-    if (typeof LanguageModel === 'undefined') {
+    if (typeof LanguageModel === "undefined") {
       throw new LoadSettingError({
-        message: 'Browser AI API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.'
+        message:
+          "Browser AI API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
       });
     }
 
@@ -99,13 +100,15 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     const availability = await LanguageModel.availability();
 
-    if (availability === 'unavailable') {
-      throw new LoadSettingError({ message: 'Built-in model not available' });
+    if (availability === "unavailable") {
+      throw new LoadSettingError({ message: "Built-in model not available" });
     }
 
-    if (availability === 'downloadable' || availability === 'downloading') {
+    if (availability === "downloadable" || availability === "downloading") {
       // TODO: We need to handle downloading the model and show it as loading + send back status and progress
-      throw new LoadSettingError({ message: 'Built-in model needs to be downloaded first' });
+      throw new LoadSettingError({
+        message: "Built-in model needs to be downloaded first",
+      });
     }
 
     const mergedOptions = {
@@ -128,57 +131,57 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     // Add warnings for unsupported settings
     if (options.tools && options.tools.length > 0) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'tools',
-        details: 'Tool calling is not yet supported by browser AI' // TODO: Implement
+        type: "unsupported-setting",
+        setting: "tools",
+        details: "Tool calling is not yet supported by browser AI", // TODO: Implement
       });
     }
 
     if (options.maxOutputTokens) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'maxOutputTokens',
-        details: 'maxOutputTokens is not supported by browser AI'
+        type: "unsupported-setting",
+        setting: "maxOutputTokens",
+        details: "maxOutputTokens is not supported by browser AI",
       });
     }
 
     if (options.stopSequences) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'stopSequences',
-        details: 'stopSequences is not supported by browser AI'
+        type: "unsupported-setting",
+        setting: "stopSequences",
+        details: "stopSequences is not supported by browser AI",
       });
     }
 
     if (options.topP) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'topP',
-        details: 'topP is not supported by browser AI'
+        type: "unsupported-setting",
+        setting: "topP",
+        details: "topP is not supported by browser AI",
       });
     }
 
     if (options.presencePenalty) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'presencePenalty',
-        details: 'presencePenalty is not supported by browser AI'
+        type: "unsupported-setting",
+        setting: "presencePenalty",
+        details: "presencePenalty is not supported by browser AI",
       });
     }
 
     if (options.frequencyPenalty) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'frequencyPenalty',
-        details: 'frequencyPenalty is not supported by browser AI'
+        type: "unsupported-setting",
+        setting: "frequencyPenalty",
+        details: "frequencyPenalty is not supported by browser AI",
       });
     }
 
     if (options.seed) {
       warnings.push({
-        type: 'unsupported-setting',
-        setting: 'seed',
-        details: 'seed is not supported by browser AI'
+        type: "unsupported-setting",
+        setting: "seed",
+        details: "seed is not supported by browser AI",
       });
     }
 
@@ -186,7 +189,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     // Handle response format for browser AI
     const promptOptions: any = {};
-    if (options.responseFormat?.type === 'json') {
+    if (options.responseFormat?.type === "json") {
       promptOptions.responseConstraint = options.responseFormat.schema;
     }
 
@@ -222,18 +225,18 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     const content: LanguageModelV2Content[] = [
       {
-        type: 'text',
+        type: "text",
         text,
-      }
+      },
     ];
 
     return {
       content,
-      finishReason: 'stop' as LanguageModelV2FinishReason,
+      finishReason: "stop" as LanguageModelV2FinishReason,
       usage: {
         inputTokens: undefined,
         outputTokens: undefined,
-        totalTokens: undefined
+        totalTokens: undefined,
       },
       request: { body: { message, options: promptOptions } },
       warnings,
@@ -260,20 +263,20 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     const promptStream = session.promptStreaming(message, streamOptions);
 
     let isFirstChunk = true;
-    let textId = 'text-0';
+    let textId = "text-0";
 
     const stream = promptStream.pipeThrough(
       new TransformStream<string, LanguageModelV2StreamPart>({
         start(controller) {
           // Send stream start event with warnings
           controller.enqueue({
-            type: 'stream-start',
+            type: "stream-start",
             warnings,
           });
 
           // Handle abort signal
           if (options.abortSignal) {
-            options.abortSignal.addEventListener('abort', () => {
+            options.abortSignal.addEventListener("abort", () => {
               controller.terminate();
             });
           }
@@ -283,7 +286,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
           if (isFirstChunk) {
             // Send text start event
             controller.enqueue({
-              type: 'text-start',
+              type: "text-start",
               id: textId,
             });
             isFirstChunk = false;
@@ -291,7 +294,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
           // Send text delta
           controller.enqueue({
-            type: 'text-delta',
+            type: "text-delta",
             id: textId,
             delta: chunk,
           });
@@ -300,18 +303,18 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
         flush(controller) {
           // Send text end event
           controller.enqueue({
-            type: 'text-end',
+            type: "text-end",
             id: textId,
           });
 
           // Send finish event
           controller.enqueue({
-            type: 'finish',
-            finishReason: 'stop' as LanguageModelV2FinishReason,
+            type: "finish",
+            finishReason: "stop" as LanguageModelV2FinishReason,
             usage: {
               inputTokens: undefined,
               outputTokens: undefined,
-              totalTokens: undefined
+              totalTokens: undefined,
             },
           });
         },
@@ -323,4 +326,4 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       request: { body: { message, options: promptOptions } },
     };
   }
-} 
+}
