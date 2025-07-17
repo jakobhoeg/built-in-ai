@@ -21,15 +21,14 @@
     }
   },
   "files": [
-    "dist"
+    "dist/**/*"
   ],
   "scripts": {
-    "build": "npm run build:prod",
+    "build": "npm run clean && tsup",
     "build:prod": "tsup",
     "build:test": "npm run test:run && tsup",
     "dev": "tsup --watch",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run clean",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
@@ -67,5 +66,8 @@
     "typescript": "^5.0.0",
     "vitest": "^1.0.0",
     "zod": "^3.22.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
