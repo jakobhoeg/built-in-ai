@@ -27,6 +27,8 @@ Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/doc
 npm i @built-in-ai/core
 ```
 
+The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge browser's built-in AI models.
+
 ## Browser Requirements
 
 > [!IMPORTANT]
