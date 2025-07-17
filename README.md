@@ -4,8 +4,8 @@
 
 <div align="center">
 
-[![NPM Version](https://img.shields.io/npm/v/built-in-ai)](https://www.npmjs.com/package/built-in-ai)
-[![NPM Downloads](https://img.shields.io/npm/dw/built-in-ai)](https://www.npmjs.com/package/built-in-ai)
+[![NPM Version](https://img.shields.io/npm/v/built-in-ai)](https://www.npmjs.com/package/@built-in-ai/core)
+[![NPM Downloads](https://img.shields.io/npm/dw/built-in-ai)](https://www.npmjs.com/package/@built-in-ai/core)
 
 </div>
 
