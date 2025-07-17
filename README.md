@@ -9,7 +9,7 @@
 
 </div>
 
-A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) with the AI SDK. 
+A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) with the AI SDK.
 
 > We will also aim to add other providers such as [web-llm](https://github.com/mlc-ai/web-llm) and [transformers.js](https://huggingface.co/docs/transformers.js/en/index)
 
