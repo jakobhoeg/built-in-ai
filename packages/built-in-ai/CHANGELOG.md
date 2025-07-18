@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.4.0
+
+### Minor Changes
+
+- 1dd8bd8: fix: dont bundle dependencies
+
 ## 1.3.2
 
 ### Patch Changes
