@@ -1,11 +1,11 @@
-import { ThemeProvider } from '@/components/theme-provider';
-import { ModeToggle } from '@/components/ui/mode-toggle';
-import './globals.css';
-import { Toaster } from '@/components/ui/sonner';
+import { ThemeProvider } from "@/components/theme-provider";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata = {
-  title: 'AI SDK - built-in-ai model example',
-  description: 'Example of using the AI SDK with Next.js and built-in-ai.',
+  title: "AI SDK - built-in-ai model example",
+  description: "Example of using the AI SDK with Next.js and built-in-ai.",
 };
 
 export default function RootLayout({
@@ -25,10 +25,10 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
-            <Toaster position='top-center' />
+            <Toaster position="top-center" />
           </ThemeProvider>
         </body>
       </html>
     </>
-  )
+  );
 }

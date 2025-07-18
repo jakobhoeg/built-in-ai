@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { BuiltInAIEmbeddingModel } from '../src/built-in-ai-embedding-model';
-import { TextEmbedder } from '@mediapipe/tasks-text';
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { BuiltInAIEmbeddingModel } from "../src/built-in-ai-embedding-model";
+import { TextEmbedder } from "@mediapipe/tasks-text";
 
-vi.mock('@mediapipe/tasks-text', () => ({
+vi.mock("@mediapipe/tasks-text", () => ({
   TextEmbedder: {
     createFromOptions: vi.fn(),
   },
 }));
 
-describe('BuiltInAIEmbeddingModel', () => {
+describe("BuiltInAIEmbeddingModel", () => {
   let mockTextEmbedder: any;
 
   beforeEach(() => {
@@ -33,14 +33,16 @@ describe('BuiltInAIEmbeddingModel', () => {
     };
 
     // Setup default mock implementations
-    vi.mocked(TextEmbedder.createFromOptions).mockResolvedValue(mockTextEmbedder);
+    vi.mocked(TextEmbedder.createFromOptions).mockResolvedValue(
+      mockTextEmbedder,
+    );
 
     mockTextEmbedder.embed.mockReturnValue({
       embeddings: [
         {
           floatEmbedding: [0.1, 0.2, 0.3, 0.4, 0.5],
           headIndex: 0,
-          headName: 'embedding',
+          headName: "embedding",
         },
       ],
     });
@@ -51,26 +53,26 @@ describe('BuiltInAIEmbeddingModel', () => {
     vi.unstubAllGlobals();
   });
 
-  describe('Construction', () => {
-    it('should instantiate correctly with default settings', () => {
+  describe("Construction", () => {
+    it("should instantiate correctly with default settings", () => {
       const model = new BuiltInAIEmbeddingModel();
 
       expect(model).toBeInstanceOf(BuiltInAIEmbeddingModel);
-      expect(model.modelId).toBe('embedding');
-      expect(model.provider).toBe('google-mediapipe');
-      expect(model.specificationVersion).toBe('v2');
+      expect(model.modelId).toBe("embedding");
+      expect(model.provider).toBe("google-mediapipe");
+      expect(model.specificationVersion).toBe("v2");
       expect(model.supportsParallelCalls).toBe(true);
       expect(model.maxEmbeddingsPerCall).toBeUndefined();
     });
 
-    it('should instantiate with custom settings', () => {
+    it("should instantiate with custom settings", () => {
       const customSettings = {
-        modelAssetPath: 'https://custom-model-path.tflite',
-        wasmLoaderPath: 'https://custom-loader.js',
-        wasmBinaryPath: 'https://custom-binary.wasm',
+        modelAssetPath: "https://custom-model-path.tflite",
+        wasmLoaderPath: "https://custom-loader.js",
+        wasmBinaryPath: "https://custom-binary.wasm",
         l2Normalize: true,
         quantize: false,
-        delegate: 'GPU' as const,
+        delegate: "GPU" as const,
       };
 
       const model = new BuiltInAIEmbeddingModel(customSettings);
@@ -78,25 +80,25 @@ describe('BuiltInAIEmbeddingModel', () => {
     });
   });
 
-  describe('doEmbed', () => {
-    it('should generate embeddings for single text', async () => {
+  describe("doEmbed", () => {
+    it("should generate embeddings for single text", async () => {
       const model = new BuiltInAIEmbeddingModel();
 
       const result = await model.doEmbed({
-        values: ['Hello, world!'],
+        values: ["Hello, world!"],
       });
 
       expect(result.embeddings).toHaveLength(1);
       expect(result.embeddings[0]).toEqual([0.1, 0.2, 0.3, 0.4, 0.5]);
       expect(result.rawResponse).toEqual({
-        model: 'universal_sentence_encoder',
-        provider: 'google-mediapipe',
+        model: "universal_sentence_encoder",
+        provider: "google-mediapipe",
         processed_texts: 1,
       });
-      expect(mockTextEmbedder.embed).toHaveBeenCalledWith('Hello, world!');
+      expect(mockTextEmbedder.embed).toHaveBeenCalledWith("Hello, world!");
     });
 
-    it('should generate embeddings for multiple texts', async () => {
+    it("should generate embeddings for multiple texts", async () => {
       const model = new BuiltInAIEmbeddingModel();
 
       // Mock different embeddings for different texts
@@ -106,7 +108,7 @@ describe('BuiltInAIEmbeddingModel', () => {
             {
               floatEmbedding: [0.1, 0.2, 0.3],
               headIndex: 0,
-              headName: 'embedding',
+              headName: "embedding",
             },
           ],
         })
@@ -115,13 +117,13 @@ describe('BuiltInAIEmbeddingModel', () => {
             {
               floatEmbedding: [0.4, 0.5, 0.6],
               headIndex: 0,
-              headName: 'embedding',
+              headName: "embedding",
             },
           ],
         });
 
       const result = await model.doEmbed({
-        values: ['First text', 'Second text'],
+        values: ["First text", "Second text"],
       });
 
       expect(result.embeddings).toHaveLength(2);
@@ -131,7 +133,7 @@ describe('BuiltInAIEmbeddingModel', () => {
       expect(mockTextEmbedder.embed).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle empty embeddings gracefully', async () => {
+    it("should handle empty embeddings gracefully", async () => {
       const model = new BuiltInAIEmbeddingModel();
 
       mockTextEmbedder.embed.mockReturnValue({
@@ -139,14 +141,14 @@ describe('BuiltInAIEmbeddingModel', () => {
       });
 
       const result = await model.doEmbed({
-        values: ['Test text'],
+        values: ["Test text"],
       });
 
       expect(result.embeddings).toHaveLength(1);
       expect(result.embeddings[0]).toEqual([]);
     });
 
-    it('should handle empty values array', async () => {
+    it("should handle empty values array", async () => {
       const model = new BuiltInAIEmbeddingModel();
 
       const result = await model.doEmbed({
@@ -159,25 +161,25 @@ describe('BuiltInAIEmbeddingModel', () => {
     });
   });
 
-  describe('Abort Signal Handling', () => {
-    it('should throw error when signal is already aborted', async () => {
+  describe("Abort Signal Handling", () => {
+    it("should throw error when signal is already aborted", async () => {
       const model = new BuiltInAIEmbeddingModel();
       const abortController = new AbortController();
       abortController.abort();
 
       await expect(
         model.doEmbed({
-          values: ['Test text'],
+          values: ["Test text"],
           abortSignal: abortController.signal,
-        })
-      ).rejects.toThrow('Operation was aborted');
+        }),
+      ).rejects.toThrow("Operation was aborted");
     });
 
-    it('should work without abort signal', async () => {
+    it("should work without abort signal", async () => {
       const model = new BuiltInAIEmbeddingModel();
 
       const result = await model.doEmbed({
-        values: ['Test text'],
+        values: ["Test text"],
       });
 
       expect(result.embeddings).toHaveLength(1);
@@ -185,42 +187,44 @@ describe('BuiltInAIEmbeddingModel', () => {
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle TextEmbedder creation errors', async () => {
+  describe("Error Handling", () => {
+    it("should handle TextEmbedder creation errors", async () => {
       vi.mocked(TextEmbedder.createFromOptions).mockRejectedValue(
-        new Error('Failed to create embedder')
+        new Error("Failed to create embedder"),
       );
 
       const model = new BuiltInAIEmbeddingModel();
 
-      await expect(
-        model.doEmbed({ values: ['test'] })
-      ).rejects.toThrow('Failed to create embedder');
+      await expect(model.doEmbed({ values: ["test"] })).rejects.toThrow(
+        "Failed to create embedder",
+      );
     });
 
-    it('should handle embedding errors', async () => {
+    it("should handle embedding errors", async () => {
       mockTextEmbedder.embed.mockImplementation(() => {
-        throw new Error('Embedding failed');
+        throw new Error("Embedding failed");
       });
 
       const model = new BuiltInAIEmbeddingModel();
 
-      await expect(
-        model.doEmbed({ values: ['test'] })
-      ).rejects.toThrow('Embedding failed');
+      await expect(model.doEmbed({ values: ["test"] })).rejects.toThrow(
+        "Embedding failed",
+      );
     });
   });
 
-  describe('Integration Tests', () => {
-    it('should maintain embedder instance across multiple calls', async () => {
+  describe("Integration Tests", () => {
+    it("should maintain embedder instance across multiple calls", async () => {
       const model = new BuiltInAIEmbeddingModel();
 
-      await model.doEmbed({ values: ['First call'] });
-      await model.doEmbed({ values: ['Second call'] });
+      await model.doEmbed({ values: ["First call"] });
+      await model.doEmbed({ values: ["Second call"] });
 
       // Should only create embedder once
-      expect(vi.mocked(TextEmbedder.createFromOptions)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(TextEmbedder.createFromOptions)).toHaveBeenCalledTimes(
+        1,
+      );
       expect(mockTextEmbedder.embed).toHaveBeenCalledTimes(2);
     });
   });
-}); 
+});

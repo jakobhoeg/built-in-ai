@@ -1,4 +1,3 @@
-
 import {
   ChatTransport,
   UIMessage,
@@ -6,18 +5,23 @@ import {
   streamText,
   convertToModelMessages,
   ChatRequestOptions,
-} from 'ai';
-import { builtInAI, BuiltInAIChatLanguageModel } from 'built-in-ai';
+} from "ai";
+import { builtInAI, BuiltInAIChatLanguageModel } from "@built-in-ai/core";
 
 export class ClientSideChatTransport implements ChatTransport<UIMessage> {
-  async sendMessages(options: {
-    chatId: string;
-    messages: UIMessage[];
-    abortSignal: AbortSignal | undefined;
-  } & {
-    trigger: 'submit-user-message' | 'submit-tool-result' | 'regenerate-assistant-message';
-    messageId: string | undefined;
-  } & ChatRequestOptions): Promise<ReadableStream<UIMessageChunk>> {
+  async sendMessages(
+    options: {
+      chatId: string;
+      messages: UIMessage[];
+      abortSignal: AbortSignal | undefined;
+    } & {
+      trigger:
+        | "submit-user-message"
+        | "submit-tool-result"
+        | "regenerate-assistant-message";
+      messageId: string | undefined;
+    } & ChatRequestOptions,
+  ): Promise<ReadableStream<UIMessageChunk>> {
     const prompt = convertToModelMessages(options.messages);
 
     const result = streamText({
@@ -29,9 +33,11 @@ export class ClientSideChatTransport implements ChatTransport<UIMessage> {
     return result.toUIMessageStream();
   }
 
-  async reconnectToStream(options: {
-    chatId: string;
-  } & ChatRequestOptions): Promise<ReadableStream<UIMessageChunk> | null> {
+  async reconnectToStream(
+    options: {
+      chatId: string;
+    } & ChatRequestOptions,
+  ): Promise<ReadableStream<UIMessageChunk> | null> {
     // AFAIK: Client-side AI doesn't support stream reconnection
     return null;
   }

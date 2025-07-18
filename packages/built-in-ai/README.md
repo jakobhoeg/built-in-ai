@@ -1,10 +1,19 @@
-
 # Built-in AI provider for Vercel AI SDK
+
 <img src="../../npm-header.png">
 
-A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) while also easily switching models.
+<div align="center">
 
-Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, which has been the *missing piece* needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
+[![NPM Version](https://img.shields.io/npm/v/built-in-ai)](https://www.npmjs.com/package/@built-in-ai/core)
+[![NPM Downloads](https://img.shields.io/npm/dw/built-in-ai)](https://www.npmjs.com/package/@built-in-ai/core)
+
+</div>
+
+A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) with the AI SDK.
+
+> We will also aim to add other providers such as [web-llm](https://github.com/mlc-ai/web-llm) and [transformers.js](https://huggingface.co/docs/transformers.js/en/index)
+
+Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, which has been the _missing piece_ needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
 
 > [!IMPORTANT]
 > This package is under constant development as the Prompt API matures, and may contain errors and incompatible changes.
@@ -12,11 +21,13 @@ Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/doc
 ## Installation
 
 > [!NOTE]
-> This only works with the new v5 soon to release (beta) of the Vercel AI SDK.
+> This only works with the new v5 of the Vercel AI SDK.
 
 ```bash
-npm install built-in-ai
+npm i @built-in-ai/core
 ```
+
+The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge browser's built-in AI models.
 
 ## Browser Requirements
 
@@ -26,12 +37,12 @@ npm install built-in-ai
 1. You need Chrome (v. 128 or higher) or Edge Dev/Canary (v. 138.0.3309.2 or higher)
 
 2. Enable these experimental flags:
-    - If you're using Chrome:
-      1. Go to chrome://flags/#prompt-api-for-gemini-nano and set it to Enabled
-      2. Go to chrome://flags/#optimization-guide-on-device-model and set it to Enabled BypassPrefRequirement
-      3. Go to chrome://components and click Check for Update on Optimization Guide On Device Model
-    - If you're using Edge:
-      1. Go to edge://flags/#prompt-api-for-phi-mini and set it to Enabled
+   - If you're using Chrome:
+     1. Go to chrome://flags/#prompt-api-for-gemini-nano and set it to Enabled
+     2. Go to chrome://flags/#optimization-guide-on-device-model and set it to Enabled BypassPrefRequirement
+     3. Go to chrome://components and click Check for Update on Optimization Guide On Device Model
+   - If you're using Edge:
+     1. Go to edge://flags/#prompt-api-for-phi-mini and set it to Enabled
 
 For more information, check out [this guide](https://developer.chrome.com/docs/extensions/ai/prompt-api)
 
@@ -40,14 +51,12 @@ For more information, check out [this guide](https://developer.chrome.com/docs/e
 ### Simple Chat
 
 ```typescript
-import { streamText } from 'ai';
-import { builtInAI } from 'built-in-ai';
+import { streamText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
 
 const result = streamText({
   model: builtInAI(),
-  messages: [
-    { role: 'user', content: 'Hello, how are you?' }
-  ],
+  messages: [{ role: "user", content: "Hello, how are you?" }],
 });
 
 for await (const chunk of result.textStream) {
@@ -58,12 +67,12 @@ for await (const chunk of result.textStream) {
 ### Text Embeddings
 
 ```typescript
-import { embed } from 'ai';
-import { builtInAI } from 'built-in-ai';
+import { embed } from "ai";
+import { builtInAI } from "@built-in-ai/core";
 
 const result = await embed({
-  model: builtInAI('embedding'),
-  value: 'Hello, world!'
+  model: builtInAI("embedding"),
+  value: "Hello, world!",
 });
 
 console.log(result.embedding); // [0.1, 0.2, 0.3, ...]
@@ -75,7 +84,7 @@ For the full implementation look here: [`/examples/next-hybrid`](/examples/next-
 
 Since the Built-in AI is a client-side API, it cannot be used in traditional API routes in Next.js. Instead, we need to create a custom class that implements the `ChatTransport` interface.
 
-Because the Prompt API is not yet widely available across all browsers, the implementation below includes a fallback mechanism that uses a server-side API route when browser AI is unavailable. This is optional, but enhances the user experience. 
+Because the Prompt API is not yet widely available across all browsers, the implementation below includes a fallback mechanism that uses a server-side API route when browser AI is unavailable. This is optional, but enhances the user experience.
 
 ```typescript:client-side-chat-transport.ts
 import {
@@ -86,7 +95,7 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
 } from 'ai';
-import { builtInAI, BuiltInAIChatLanguageModel } from 'built-in-ai';
+import { builtInAI, BuiltInAIChatLanguageModel } from '@built-in-ai/core';
 
 export class ClientSideChatTransport implements ChatTransport<UIMessage> {
   async sendMessages(options: {
@@ -124,7 +133,7 @@ We can then provide the `useChat` hook with our `ClientSideChatTransport` AND pr
 'use client'
 
 import { useChat } from 'ai/react';
-import { isBuiltInAIModelAvailable } from 'built-in-ai';
+import { isBuiltInAIModelAvailable } from '@built-in-ai/core';
 
 const isBuiltInAIAvailable = isBuiltInAIModelAvailable();
 
@@ -150,6 +159,7 @@ export default function Chat() {
 Creates a browser AI model instance for chat or embeddings.
 
 **Chat Models:**
+
 - `modelId` (optional): The model identifier, defaults to 'text'
 - `settings` (optional): Configuration options for the chat model
   - `temperature?: number` - Controls randomness (0-1)
@@ -158,6 +168,7 @@ Creates a browser AI model instance for chat or embeddings.
 **Returns:** `BuiltInAIChatLanguageModel` instance
 
 **For Embedding Models:**
+
 - `modelId`: Must be 'embedding'
 - `settings` (optional): Configuration options for the embedding model
   - `wasmLoaderPath?: string` - Path to WASM loader (default: CDN hosted)
