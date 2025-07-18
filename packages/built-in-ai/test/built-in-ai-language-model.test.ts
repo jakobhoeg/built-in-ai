@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { BuiltInAIChatLanguageModel } from "../src/built-in-ai-language-model";
+import { BuiltInAIChatLanguageModel, BuiltInAIChatSettings } from "../src/built-in-ai-language-model";
 
 import { generateText, streamText, generateObject, streamObject } from "ai";
 import { LoadSettingError } from "@ai-sdk/provider";
@@ -74,7 +74,10 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(result.text).toBe("Hello, world!");
-    expect(mockPrompt).toHaveBeenCalledWith("user\nSay hello\nmodel\n", {});
+    expect(mockPrompt).toHaveBeenCalledWith([{
+      role: "user",
+      content: [{ type: "text", value: "Say hello" }],
+    }], {});
   });
 
   it("should handle system messages", async () => {
@@ -89,10 +92,10 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(result.text).toBe("I am a helpful assistant.");
-    expect(mockPrompt).toHaveBeenCalledWith(
-      "You are a helpful assistant.\nuser\nWho are you?\nmodel\n",
-      {},
-    );
+    expect(mockPrompt).toHaveBeenCalledWith([{
+      role: "user",
+      content: [{ type: "text", value: "Who are you?" }],
+    }], {});
   });
 
   it("should handle conversation history", async () => {
@@ -108,10 +111,20 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(result.text).toBe("I can help you with that!");
-    expect(mockPrompt).toHaveBeenCalledWith(
-      "user\nCan you help me?\nmodel\nOf course! What do you need?\nuser\nI need assistance with coding.\nmodel\n",
-      {},
-    );
+    expect(mockPrompt).toHaveBeenCalledWith([
+      {
+        role: "user",
+        content: [{ type: "text", value: "Can you help me?" }],
+      },
+      {
+        role: "assistant",
+        content: "Of course! What do you need?",
+      },
+      {
+        role: "user",
+        content: [{ type: "text", value: "I need assistance with coding." }],
+      },
+    ], {});
   });
 
   it("should stream text successfully", async () => {
@@ -137,10 +150,12 @@ describe("BuiltInAIChatLanguageModel", () => {
     }
 
     expect(text).toBe("Hello, world!");
-    expect(mockPromptStreaming).toHaveBeenCalledWith(
-      "user\nSay hello\nmodel\n",
-      {},
-    );
+    expect(mockPromptStreaming).toHaveBeenCalledWith([{
+      role: "user",
+      content: [{ type: "text", value: "Say hello" }],
+    }], {
+      signal: undefined,
+    });
   });
 
   it("should handle JSON response format", async () => {
@@ -159,7 +174,10 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(object).toEqual({ name: "John", age: 30 });
-    expect(mockPrompt).toHaveBeenCalledWith("user\nCreate a person\nmodel\n", {
+    expect(mockPrompt).toHaveBeenCalledWith([{
+      role: "user",
+      content: [{ type: "text", value: "Create a person" }],
+    }], {
       responseConstraint: {
         $schema: "http://json-schema.org/draft-07/schema#",
         additionalProperties: false,
@@ -188,7 +206,10 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(object).toEqual({ users: ["Alice", "Bob"] });
-    expect(mockPrompt).toHaveBeenCalledWith("user\nList some users\nmodel\n", {
+    expect(mockPrompt).toHaveBeenCalledWith([{
+      role: "user",
+      content: [{ type: "text", value: "List some users" }],
+    }], {
       responseConstraint: {
         $schema: "http://json-schema.org/draft-07/schema#",
         additionalProperties: false,
@@ -255,6 +276,144 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(result.text).toBe("Response");
-    expect(mockPrompt).toHaveBeenCalledWith("model\n", {});
+    expect(mockPrompt).toHaveBeenCalledWith([{
+      role: "user",
+      content: [],
+    }], {});
+  });
+
+  describe("multimodal support", () => {
+    beforeEach(() => {
+      // Mock LanguageModel.create to capture the options passed to it
+      (global as any).LanguageModel.create = vi.fn().mockResolvedValue(mockSession);
+    });
+
+    it("should handle image files in messages", async () => {
+      mockPrompt.mockResolvedValue("I can see an image.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What's in this image?" },
+              {
+                type: "file",
+                mediaType: "image/png",
+                data: "SGVsbG8gV29ybGQ=", // "Hello World" in base64
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can see an image.");
+
+      // Verify that the session was created with expected inputs for image
+      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: [{ type: "image" }],
+        })
+      );
+    });
+
+    it("should handle audio files in messages", async () => {
+      mockPrompt.mockResolvedValue("I can hear the audio.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What's in this audio?" },
+              {
+                type: "file",
+                mediaType: "audio/wav",
+                data: new Uint8Array([82, 73, 70, 70]), // "RIFF" header
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can hear the audio.");
+
+      // Verify that the session was created with expected inputs for audio
+      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: [{ type: "audio" }],
+        })
+      );
+    });
+
+    it("should handle both image and audio content", async () => {
+      mockPrompt.mockResolvedValue("I can see and hear the content.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Analyze this:" },
+              {
+                type: "file",
+                mediaType: "image/jpeg",
+                data: "SGVsbG8=", // "Hello" in base64
+              },
+              { type: "text", text: "And this:" },
+              {
+                type: "file",
+                mediaType: "audio/mp3",
+                data: new Uint8Array([1, 2, 3]),
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can see and hear the content.");
+
+      // Verify that the session was created with expected inputs for both image and audio
+      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: expect.arrayContaining([
+            { type: "image" },
+            { type: "audio" },
+          ]),
+        })
+      );
+    });
+
+    it("should handle URL-based image data", async () => {
+      mockPrompt.mockResolvedValue("I can see the image from the URL.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "file",
+                mediaType: "image/png",
+                data: new URL("https://example.com/image.png"),
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can see the image from the URL.");
+
+      // Verify that the session was created with expected inputs for image
+      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: [{ type: "image" }],
+        })
+      );
+    });
   });
 });
