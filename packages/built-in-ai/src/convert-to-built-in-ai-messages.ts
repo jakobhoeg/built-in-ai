@@ -3,19 +3,24 @@ import {
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 
+export interface ConvertedMessages {
+  systemMessage?: string;
+  messages: LanguageModelMessage[];
+}
+
 /**
  * Convert Vercel AI SDK prompt format to built-in AI Prompt API format
+ * Returns system message (for initialPrompts) and regular messages (for prompt method)
  */
-export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): any[] {
-  const messages = [];
+export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): ConvertedMessages {
+  let systemMessage: string | undefined;
+  const messages: LanguageModelMessage[] = [];
 
   for (const message of prompt) {
     switch (message.role) {
       case "system": {
-        messages.push({
-          role: "system",
-          content: message.content
-        });
+        // There's only ever one system message from AI SDK
+        systemMessage = message.content;
         break;
       }
 
@@ -25,7 +30,7 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): any[]
           content: message.content.map(part => {
             switch (part.type) {
               case "text": {
-                return { type: "text", value: part.text };
+                return { type: "text", value: part.text } as LanguageModelMessageContent;
               }
 
               case "file": {
@@ -33,12 +38,12 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): any[]
                   return {
                     type: "image",
                     value: part.data instanceof URL ? part.data.toString() : part.data,
-                  };
+                  } as LanguageModelMessageContent;
                 } else if (part.mediaType?.startsWith("audio/")) {
                   return {
                     type: "audio",
                     value: part.data instanceof URL ? part.data.toString() : part.data,
-                  };
+                  } as LanguageModelMessageContent;
                 } else {
                   throw new UnsupportedFunctionalityError({
                     functionality: `file type: ${part.mediaType}`,
@@ -53,7 +58,7 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): any[]
               }
             }
           }),
-        });
+        } as LanguageModelMessage);
         break;
       }
 
@@ -77,7 +82,7 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): any[]
         messages.push({
           role: "assistant",
           content: text,
-        });
+        } as LanguageModelMessage);
         break;
       }
 
@@ -93,5 +98,5 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): any[]
     }
   }
 
-  return messages;
+  return { systemMessage, messages };
 }
