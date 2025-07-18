@@ -9,10 +9,20 @@ import {
   LoadSettingError,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
+import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 
 export type BuiltInAIChatModelId = "text";
 
-export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {}
+export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
+  /**
+   * Expected input types for the session. This helps the browser prepare
+   * for multimodal inputs and download necessary model components.
+   */
+  expectedInputs?: Array<{
+    type: "text" | "image" | "audio";
+    languages?: string[];
+  }>;
+}
 
 /**
  * Check if the Prompt API is available
@@ -28,42 +38,46 @@ type BuiltInAIConfig = {
   options: BuiltInAIChatSettings;
 };
 
-function getStringContent(prompt: LanguageModelV2Prompt): string {
-  let result = "";
+/**
+ * Detect if the prompt contains multimodal content
+ */
+function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
+  for (const message of prompt) {
+    if (message.role === "user") {
+      for (const part of message.content) {
+        if ((part as any).type === "image" || part.type === "file") {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Get expected inputs based on prompt content
+ */
+function getExpectedInputs(prompt: LanguageModelV2Prompt): Array<{ type: "text" | "image" | "audio" }> {
+  const inputs = new Set<"text" | "image" | "audio">();
+  // Don't add text by default - it's assumed by the browser API
 
   for (const message of prompt) {
-    switch (message.role) {
-      case "system":
-        result += `${message.content}\n`;
-        break;
-      case "assistant":
-        for (const part of message.content) {
-          if (part.type === "text") {
-            result += `model\n${part.text}\n`;
-          } else if (part.type === "tool-call") {
-            // TODO: Implement
+    if (message.role === "user") {
+      for (const part of message.content) {
+        if ((part as any).type === "image") {
+          inputs.add("image");
+        } else if (part.type === "file") {
+          if (part.mediaType?.startsWith("image/")) {
+            inputs.add("image");
+          } else if (part.mediaType?.startsWith("audio/")) {
+            inputs.add("audio");
           }
         }
-        break;
-      case "user":
-        for (const part of message.content) {
-          if (part.type === "text") {
-            result += `user\n${part.text}\n`;
-          } else if (part.type === "file") {
-            throw new UnsupportedFunctionalityError({
-              functionality: "file input",
-            });
-          }
-        }
-        break;
-      case "tool":
-        // TODO: Implement
-        break;
+      }
     }
   }
 
-  result += `model\n`;
-  return result;
+  return Array.from(inputs).map(type => ({ type }));
 }
 
 export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
@@ -86,8 +100,14 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     };
   }
 
+  readonly supportedUrls: Record<string, RegExp[]> = {
+    "image/*": [/^https?:\/\/.+$/],
+    "audio/*": [/^https?:\/\/.+$/],
+  };
+
   private async getSession(
     options?: LanguageModelCreateOptions,
+    expectedInputs?: Array<{ type: "text" | "image" | "audio" }>
   ): Promise<LanguageModel> {
     if (typeof LanguageModel === "undefined") {
       throw new LoadSettingError({
@@ -116,28 +136,57 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       ...options,
     };
 
+    // Try to create multimodal session if expected inputs are provided
+    if (expectedInputs && expectedInputs.length > 0) {
+      try {
+        mergedOptions.expectedInputs = expectedInputs;
+        console.log('Built-in AI: Attempting to create multimodal session with expected inputs:', expectedInputs);
+        this.session = await LanguageModel.create(mergedOptions);
+        console.log('Built-in AI: Multimodal session created successfully');
+        return this.session;
+      } catch (error) {
+        console.warn('Built-in AI: Multimodal session creation failed, falling back to text-only:', error);
+        // Fall back to text-only session
+        const textOnlyOptions = { ...mergedOptions };
+        delete textOnlyOptions.expectedInputs;
+        this.session = await LanguageModel.create(textOnlyOptions);
+        console.log('Built-in AI: Text-only fallback session created');
+        return this.session;
+      }
+    }
+
+    console.log('Built-in AI: Creating text-only session with options:', mergedOptions);
     this.session = await LanguageModel.create(mergedOptions);
+    console.log('Built-in AI: Session created successfully');
 
     return this.session;
   }
 
-  private async getArgs(options: LanguageModelV2CallOptions): Promise<{
-    message: string;
-    warnings: LanguageModelV2CallWarning[];
-    promptOptions: any;
-  }> {
+  private getArgs({
+    prompt,
+    maxOutputTokens,
+    temperature,
+    topP,
+    topK,
+    frequencyPenalty,
+    presencePenalty,
+    stopSequences,
+    responseFormat,
+    seed,
+    tools,
+  }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     const warnings: LanguageModelV2CallWarning[] = [];
 
     // Add warnings for unsupported settings
-    if (options.tools && options.tools.length > 0) {
+    if (tools && tools.length > 0) {
       warnings.push({
         type: "unsupported-setting",
         setting: "tools",
-        details: "Tool calling is not yet supported by browser AI", // TODO: Implement
+        details: "Tool calling is not yet supported by browser AI",
       });
     }
 
-    if (options.maxOutputTokens) {
+    if (maxOutputTokens != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "maxOutputTokens",
@@ -145,7 +194,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.stopSequences) {
+    if (stopSequences != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "stopSequences",
@@ -153,7 +202,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.topP) {
+    if (topP != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "topP",
@@ -161,7 +210,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.presencePenalty) {
+    if (presencePenalty != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "presencePenalty",
@@ -169,7 +218,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.frequencyPenalty) {
+    if (frequencyPenalty != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "frequencyPenalty",
@@ -177,7 +226,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.seed) {
+    if (seed != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "seed",
@@ -185,29 +234,37 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       });
     }
 
-    const message = getStringContent(options.prompt);
+    // Check if this is a multimodal prompt
+    const isMultimodal = hasMultimodalContent(prompt);
+    console.log('Built-in AI: isMultimodal:', isMultimodal);
+
+    // Convert messages to the appropriate format
+    const messages = isMultimodal
+      ? convertToBuiltInAIMessages(prompt)
+      : convertToLegacyStringFormat(prompt);
 
     // Handle response format for browser AI
     const promptOptions: any = {};
-    if (options.responseFormat?.type === "json") {
-      promptOptions.responseConstraint = options.responseFormat.schema;
+    if (responseFormat?.type === "json") {
+      promptOptions.responseConstraint = responseFormat.schema;
     }
 
     // Map supported settings
-    if (options.temperature !== undefined) {
-      promptOptions.temperature = options.temperature;
+    if (temperature !== undefined) {
+      promptOptions.temperature = temperature;
     }
 
-    if (options.topK !== undefined) {
-      promptOptions.topK = options.topK;
+    if (topK !== undefined) {
+      promptOptions.topK = topK;
     }
 
-    return { message, warnings, promptOptions };
-  }
-
-  get supportedUrls(): Record<string, RegExp[]> {
-    // Browser AI doesn't support any URLs natively
-    return {};
+    return {
+      messages,
+      warnings,
+      promptOptions,
+      isMultimodal,
+      expectedInputs: isMultimodal ? getExpectedInputs(prompt) : undefined
+    };
   }
 
   /**
@@ -218,10 +275,23 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
   public async doGenerate(options: LanguageModelV2CallOptions) {
-    const session = await this.getSession();
-    const { message, warnings, promptOptions } = await this.getArgs(options);
+    const { messages, warnings, promptOptions, expectedInputs, isMultimodal } = await this.getArgs(options);
 
-    const text = await session.prompt(message, promptOptions);
+    console.log('Built-in AI: messages to send:', messages);
+    console.log('Built-in AI: expected inputs:', expectedInputs);
+    console.log('Built-in AI: prompt options:', promptOptions);
+
+    const session = await this.getSession(undefined, expectedInputs);
+
+    // If we detected multimodal content but couldn't create a multimodal session,
+    // we need to check if the session supports multimodal input
+    if (isMultimodal && (!expectedInputs || expectedInputs.length === 0)) {
+      throw new UnsupportedFunctionalityError({
+        functionality: "Multimodal input (images/audio) - this browser/device doesn't support multimodal AI sessions",
+      });
+    }
+
+    const text = await session.prompt(messages, promptOptions);
 
     const content: LanguageModelV2Content[] = [
       {
@@ -238,7 +308,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
         outputTokens: undefined,
         totalTokens: undefined,
       },
-      request: { body: { message, options: promptOptions } },
+      request: { body: { messages, options: promptOptions } },
       warnings,
     };
   }
@@ -251,8 +321,17 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
   public async doStream(options: LanguageModelV2CallOptions) {
-    const session = await this.getSession();
-    const { message, warnings, promptOptions } = await this.getArgs(options);
+    const { messages, warnings, promptOptions, expectedInputs, isMultimodal } = await this.getArgs(options);
+
+    const session = await this.getSession(undefined, expectedInputs);
+
+    // If we detected multimodal content but couldn't create a multimodal session,
+    // we need to check if the session supports multimodal input
+    if (isMultimodal && (!expectedInputs || expectedInputs.length === 0)) {
+      throw new UnsupportedFunctionalityError({
+        functionality: "Multimodal input (images/audio) - this browser/device doesn't support multimodal AI sessions",
+      });
+    }
 
     // Pass abort signal to the native streaming method
     const streamOptions = {
@@ -260,10 +339,10 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       signal: options.abortSignal,
     };
 
-    const promptStream = session.promptStreaming(message, streamOptions);
+    const promptStream = session.promptStreaming(messages, streamOptions);
 
     let isFirstChunk = true;
-    let textId = "text-0";
+    const textId = "text-0";
 
     const stream = promptStream.pipeThrough(
       new TransformStream<string, LanguageModelV2StreamPart>({
@@ -323,7 +402,46 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     return {
       stream,
-      request: { body: { message, options: promptOptions } },
+      request: { body: { messages, options: promptOptions } },
     };
   }
+}
+
+// Legacy function for backward compatibility - only used for text-only prompts
+function convertToLegacyStringFormat(prompt: LanguageModelV2Prompt): string {
+  let result = "";
+
+  for (const message of prompt) {
+    switch (message.role) {
+      case "system":
+        result += `${message.content}\n`;
+        break;
+      case "assistant":
+        for (const part of message.content) {
+          if (part.type === "text") {
+            result += `model\n${part.text}\n`;
+          } else if (part.type === "tool-call") {
+            // TODO: Implement
+          }
+        }
+        break;
+      case "user":
+        for (const part of message.content) {
+          if (part.type === "text") {
+            result += `user\n${part.text}\n`;
+          } else if (part.type === "file") {
+            throw new UnsupportedFunctionalityError({
+              functionality: "file input",
+            });
+          }
+        }
+        break;
+      case "tool":
+        // TODO: Implement
+        break;
+    }
+  }
+
+  result += `model\n`;
+  return result;
 }
