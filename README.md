@@ -70,7 +70,7 @@ Look [here](/packages/built-in-ai/README.md) for more usage examples and API ref
 
 - [x] **Text generation** (`generateText()`)
 - [x] **Streaming responses** (`streamText()`)
-- [x] **Multimodal functionality** (image and audio support)*
+- [x] **Multimodal functionality** (image and audio support)\*
 - [x] **Temperature control**
 - [x] **Response format constraints** (JSON)
 - [x] **Abort signals**
@@ -82,7 +82,7 @@ Look [here](/packages/built-in-ai/README.md) for more usage examples and API ref
 - [ ] **Custom stop sequences**
 - [ ] **Presence/frequency penalties**
 
-> *Multimodal functionality is currently only available in Chrome's Prompt API implementation
+> \*Multimodal functionality is currently only available in Chrome's Prompt API implementation
 
 ## Contributing
 

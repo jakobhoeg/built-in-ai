@@ -56,7 +56,9 @@ function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
 /**
  * Get expected inputs based on prompt content
  */
-function getExpectedInputs(prompt: LanguageModelV2Prompt): Array<{ type: "text" | "image" | "audio" }> {
+function getExpectedInputs(
+  prompt: LanguageModelV2Prompt,
+): Array<{ type: "text" | "image" | "audio" }> {
   const inputs = new Set<"text" | "image" | "audio">();
   // Don't add text by default - it's assumed by the Prompt API
 
@@ -76,7 +78,7 @@ function getExpectedInputs(prompt: LanguageModelV2Prompt): Array<{ type: "text" 
     }
   }
 
-  return Array.from(inputs).map(type => ({ type }));
+  return Array.from(inputs).map((type) => ({ type }));
 }
 
 export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
@@ -107,7 +109,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
   private async getSession(
     options?: LanguageModelCreateOptions,
     expectedInputs?: Array<{ type: "text" | "image" | "audio" }>,
-    systemMessage?: string
+    systemMessage?: string,
   ): Promise<LanguageModel> {
     if (typeof LanguageModel === "undefined") {
       throw new LoadSettingError({
@@ -138,7 +140,9 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     // Add system message to initialPrompts if provided
     if (systemMessage) {
-      mergedOptions.initialPrompts = [{ role: "system", content: systemMessage }];
+      mergedOptions.initialPrompts = [
+        { role: "system", content: systemMessage },
+      ];
     }
 
     // Add expected inputs if provided
@@ -250,7 +254,9 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       warnings,
       promptOptions,
       hasMultiModalInput,
-      expectedInputs: hasMultiModalInput ? getExpectedInputs(prompt) : undefined
+      expectedInputs: hasMultiModalInput
+        ? getExpectedInputs(prompt)
+        : undefined,
     };
   }
 
@@ -263,9 +269,14 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    */
   public async doGenerate(options: LanguageModelV2CallOptions) {
     const converted = this.getArgs(options);
-    const { systemMessage, messages, warnings, promptOptions, expectedInputs } = converted;
+    const { systemMessage, messages, warnings, promptOptions, expectedInputs } =
+      converted;
 
-    const session = await this.getSession(undefined, expectedInputs, systemMessage);
+    const session = await this.getSession(
+      undefined,
+      expectedInputs,
+      systemMessage,
+    );
 
     const text = await session.prompt(messages, promptOptions);
 
@@ -298,9 +309,20 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    */
   public async doStream(options: LanguageModelV2CallOptions) {
     const converted = this.getArgs(options);
-    const { systemMessage, messages, warnings, promptOptions, expectedInputs, hasMultiModalInput } = converted;
+    const {
+      systemMessage,
+      messages,
+      warnings,
+      promptOptions,
+      expectedInputs,
+      hasMultiModalInput,
+    } = converted;
 
-    const session = await this.getSession(undefined, expectedInputs, systemMessage);
+    const session = await this.getSession(
+      undefined,
+      expectedInputs,
+      systemMessage,
+    );
 
     // Pass abort signal to the native streaming method
     const streamOptions = {
@@ -375,5 +397,3 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     };
   }
 }
-
-

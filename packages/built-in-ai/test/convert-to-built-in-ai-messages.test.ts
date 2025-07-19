@@ -3,7 +3,7 @@ import { convertToBuiltInAIMessages } from "../src/convert-to-built-in-ai-messag
 import {
   LanguageModelV2Prompt,
   LanguageModelV2Message,
-  UnsupportedFunctionalityError
+  UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 
 describe("convertToBuiltInAIMessages", () => {
@@ -108,7 +108,9 @@ describe("convertToBuiltInAIMessages", () => {
       expect(imageContent.value).toBeInstanceOf(Uint8Array);
 
       // Verify the conversion worked correctly
-      const expectedBytes = new Uint8Array([72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]);
+      const expectedBytes = new Uint8Array([
+        72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100,
+      ]);
       expect(imageContent.value).toEqual(expectedBytes);
     });
 
@@ -268,7 +270,7 @@ describe("convertToBuiltInAIMessages", () => {
       ];
 
       expect(() => convertToBuiltInAIMessages(prompt)).toThrow(
-        UnsupportedFunctionalityError
+        UnsupportedFunctionalityError,
       );
     });
 
@@ -286,7 +288,7 @@ describe("convertToBuiltInAIMessages", () => {
       ] as LanguageModelV2Prompt;
 
       expect(() => convertToBuiltInAIMessages(prompt)).toThrow(
-        UnsupportedFunctionalityError
+        UnsupportedFunctionalityError,
       );
     });
 
@@ -334,4 +336,4 @@ describe("convertToBuiltInAIMessages", () => {
       ]);
     });
   });
-}); 
+});

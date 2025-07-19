@@ -41,7 +41,7 @@ function convertFileData(data: any, mediaType: string): Uint8Array | string {
     return data;
   }
 
-  if (typeof data === 'string') {
+  if (typeof data === "string") {
     // Base64 string from AI SDK - convert to Uint8Array
     return convertBase64ToUint8Array(data);
   }
@@ -55,7 +55,9 @@ function convertFileData(data: any, mediaType: string): Uint8Array | string {
  * Convert Vercel AI SDK prompt format to built-in AI Prompt API format
  * Returns system message (for initialPrompts) and regular messages (for prompt method)
  */
-export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): ConvertedMessages {
+export function convertToBuiltInAIMessages(
+  prompt: LanguageModelV2Prompt,
+): ConvertedMessages {
   let systemMessage: string | undefined;
   const messages: LanguageModelMessage[] = [];
 
@@ -70,10 +72,13 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): Conve
       case "user": {
         messages.push({
           role: "user",
-          content: message.content.map(part => {
+          content: message.content.map((part) => {
             switch (part.type) {
               case "text": {
-                return { type: "text", value: part.text } as LanguageModelMessageContent;
+                return {
+                  type: "text",
+                  value: part.text,
+                } as LanguageModelMessageContent;
               }
 
               case "file": {
@@ -86,7 +91,6 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): Conve
                     type: "image",
                     value: convertedData,
                   } as LanguageModelMessageContent;
-
                 } else if (mediaType?.startsWith("audio/")) {
                   const convertedData = convertFileData(data, mediaType);
 
@@ -94,7 +98,6 @@ export function convertToBuiltInAIMessages(prompt: LanguageModelV2Prompt): Conve
                     type: "audio",
                     value: convertedData,
                   } as LanguageModelMessageContent;
-
                 } else {
                   throw new UnsupportedFunctionalityError({
                     functionality: `file type: ${mediaType}`,
