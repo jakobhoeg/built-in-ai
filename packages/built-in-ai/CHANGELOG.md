@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.5.0
+
+### Minor Changes
+
+- 29015ed: feat: add multimodal support
+
 ## 1.4.0
 
 ### Minor Changes
