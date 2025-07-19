@@ -64,23 +64,25 @@ for await (const chunk of result.textStream) {
 
 Look [here](/packages/built-in-ai/README.md) for more usage examples and API reference.
 
-## Supported Features
+## Features
 
 ### Supported
 
-- Text generation
-- Streaming responses
-- Temperature control
-- Response format constraints (JSON)
-- Abort signals
+- [x] **Text generation** (`generateText()`)
+- [x] **Streaming responses** (`streamText()`)
+- [x] **Multimodal functionality** (image and audio support)*
+- [x] **Temperature control**
+- [x] **Response format constraints** (JSON)
+- [x] **Abort signals**
 
-### Needs to be implemented (when implemented in the Prompt API)
+### Planned (when implemented in the Prompt API)
 
-- Tool calling
-- Multimodality (images)
-- Token counting
-- Custom stop sequences
-- Presence/frequency penalties
+- [ ] **Tool calling**
+- [ ] **Token counting**
+- [ ] **Custom stop sequences**
+- [ ] **Presence/frequency penalties**
+
+> *Multimodal functionality is currently only available in Chrome's Prompt API implementation
 
 ## Contributing
 
