@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.5.1
+
+### Patch Changes
+
+- 9cdf7d9: docs: update readme with correct npm icons
+
 ## 1.5.0
 
 ### Minor Changes
