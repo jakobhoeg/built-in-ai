@@ -1,11 +1,13 @@
 # Built-in AI provider for Vercel AI SDK
 
+<div align="center">
 <img src="../../npm-header.png">
+</div>
 
 <div align="center">
 
-[![NPM Version](https://img.shields.io/npm/v/built-in-ai)](https://www.npmjs.com/package/@built-in-ai/core)
-[![NPM Downloads](https://img.shields.io/npm/dw/built-in-ai)](https://www.npmjs.com/package/@built-in-ai/core)
+[![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
+[![NPM Downloads](https://img.shields.io/npm/dw/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
 
 </div>
 
