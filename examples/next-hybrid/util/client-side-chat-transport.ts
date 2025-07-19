@@ -3,6 +3,7 @@ import {
   UIMessage,
   UIMessageChunk,
   streamText,
+  generateText,
   convertToModelMessages,
   ChatRequestOptions,
 } from "ai";

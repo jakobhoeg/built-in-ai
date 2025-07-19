@@ -9,10 +9,19 @@ import {
   LoadSettingError,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
+import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 
 export type BuiltInAIChatModelId = "text";
 
-export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {}
+export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
+  /**
+   * Expected input types for the session, for multimodal inputs.
+   */
+  expectedInputs?: Array<{
+    type: "text" | "image" | "audio";
+    languages?: string[];
+  }>;
+}
 
 /**
  * Check if the Prompt API is available
@@ -28,42 +37,48 @@ type BuiltInAIConfig = {
   options: BuiltInAIChatSettings;
 };
 
-function getStringContent(prompt: LanguageModelV2Prompt): string {
-  let result = "";
+/**
+ * Detect if the prompt contains multimodal content
+ */
+function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
+  for (const message of prompt) {
+    if (message.role === "user") {
+      for (const part of message.content) {
+        if ((part as any).type === "image" || part.type === "file") {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Get expected inputs based on prompt content
+ */
+function getExpectedInputs(
+  prompt: LanguageModelV2Prompt,
+): Array<{ type: "text" | "image" | "audio" }> {
+  const inputs = new Set<"text" | "image" | "audio">();
+  // Don't add text by default - it's assumed by the Prompt API
 
   for (const message of prompt) {
-    switch (message.role) {
-      case "system":
-        result += `${message.content}\n`;
-        break;
-      case "assistant":
-        for (const part of message.content) {
-          if (part.type === "text") {
-            result += `model\n${part.text}\n`;
-          } else if (part.type === "tool-call") {
-            // TODO: Implement
+    if (message.role === "user") {
+      for (const part of message.content) {
+        if ((part as any).type === "image") {
+          inputs.add("image");
+        } else if (part.type === "file") {
+          if (part.mediaType?.startsWith("image/")) {
+            inputs.add("image");
+          } else if (part.mediaType?.startsWith("audio/")) {
+            inputs.add("audio");
           }
         }
-        break;
-      case "user":
-        for (const part of message.content) {
-          if (part.type === "text") {
-            result += `user\n${part.text}\n`;
-          } else if (part.type === "file") {
-            throw new UnsupportedFunctionalityError({
-              functionality: "file input",
-            });
-          }
-        }
-        break;
-      case "tool":
-        // TODO: Implement
-        break;
+      }
     }
   }
 
-  result += `model\n`;
-  return result;
+  return Array.from(inputs).map((type) => ({ type }));
 }
 
 export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
@@ -86,13 +101,20 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     };
   }
 
+  readonly supportedUrls: Record<string, RegExp[]> = {
+    "image/*": [/^https?:\/\/.+$/],
+    "audio/*": [/^https?:\/\/.+$/],
+  };
+
   private async getSession(
     options?: LanguageModelCreateOptions,
+    expectedInputs?: Array<{ type: "text" | "image" | "audio" }>,
+    systemMessage?: string,
   ): Promise<LanguageModel> {
     if (typeof LanguageModel === "undefined") {
       throw new LoadSettingError({
         message:
-          "Browser AI API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
+          "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
       });
     }
 
@@ -116,112 +138,147 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       ...options,
     };
 
+    // Add system message to initialPrompts if provided
+    if (systemMessage) {
+      mergedOptions.initialPrompts = [
+        { role: "system", content: systemMessage },
+      ];
+    }
+
+    // Add expected inputs if provided
+    if (expectedInputs && expectedInputs.length > 0) {
+      mergedOptions.expectedInputs = expectedInputs;
+    }
+
     this.session = await LanguageModel.create(mergedOptions);
 
     return this.session;
   }
 
-  private async getArgs(options: LanguageModelV2CallOptions): Promise<{
-    message: string;
-    warnings: LanguageModelV2CallWarning[];
-    promptOptions: any;
-  }> {
+  private getArgs({
+    prompt,
+    maxOutputTokens,
+    temperature,
+    topP,
+    topK,
+    frequencyPenalty,
+    presencePenalty,
+    stopSequences,
+    responseFormat,
+    seed,
+    tools,
+  }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     const warnings: LanguageModelV2CallWarning[] = [];
 
     // Add warnings for unsupported settings
-    if (options.tools && options.tools.length > 0) {
+    if (tools && tools.length > 0) {
       warnings.push({
         type: "unsupported-setting",
         setting: "tools",
-        details: "Tool calling is not yet supported by browser AI", // TODO: Implement
+        details: "Tool calling is not yet supported by Prompt API",
       });
     }
 
-    if (options.maxOutputTokens) {
+    if (maxOutputTokens != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "maxOutputTokens",
-        details: "maxOutputTokens is not supported by browser AI",
+        details: "maxOutputTokens is not supported by Prompt API",
       });
     }
 
-    if (options.stopSequences) {
+    if (stopSequences != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "stopSequences",
-        details: "stopSequences is not supported by browser AI",
+        details: "stopSequences is not supported by Prompt API",
       });
     }
 
-    if (options.topP) {
+    if (topP != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "topP",
-        details: "topP is not supported by browser AI",
+        details: "topP is not supported by Prompt API",
       });
     }
 
-    if (options.presencePenalty) {
+    if (presencePenalty != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "presencePenalty",
-        details: "presencePenalty is not supported by browser AI",
+        details: "presencePenalty is not supported by Prompt API",
       });
     }
 
-    if (options.frequencyPenalty) {
+    if (frequencyPenalty != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "frequencyPenalty",
-        details: "frequencyPenalty is not supported by browser AI",
+        details: "frequencyPenalty is not supported by Prompt API",
       });
     }
 
-    if (options.seed) {
+    if (seed != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "seed",
-        details: "seed is not supported by browser AI",
+        details: "seed is not supported by Prompt API",
       });
     }
 
-    const message = getStringContent(options.prompt);
+    // Check if this is a multimodal prompt
+    const hasMultiModalInput = hasMultimodalContent(prompt);
 
-    // Handle response format for browser AI
+    // Convert messages to the DOM API format
+    const { systemMessage, messages } = convertToBuiltInAIMessages(prompt);
+
+    // Handle response format for Prompt API
     const promptOptions: any = {};
-    if (options.responseFormat?.type === "json") {
-      promptOptions.responseConstraint = options.responseFormat.schema;
+    if (responseFormat?.type === "json") {
+      promptOptions.responseConstraint = responseFormat.schema;
     }
 
     // Map supported settings
-    if (options.temperature !== undefined) {
-      promptOptions.temperature = options.temperature;
+    if (temperature !== undefined) {
+      promptOptions.temperature = temperature;
     }
 
-    if (options.topK !== undefined) {
-      promptOptions.topK = options.topK;
+    if (topK !== undefined) {
+      promptOptions.topK = topK;
     }
 
-    return { message, warnings, promptOptions };
-  }
-
-  get supportedUrls(): Record<string, RegExp[]> {
-    // Browser AI doesn't support any URLs natively
-    return {};
+    return {
+      systemMessage,
+      messages,
+      warnings,
+      promptOptions,
+      hasMultiModalInput,
+      expectedInputs: hasMultiModalInput
+        ? getExpectedInputs(prompt)
+        : undefined,
+    };
   }
 
   /**
    * Generates a complete text response using the browser's built-in Prompt API
    * @param options
    * @returns Promise resolving to the generated content with finish reason, usage stats, and any warnings
-   * @throws {LoadSettingError} When browser AI is not available or model needs to be downloaded
+   * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
   public async doGenerate(options: LanguageModelV2CallOptions) {
-    const session = await this.getSession();
-    const { message, warnings, promptOptions } = await this.getArgs(options);
+    const converted = this.getArgs(options);
+    const { systemMessage, messages, warnings, promptOptions, expectedInputs } =
+      converted;
 
-    const text = await session.prompt(message, promptOptions);
+    const session = await this.getSession(
+      undefined,
+      expectedInputs,
+      systemMessage,
+    );
+
+    const text = await session.prompt(messages, promptOptions);
 
     const content: LanguageModelV2Content[] = [
       {
@@ -238,7 +295,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
         outputTokens: undefined,
         totalTokens: undefined,
       },
-      request: { body: { message, options: promptOptions } },
+      request: { body: { messages, options: promptOptions } },
       warnings,
     };
   }
@@ -247,12 +304,25 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * Generates a streaming text response using the browser's built-in Prompt API
    * @param options
    * @returns Promise resolving to a readable stream of text chunks and request metadata
-   * @throws {LoadSettingError} When browser AI is not available or model needs to be downloaded
+   * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
   public async doStream(options: LanguageModelV2CallOptions) {
-    const session = await this.getSession();
-    const { message, warnings, promptOptions } = await this.getArgs(options);
+    const converted = this.getArgs(options);
+    const {
+      systemMessage,
+      messages,
+      warnings,
+      promptOptions,
+      expectedInputs,
+      hasMultiModalInput,
+    } = converted;
+
+    const session = await this.getSession(
+      undefined,
+      expectedInputs,
+      systemMessage,
+    );
 
     // Pass abort signal to the native streaming method
     const streamOptions = {
@@ -260,10 +330,10 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       signal: options.abortSignal,
     };
 
-    const promptStream = session.promptStreaming(message, streamOptions);
+    const promptStream = session.promptStreaming(messages, streamOptions);
 
     let isFirstChunk = true;
-    let textId = "text-0";
+    const textId = "text-0";
 
     const stream = promptStream.pipeThrough(
       new TransformStream<string, LanguageModelV2StreamPart>({
@@ -312,7 +382,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
             type: "finish",
             finishReason: "stop" as LanguageModelV2FinishReason,
             usage: {
-              inputTokens: undefined,
+              inputTokens: session.inputUsage,
               outputTokens: undefined,
               totalTokens: undefined,
             },
@@ -323,7 +393,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     return {
       stream,
-      request: { body: { message, options: promptOptions } },
+      request: { body: { messages, options: promptOptions } },
     };
   }
 }
