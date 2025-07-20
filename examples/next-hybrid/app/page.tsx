@@ -35,19 +35,36 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import { isBuiltInAIModelAvailable } from "@built-in-ai/core";
 import { DefaultChatTransport, UIMessage } from "ai";
 import { toast } from "sonner";
+import { BuiltInAIUIMessage } from "@built-in-ai/core";
 import Image from "next/image";
+import { Spinner } from "@/components/ui/spinner";
+import { Progress } from "@/components/ui/progress";
+import { AudioFileDisplay } from "@/components/audio-file-display";
 
 const isBuiltInAIAvailable = isBuiltInAIModelAvailable();
 
 export default function Chat() {
-  const { error, status, sendMessage, messages, regenerate, stop } = useChat({
+  const { error, status, sendMessage, messages, regenerate, stop } = useChat<BuiltInAIUIMessage>({
     transport: isBuiltInAIAvailable
       ? new ClientSideChatTransport()
       : new DefaultChatTransport<UIMessage>({
-          api: "/api/chat",
-        }),
+        api: "/api/chat",
+      }),
     onError(error) {
       toast.error(error.message);
+    },
+    onData(dataPart) {
+      // Handle transient notifications
+      // we can also access the date-modelDownloadProgress here
+      if (dataPart.type === 'data-notification') {
+        if (dataPart.data.level === 'error') {
+          toast.error(dataPart.data.message);
+        } else if (dataPart.data.level === 'warning') {
+          toast.warning(dataPart.data.message);
+        } else {
+          toast.info(dataPart.data.message);
+        }
+      }
     },
   });
 
@@ -139,53 +156,67 @@ export default function Chat() {
               key={m.id}
             >
               <AIMessageContent>
-                {m.parts.map((part, partIndex) => {
-                  if (part.type === "text") {
-                    return <AIResponse key={partIndex}>{part.text}</AIResponse>;
-                  }
+                {/* Handle download progress parts first */}
+                {m.parts
+                  .filter(part => part.type === "data-modelDownloadProgress")
+                  .map((part, partIndex) => {
+                    // Only show if message is not empty (hiding completed/cleared progress)
+                    if (!part.data.message) return null;
 
-                  if (
-                    part.type === "file" &&
-                    part.mediaType?.startsWith("image/")
-                  ) {
-                    return (
-                      <div key={partIndex} className="mt-2">
-                        <Image
-                          src={part.url}
-                          width={300}
-                          height={300}
-                          alt={part.filename || "Uploaded image"}
-                          className="object-contain max-w-sm rounded-lg border"
-                        />
-                      </div>
-                    );
-                  }
+                    // Don't show the entire div when actively streaming
+                    if (status === 'ready') return null;
 
-                  if (
-                    part.type === "file" &&
-                    part.mediaType?.startsWith("audio/")
-                  ) {
                     return (
-                      <div key={partIndex} className="mt-2">
-                        <audio
-                          src={part.url}
-                          className="max-w-sm rounded-lg border bg-gray-50 dark:bg-gray-800"
-                        >
-                          Your browser does not support the audio element.
-                        </audio>
-                        {part.filename && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            {part.filename}
-                          </p>
+                      <div key={partIndex}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="flex items-center gap-1">
+                            <Spinner className="size-4 " />
+                            {part.data.message}
+                          </span>
+                        </div>
+                        {part.data.status === 'downloading' && part.data.progress !== undefined && (
+                          <Progress value={part.data.progress} />
                         )}
                       </div>
                     );
-                  }
+                  })}
 
-                  // TODO: Handle other file types
-                  return null;
-                })}
+                {/* Handle file parts */}
+                {m.parts
+                  .filter(part => part.type === "file")
+                  .map((part, partIndex) => {
+                    if (part.mediaType?.startsWith("image/")) {
+                      return (
+                        <div key={partIndex} className="mt-2">
+                          <Image
+                            src={part.url}
+                            width={300}
+                            height={300}
+                            alt={part.filename || "Uploaded image"}
+                            className="object-contain max-w-sm rounded-lg border"
+                          />
+                        </div>
+                      );
+                    }
 
+                    if (part.mediaType?.startsWith("audio/")) {
+                      return (
+                        <AudioFileDisplay key={partIndex} fileName={part.filename!} fileUrl={part.url} />
+                      )
+                    }
+
+                    // TODO: Handle other file types
+                    return null
+                  })}
+
+                {/* Handle text parts */}
+                {m.parts
+                  .filter(part => part.type === "text")
+                  .map((part, partIndex) => (
+                    <AIResponse key={partIndex}>{part.text}</AIResponse>
+                  ))}
+
+                {/* Action buttons for assistant messages */}
                 {(m.role === "assistant" || m.role === "system") &&
                   index === messages.length - 1 &&
                   status === "ready" && (
@@ -222,7 +253,10 @@ export default function Chat() {
           {status === "submitted" && (
             <AIMessage from="assistant">
               <AIMessageContent>
-                <div className="text-gray-500">Thinking...</div>
+                <div className="flex gap-1 items-center text-gray-500">
+                  <Spinner className="size-4" />
+                  Thinking...
+                </div>
               </AIMessageContent>
               <AIMessageAvatar name="assistant" src="" />
             </AIMessage>
@@ -322,8 +356,7 @@ export default function Chat() {
                     <div className="flex text-sm flex-col">
                       <audio
                         src={URL.createObjectURL(file)}
-                        className="max-w-[100px] h-8"
-                        controls
+                        className="hidden"
                       >
                         Your browser does not support the audio element.
                       </audio>
