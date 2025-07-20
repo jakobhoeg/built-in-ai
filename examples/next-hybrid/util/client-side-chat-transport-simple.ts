@@ -11,7 +11,7 @@ import { builtInAI } from "@built-in-ai/core";
 
 // This class won't stream back data parts with the download progress if
 // the Prompt API model hasn't yet been downloaded
-export class ClientSideChatTransport implements ChatTransport<UIMessage> {
+export class SimpleClientSideChatTransport implements ChatTransport<UIMessage> {
   async sendMessages(
     options: {
       chatId: string;
