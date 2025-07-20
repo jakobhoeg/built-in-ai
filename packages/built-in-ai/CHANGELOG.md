@@ -1,5 +1,16 @@
 # @built-in-ai/core
 
+## 1.6.0
+
+### Minor Changes
+
+- 28c754f: feat: add download progress callback support
+
+### Patch Changes
+
+- c7e6626: docs: update readme
+- 842f818: fix: deprecate isBuiltInAIModelAvailable()
+
 ## 1.5.1
 
 ### Patch Changes
