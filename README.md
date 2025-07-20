@@ -40,11 +40,10 @@ The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge 
 
 2. Enable these experimental flags:
    - If you're using Chrome:
-     1. Go to chrome://flags/#prompt-api-for-gemini-nano and set it to Enabled
-     2. Go to chrome://flags/#optimization-guide-on-device-model and set it to Enabled BypassPrefRequirement
-     3. Go to chrome://components and click Check for Update on Optimization Guide On Device Model
+     1. Go to `chrome://flags/`, search for *'Prompt API for Gemini Nano with Multimodal Input'* and set it to Enabled
+     2. Go to `chrome://components` and click Check for Update on Optimization Guide On Device Model
    - If you're using Edge:
-     1. Go to edge://flags/#prompt-api-for-phi-mini and set it to Enabled
+     1. Go to `edge://flags/#prompt-api-for-phi-mini` and set it to Enabled
 
 For more information, check out [this guide](https://developer.chrome.com/docs/extensions/ai/prompt-api)
 
@@ -72,6 +71,7 @@ Look [here](/packages/built-in-ai/README.md) for more usage examples and API ref
 
 - [x] **Text generation** (`generateText()`)
 - [x] **Streaming responses** (`streamText()`)
+- [x] **Download progress streaming** - Real-time progress updates during model downloads
 - [x] **Multimodal functionality** (image and audio support)\*
 - [x] **Temperature control**
 - [x] **Response format constraints** (JSON)
