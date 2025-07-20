@@ -1,5 +1,28 @@
 # @built-in-ai/core
 
+## 1.6.0
+
+### Minor Changes
+
+- 28c754f: feat: add download progress callback support
+
+### Patch Changes
+
+- c7e6626: docs: update readme
+- 842f818: fix: deprecate isBuiltInAIModelAvailable()
+
+## 1.5.1
+
+### Patch Changes
+
+- 9cdf7d9: docs: update readme with correct npm icons
+
+## 1.5.0
+
+### Minor Changes
+
+- 29015ed: feat: add multimodal support
+
 ## 1.4.0
 
 ### Minor Changes

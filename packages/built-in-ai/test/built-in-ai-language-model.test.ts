@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { BuiltInAIChatLanguageModel } from "../src/built-in-ai-language-model";
+import {
+  BuiltInAIChatLanguageModel,
+  BuiltInAIChatSettings,
+} from "../src/built-in-ai-language-model";
 
 import { generateText, streamText, generateObject, streamObject } from "ai";
 import { LoadSettingError } from "@ai-sdk/provider";
@@ -21,12 +24,11 @@ describe("BuiltInAIChatLanguageModel", () => {
       prompt: mockPrompt,
       promptStreaming: mockPromptStreaming,
     };
-
     // Mock the global LanguageModel API
-    (global as any).LanguageModel = {
+    vi.stubGlobal("LanguageModel", {
       availability: vi.fn().mockResolvedValue("available"),
       create: vi.fn().mockResolvedValue(mockSession),
-    } as any;
+    });
   });
 
   afterEach(() => {
@@ -40,9 +42,8 @@ describe("BuiltInAIChatLanguageModel", () => {
     expect(model.provider).toBe("browser-ai");
     expect(model.specificationVersion).toBe("v2");
   });
-
   it("should throw when LanguageModel is not available", async () => {
-    (global as any).LanguageModel = undefined;
+    vi.stubGlobal("LanguageModel", undefined);
 
     await expect(() =>
       generateText({
@@ -51,11 +52,10 @@ describe("BuiltInAIChatLanguageModel", () => {
       }),
     ).rejects.toThrow(LoadSettingError);
   });
-
   it("should throw when model is unavailable", async () => {
-    (global as any).LanguageModel = {
+    vi.stubGlobal("LanguageModel", {
       availability: vi.fn().mockResolvedValue("unavailable"),
-    };
+    });
 
     await expect(() =>
       generateText({
@@ -74,7 +74,15 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(result.text).toBe("Hello, world!");
-    expect(mockPrompt).toHaveBeenCalledWith("user\nSay hello\nmodel\n", {});
+    expect(mockPrompt).toHaveBeenCalledWith(
+      [
+        {
+          role: "user",
+          content: [{ type: "text", value: "Say hello" }],
+        },
+      ],
+      {},
+    );
   });
 
   it("should handle system messages", async () => {
@@ -90,7 +98,12 @@ describe("BuiltInAIChatLanguageModel", () => {
 
     expect(result.text).toBe("I am a helpful assistant.");
     expect(mockPrompt).toHaveBeenCalledWith(
-      "You are a helpful assistant.\nuser\nWho are you?\nmodel\n",
+      [
+        {
+          role: "user",
+          content: [{ type: "text", value: "Who are you?" }],
+        },
+      ],
       {},
     );
   });
@@ -109,7 +122,20 @@ describe("BuiltInAIChatLanguageModel", () => {
 
     expect(result.text).toBe("I can help you with that!");
     expect(mockPrompt).toHaveBeenCalledWith(
-      "user\nCan you help me?\nmodel\nOf course! What do you need?\nuser\nI need assistance with coding.\nmodel\n",
+      [
+        {
+          role: "user",
+          content: [{ type: "text", value: "Can you help me?" }],
+        },
+        {
+          role: "assistant",
+          content: "Of course! What do you need?",
+        },
+        {
+          role: "user",
+          content: [{ type: "text", value: "I need assistance with coding." }],
+        },
+      ],
       {},
     );
   });
@@ -138,8 +164,15 @@ describe("BuiltInAIChatLanguageModel", () => {
 
     expect(text).toBe("Hello, world!");
     expect(mockPromptStreaming).toHaveBeenCalledWith(
-      "user\nSay hello\nmodel\n",
-      {},
+      [
+        {
+          role: "user",
+          content: [{ type: "text", value: "Say hello" }],
+        },
+      ],
+      {
+        signal: undefined,
+      },
     );
   });
 
@@ -159,18 +192,26 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(object).toEqual({ name: "John", age: 30 });
-    expect(mockPrompt).toHaveBeenCalledWith("user\nCreate a person\nmodel\n", {
-      responseConstraint: {
-        $schema: "http://json-schema.org/draft-07/schema#",
-        additionalProperties: false,
-        properties: {
-          age: { type: "number" },
-          name: { type: "string" },
+    expect(mockPrompt).toHaveBeenCalledWith(
+      [
+        {
+          role: "user",
+          content: [{ type: "text", value: "Create a person" }],
         },
-        required: ["name", "age"],
-        type: "object",
+      ],
+      {
+        responseConstraint: {
+          $schema: "http://json-schema.org/draft-07/schema#",
+          additionalProperties: false,
+          properties: {
+            age: { type: "number" },
+            name: { type: "string" },
+          },
+          required: ["name", "age"],
+          type: "object",
+        },
       },
-    });
+    );
   });
 
   it("should handle object generation mode", async () => {
@@ -188,20 +229,28 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(object).toEqual({ users: ["Alice", "Bob"] });
-    expect(mockPrompt).toHaveBeenCalledWith("user\nList some users\nmodel\n", {
-      responseConstraint: {
-        $schema: "http://json-schema.org/draft-07/schema#",
-        additionalProperties: false,
-        properties: {
-          users: {
-            items: { type: "string" },
-            type: "array",
-          },
+    expect(mockPrompt).toHaveBeenCalledWith(
+      [
+        {
+          role: "user",
+          content: [{ type: "text", value: "List some users" }],
         },
-        required: ["users"],
-        type: "object",
+      ],
+      {
+        responseConstraint: {
+          $schema: "http://json-schema.org/draft-07/schema#",
+          additionalProperties: false,
+          properties: {
+            users: {
+              items: { type: "string" },
+              type: "array",
+            },
+          },
+          required: ["users"],
+          type: "object",
+        },
       },
-    });
+    );
   });
 
   it("should handle complex JSON schemas", async () => {
@@ -255,6 +304,264 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(result.text).toBe("Response");
-    expect(mockPrompt).toHaveBeenCalledWith("model\n", {});
+    expect(mockPrompt).toHaveBeenCalledWith(
+      [
+        {
+          role: "user",
+          content: [],
+        },
+      ],
+      {},
+    );
+  });
+
+  describe("multimodal support", () => {
+    beforeEach(() => {
+      // Mock LanguageModel.create to capture the options passed to it
+      LanguageModel.create = vi.fn().mockResolvedValue(mockSession);
+    });
+
+    it("should handle image files in messages", async () => {
+      mockPrompt.mockResolvedValue("I can see an image.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What's in this image?" },
+              {
+                type: "file",
+                mediaType: "image/png",
+                data: "SGVsbG8gV29ybGQ=", // "Hello World" in base64
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can see an image.");
+
+      // Verify that the session was created with expected inputs for image
+      expect(LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: [{ type: "image" }],
+        }),
+      );
+    });
+
+    it("should handle audio files in messages", async () => {
+      mockPrompt.mockResolvedValue("I can hear the audio.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What's in this audio?" },
+              {
+                type: "file",
+                mediaType: "audio/wav",
+                data: new Uint8Array([82, 73, 70, 70]), // "RIFF" header
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can hear the audio.");
+
+      // Verify that the session was created with expected inputs for audio
+      expect(LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: [{ type: "audio" }],
+        }),
+      );
+    });
+
+    it("should handle both image and audio content", async () => {
+      mockPrompt.mockResolvedValue("I can see and hear the content.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Analyze this:" },
+              {
+                type: "file",
+                mediaType: "image/jpeg",
+                data: "SGVsbG8=", // "Hello" in base64
+              },
+              { type: "text", text: "And this:" },
+              {
+                type: "file",
+                mediaType: "audio/mp3",
+                data: new Uint8Array([1, 2, 3]),
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can see and hear the content.");
+
+      // Verify that the session was created with expected inputs for both image and audio
+      expect(LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: expect.arrayContaining([
+            { type: "image" },
+            { type: "audio" },
+          ]),
+        }),
+      );
+    });
+
+    it("should handle URL-based image data", async () => {
+      mockPrompt.mockResolvedValue("I can see the image from the URL.");
+
+      const result = await generateText({
+        model: new BuiltInAIChatLanguageModel("text"),
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "file",
+                mediaType: "image/png",
+                data: new URL("https://example.com/image.png"),
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.text).toBe("I can see the image from the URL.");
+
+      // Verify that the session was created with expected inputs for image
+      expect(LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+          expectedInputs: [{ type: "image" }],
+        }),
+      );
+    });
+  });
+
+  describe("createSessionWithProgress", () => {
+    let mockEventTarget: {
+      addEventListener: ReturnType<typeof vi.fn>;
+      removeEventListener: ReturnType<typeof vi.fn>;
+      dispatchEvent: ReturnType<typeof vi.fn>;
+      ondownloadprogress: null;
+    };
+
+    beforeEach(() => {
+      // Create a mock CreateMonitor that matches the DOM API
+      mockEventTarget = {
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+        ondownloadprogress: null,
+      };
+
+      // Mock LanguageModel.create to capture monitor option and simulate its usage
+      LanguageModel.create = vi.fn((options: LanguageModelCreateOptions) => {
+        // If a monitor option is provided, call it to set up event listeners
+        if (options.monitor) {
+          options.monitor(mockEventTarget as CreateMonitor);
+        }
+        return Promise.resolve(mockSession);
+      });
+    });
+
+    it("should create a session without progress callback", async () => {
+      const model = new BuiltInAIChatLanguageModel("text");
+      const session = await model.createSessionWithProgress();
+
+      expect(session).toBe(mockSession);
+      expect(LanguageModel.create).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          monitor: expect.any(Function),
+        }),
+      );
+    });
+
+    it("should create a session with progress callback and forward progress events", async () => {
+      const model = new BuiltInAIChatLanguageModel("text");
+      const progressCallback = vi.fn();
+
+      // Mock LanguageModel.create to simulate progress events
+      LanguageModel.create = vi.fn((options: LanguageModelCreateOptions) => {
+        if (options.monitor) {
+          options.monitor(mockEventTarget as CreateMonitor);
+
+          // Simulate the addEventListener call and trigger progress events
+          const addEventListenerCall =
+            mockEventTarget.addEventListener.mock.calls.find(
+              (call) => call[0] === "downloadprogress",
+            );
+
+          if (addEventListenerCall) {
+            const progressHandler = addEventListenerCall[1];
+
+            // Simulate progress events
+            setTimeout(() => {
+              progressHandler({ loaded: 0.0 });
+              progressHandler({ loaded: 0.5 });
+              progressHandler({ loaded: 1.0 });
+            }, 0);
+          }
+        }
+        return Promise.resolve(mockSession);
+      });
+
+      const session = await model.createSessionWithProgress(progressCallback);
+
+      expect(session).toBe(mockSession);
+      expect(LanguageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          monitor: expect.any(Function),
+        }),
+      );
+      expect(mockEventTarget.addEventListener).toHaveBeenCalledWith(
+        "downloadprogress",
+        expect.any(Function),
+      );
+
+      // Wait for the setTimeout to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(progressCallback).toHaveBeenCalledTimes(3);
+      expect(progressCallback).toHaveBeenNthCalledWith(1, 0.0);
+      expect(progressCallback).toHaveBeenNthCalledWith(2, 0.5);
+      expect(progressCallback).toHaveBeenNthCalledWith(3, 1.0);
+    });
+
+    it("should reuse existing session on subsequent calls", async () => {
+      const model = new BuiltInAIChatLanguageModel("text");
+
+      // First call should create a new session
+      const session1 = await model.createSessionWithProgress();
+      expect(session1).toBe(mockSession);
+      expect(LanguageModel.create).toHaveBeenCalledTimes(1);
+
+      // Second call should reuse the existing session
+      const session2 = await model.createSessionWithProgress();
+      expect(session2).toBe(mockSession);
+      expect(session1).toBe(session2);
+      expect(LanguageModel.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("should throw LoadSettingError when LanguageModel is unavailable", async () => {
+      vi.stubGlobal("LanguageModel", undefined);
+      const model = new BuiltInAIChatLanguageModel("text");
+
+      await expect(model.createSessionWithProgress()).rejects.toThrow(
+        LoadSettingError,
+      );
+    });
   });
 });
