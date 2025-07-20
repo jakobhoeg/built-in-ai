@@ -4,11 +4,9 @@ import {
   LanguageModelV2CallWarning,
   LanguageModelV2Content,
   LanguageModelV2FinishReason,
-  LanguageModelV2Message,
   LanguageModelV2Prompt,
   LanguageModelV2StreamPart,
   LoadSettingError,
-  UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 
