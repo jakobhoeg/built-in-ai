@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { isBuiltInAIModelAvailable } from "@built-in-ai/core";
+import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
 import { DefaultChatTransport, UIMessage } from "ai";
 import { toast } from "sonner";
 import { BuiltInAIUIMessage } from "@built-in-ai/core";
@@ -41,11 +41,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 
-const isBuiltInAIAvailable = isBuiltInAIModelAvailable();
+const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
 
 export default function Chat() {
   const { error, status, sendMessage, messages, regenerate, stop } = useChat<BuiltInAIUIMessage>({
-    transport: isBuiltInAIAvailable
+    transport: doesBrowserSupportModel
       ? new ClientSideChatTransport()
       : new DefaultChatTransport<UIMessage>({
         api: "/api/chat",
@@ -75,7 +75,7 @@ export default function Chat() {
   // For showcase purposes: show if built-in ai model is supported once page loads
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (isBuiltInAIAvailable) {
+      if (doesBrowserSupportModel) {
         toast.success("Using the built-in AI model", {
           description:
             "Your conversations will be processed locally in your browser",
@@ -91,7 +91,7 @@ export default function Chat() {
     }, 50);
 
     return () => clearTimeout(timeoutId);
-  }, [isBuiltInAIAvailable]);
+  }, [doesBrowserSupportModel]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
