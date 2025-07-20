@@ -24,12 +24,11 @@ describe("BuiltInAIChatLanguageModel", () => {
       prompt: mockPrompt,
       promptStreaming: mockPromptStreaming,
     };
-
     // Mock the global LanguageModel API
-    (global as any).LanguageModel = {
+    vi.stubGlobal('LanguageModel', {
       availability: vi.fn().mockResolvedValue("available"),
       create: vi.fn().mockResolvedValue(mockSession),
-    } as any;
+    });
   });
 
   afterEach(() => {
@@ -43,9 +42,8 @@ describe("BuiltInAIChatLanguageModel", () => {
     expect(model.provider).toBe("browser-ai");
     expect(model.specificationVersion).toBe("v2");
   });
-
   it("should throw when LanguageModel is not available", async () => {
-    (global as any).LanguageModel = undefined;
+    vi.stubGlobal('LanguageModel', undefined);
 
     await expect(() =>
       generateText({
@@ -54,11 +52,10 @@ describe("BuiltInAIChatLanguageModel", () => {
       }),
     ).rejects.toThrow(LoadSettingError);
   });
-
   it("should throw when model is unavailable", async () => {
-    (global as any).LanguageModel = {
+    vi.stubGlobal('LanguageModel', {
       availability: vi.fn().mockResolvedValue("unavailable"),
-    };
+    });
 
     await expect(() =>
       generateText({
@@ -321,7 +318,7 @@ describe("BuiltInAIChatLanguageModel", () => {
   describe("multimodal support", () => {
     beforeEach(() => {
       // Mock LanguageModel.create to capture the options passed to it
-      (global as any).LanguageModel.create = vi
+      LanguageModel.create = vi
         .fn()
         .mockResolvedValue(mockSession);
     });
@@ -349,7 +346,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       expect(result.text).toBe("I can see an image.");
 
       // Verify that the session was created with expected inputs for image
-      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+      expect(LanguageModel.create).toHaveBeenCalledWith(
         expect.objectContaining<Partial<BuiltInAIChatSettings>>({
           expectedInputs: [{ type: "image" }],
         }),
@@ -379,7 +376,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       expect(result.text).toBe("I can hear the audio.");
 
       // Verify that the session was created with expected inputs for audio
-      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+      expect(LanguageModel.create).toHaveBeenCalledWith(
         expect.objectContaining<Partial<BuiltInAIChatSettings>>({
           expectedInputs: [{ type: "audio" }],
         }),
@@ -415,7 +412,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       expect(result.text).toBe("I can see and hear the content.");
 
       // Verify that the session was created with expected inputs for both image and audio
-      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+      expect(LanguageModel.create).toHaveBeenCalledWith(
         expect.objectContaining<Partial<BuiltInAIChatSettings>>({
           expectedInputs: expect.arrayContaining([
             { type: "image" },
@@ -447,7 +444,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       expect(result.text).toBe("I can see the image from the URL.");
 
       // Verify that the session was created with expected inputs for image
-      expect((global as any).LanguageModel.create).toHaveBeenCalledWith(
+      expect(LanguageModel.create).toHaveBeenCalledWith(
         expect.objectContaining<Partial<BuiltInAIChatSettings>>({
           expectedInputs: [{ type: "image" }],
         }),
