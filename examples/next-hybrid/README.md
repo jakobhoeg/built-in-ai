@@ -1,6 +1,16 @@
-# AI SDK, Next.js, and OpenAI Chat Example
+# Built-in AI Next.js Hybrid Chat Example
 
-This example shows how to use the [AI SDK](https://ai-sdk.dev/docs) with [Next.js](https://nextjs.org/) and [OpenAI](https://openai.com) to create a ChatGPT-like AI-powered streaming chat bot.
+This example demonstrates how to create a hybrid AI chat application that intelligently switches between browser-based AI (Chrome/Edge Prompt API) and server-side AI models. The app includes download progress streaming from the browser AI model, multimodal file support, and graceful fallback when browser AI model is unavailable.
+
+## Features Demonstrated
+
+- ✅ **Hybrid AI Architecture** - Automatic fallback from browser AI to server-side AI
+- ✅ **Download Progress Streaming** - Real-time progress bars during model downloads
+- ✅ **Multimodal Support** - Image and audio file upload and processing
+- ✅ **Type-Safe Streaming** - Custom data parts with TypeScript support
+- ✅ **Modern UI** - Beautiful, responsive interface with dark/light mode
+- ✅ **Error Handling** - Graceful error states and retry mechanisms
+- ✅ **Transient Notifications** - Toast notifications for status updates
 
 ## Deploy your own
 
@@ -13,31 +23,24 @@ Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_mediu
 Execute [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [npm](https://docs.npmjs.com/cli/init), [Yarn](https://yarnpkg.com/lang/en/docs/cli/create/), or [pnpm](https://pnpm.io) to bootstrap the example:
 
 ```bash
-npx create-next-app --example https://github.com/vercel/ai/tree/main/examples/next-openai next-openai-app
+npx create-next-app --example https://github.com/jakobhoeg/built-in-ai/tree/main/examples/next-hybrid next-built-in-ai-hybrid
 ```
 
 ```bash
-yarn create next-app --example https://github.com/vercel/ai/tree/main/examples/next-openai next-openai-app
+yarn create next-app --example https://github.com/jakobhoeg/built-in-ai/tree/main/examples/next-hybrid next-built-in-ai-hybrid
 ```
 
 ```bash
-pnpm create next-app --example https://github.com/vercel/ai/tree/main/examples/next-openai next-openai-app
+pnpm create next-app --example https://github.com/jakobhoeg/built-in-ai/tree/main/examples/next-hybrid next-built-in-ai-hybrid
 ```
-
-To run the example locally you need to:
-
-1. Sign up at [OpenAI's Developer Platform](https://platform.openai.com/signup).
-2. Go to [OpenAI's dashboard](https://platform.openai.com/account/api-keys) and create an API KEY.
-3. If you choose to use external files for attachments, then create a [Vercel Blob Store](https://vercel.com/docs/storage/vercel-blob).
-4. Set the required environment variable as the token value as shown [the example env file](./.env.local.example) but in a new file called `.env.local`
-5. `pnpm install` to install the required dependencies.
-6. `pnpm dev` to launch the development server.
 
 ## Learn More
 
-To learn more about OpenAI, Next.js, and the AI SDK take a look at the following resources:
+To learn more about built-in AI, browser capabilities, and the AI SDK:
 
-- [AI SDK docs](https://ai-sdk.dev/docs)
-- [Vercel AI Playground](https://ai-sdk.dev/playground)
-- [OpenAI Documentation](https://platform.openai.com/docs) - learn about OpenAI features and API.
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Built-in AI Package Documentation](../../packages/built-in-ai/README.md) - Complete API reference and examples
+- [AI SDK docs](https://ai-sdk.dev/docs) - Vercel AI SDK documentation
+- [Chrome Prompt API Guide](https://developer.chrome.com/docs/extensions/ai/prompt-api) - Browser AI capabilities
+- [AI SDK v5 Custom Transport](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) - Custom transport implementation
+- [Streaming Custom Data](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-custom-data) - Data streaming patterns
+- [Next.js Documentation](https://nextjs.org/docs) - Next.js features and API

@@ -7,7 +7,6 @@ import {
   LanguageModelV2Prompt,
   LanguageModelV2StreamPart,
   LoadSettingError,
-  UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 
@@ -24,7 +23,16 @@ export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
 }
 
 /**
+ * Check if the browser supports the built-in AI API
+ * @returns true if the browser supports the built-in AI API, false otherwise
+ */
+export function doesBrowserSupportBuiltInAI(): boolean {
+  return typeof LanguageModel !== "undefined";
+}
+
+/**
  * Check if the Prompt API is available
+ * @deprecated Use `doesBrowserSupportBuiltInAI()` instead for clearer naming
  * @returns true if the browser supports the built-in AI API, false otherwise
  */
 export function isBuiltInAIModelAvailable(): boolean {
@@ -110,6 +118,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     options?: LanguageModelCreateOptions,
     expectedInputs?: Array<{ type: "text" | "image" | "audio" }>,
     systemMessage?: string,
+    onDownloadProgress?: (progress: number) => void,
   ): Promise<LanguageModel> {
     if (typeof LanguageModel === "undefined") {
       throw new LoadSettingError({
@@ -124,13 +133,6 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     if (availability === "unavailable") {
       throw new LoadSettingError({ message: "Built-in model not available" });
-    }
-
-    if (availability === "downloadable" || availability === "downloading") {
-      // TODO: We need to handle downloading the model and show it as loading + send back status and progress
-      throw new LoadSettingError({
-        message: "Built-in model needs to be downloaded first",
-      });
     }
 
     const mergedOptions = {
@@ -148,6 +150,15 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     // Add expected inputs if provided
     if (expectedInputs && expectedInputs.length > 0) {
       mergedOptions.expectedInputs = expectedInputs;
+    }
+
+    // Add download progress monitoring if callback provided
+    if (onDownloadProgress) {
+      mergedOptions.monitor = (m: any) => {
+        m.addEventListener("downloadprogress", (e: ProgressEvent) => {
+          onDownloadProgress(e.loaded); // e.loaded is between 0 and 1
+        });
+      };
     }
 
     this.session = await LanguageModel.create(mergedOptions);
@@ -298,6 +309,39 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       request: { body: { messages, options: promptOptions } },
       warnings,
     };
+  }
+
+  /**
+   * Check the availability of the built-in AI model
+   * @returns Promise resolving to "unavailable", "available", or "available-after-download"
+   */
+  public async availability(): Promise<Availability> {
+    if (typeof LanguageModel === "undefined") {
+      return "unavailable";
+    }
+    return LanguageModel.availability();
+  }
+
+  /**
+   * Creates a session with download progress monitoring.
+   *
+   * @example
+   * ```typescript
+   * const session = await model.createSessionWithProgress(
+   *   (progress) => {
+   *     console.log(`Download progress: ${Math.round(progress * 100)}%`);
+   *   }
+   * );
+   * ```
+   *
+   * @param onDownloadProgress Optional callback receiving progress values 0-1 during model download
+   * @returns Promise resolving to a configured LanguageModel session
+   * @throws {LoadSettingError} When the Prompt API is not available or model is unavailable
+   */
+  public async createSessionWithProgress(
+    onDownloadProgress?: (progress: number) => void,
+  ): Promise<LanguageModel> {
+    return this.getSession(undefined, undefined, undefined, onDownloadProgress);
   }
 
   /**
