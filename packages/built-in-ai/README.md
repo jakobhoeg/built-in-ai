@@ -40,7 +40,7 @@ The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge 
 
 2. Enable these experimental flags:
    - If you're using Chrome:
-     1. Go to `chrome://flags/`, search for *'Prompt API for Gemini Nano with Multimodal Input'* and set it to Enabled
+     1. Go to `chrome://flags/`, search for _'Prompt API for Gemini Nano with Multimodal Input'_ and set it to Enabled
      2. Go to `chrome://components` and click Check for Update on Optimization Guide On Device Model
    - If you're using Edge:
      1. Go to `edge://flags/#prompt-api-for-phi-mini` and set it to Enabled
@@ -55,7 +55,8 @@ For more information, check out [this guide](https://developer.chrome.com/docs/e
 import { streamText } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 
-const result = streamText({ // or generateText
+const result = streamText({
+  // or generateText
   model: builtInAI(),
   messages: [{ role: "user", content: "Hello, how are you?" }],
 });
@@ -81,7 +82,7 @@ console.log(result.embedding); // [0.1, 0.2, 0.3, ...]
 
 ## Download Progress Tracking
 
-When using the built-in AI models in Chrome & Edge for the first time, the model needs to be downloaded first. 
+When using the built-in AI models in Chrome & Edge for the first time, the model needs to be downloaded first.
 
 You'll want to show download progress in your applications to improve UX.
 
@@ -119,6 +120,7 @@ When using this library with the `useChat` hook, you'll need to create a [custom
 See the complete working example: **[`/examples/next-hybrid/util/client-side-chat-transport.ts`](/examples/next-hybrid/util/client-side-chat-transport.ts)** and the **[`/examples/next-hybrid/app/page.tsx`](/examples/next-hybrid/app/page.tsx)** components.
 
 This example includes:
+
 - Download progress with UI progress bar and status message updates
 - Hybrid client/server architecture with fallback
 - Error handling and notifications
@@ -143,7 +145,7 @@ const result = streamText({
       ],
     },
     {
-      role: "user", 
+      role: "user",
       content: [{ type: "file", mediaType: "audio/mp3", data: audioData }],
     },
   ],
@@ -189,6 +191,7 @@ Quick check if the browser supports the built-in AI API. Useful for component-le
 **Returns:** `boolean` - `true` if browser supports the Prompt API, `false` otherwise
 
 **Example:**
+
 ```typescript
 import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
 
@@ -204,21 +207,26 @@ if (doesBrowserSupportBuiltInAI()) {
 Extended UI message type for use with the `useChat` hook that includes custom data parts for built-in AI functionality.
 
 **Type Definition:**
+
 ```typescript
-type BuiltInAIUIMessage = UIMessage<never, {
-  modelDownloadProgress: {
-    status: 'downloading' | 'complete' | 'error';
-    progress?: number;
-    message: string;
-  };
-  notification: {
-    message: string;
-    level: 'info' | 'warning' | 'error';
-  };
-}>
+type BuiltInAIUIMessage = UIMessage<
+  never,
+  {
+    modelDownloadProgress: {
+      status: "downloading" | "complete" | "error";
+      progress?: number;
+      message: string;
+    };
+    notification: {
+      message: string;
+      level: "info" | "warning" | "error";
+    };
+  }
+>;
 ```
 
 **Data Parts:**
+
 - `modelDownloadProgress` - Tracks browser AI model download status and progress
 - `notification` - Displays temporary messages and alerts to users
 
@@ -227,11 +235,13 @@ type BuiltInAIUIMessage = UIMessage<never, {
 Creates a language model session with optional download progress monitoring.
 
 **Parameters:**
+
 - `onDownloadProgress?: (progress: number) => void` - Optional callback that receives progress values from 0 to 1 during model download
 
 **Returns:** `Promise<LanguageModel>` - The configured language model session
 
 **Example:**
+
 ```typescript
 const model = builtInAI();
 await model.createSessionWithProgress((progress) => {

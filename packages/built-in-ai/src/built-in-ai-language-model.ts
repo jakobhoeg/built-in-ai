@@ -324,7 +324,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
   /**
    * Creates a session with download progress monitoring.
-   * 
+   *
    * @example
    * ```typescript
    * const session = await model.createSessionWithProgress(
@@ -333,7 +333,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    *   }
    * );
    * ```
-   * 
+   *
    * @param onDownloadProgress Optional callback receiving progress values 0-1 during model download
    * @returns Promise resolving to a configured LanguageModel session
    * @throws {LoadSettingError} When the Prompt API is not available or model is unavailable

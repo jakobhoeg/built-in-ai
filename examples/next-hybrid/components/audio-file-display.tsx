@@ -1,9 +1,9 @@
-import { Volume2 } from "lucide-react"
-import { Url } from "url"
+import { Volume2 } from "lucide-react";
+import { Url } from "url";
 
 interface AudioFileDisplayProps {
-  fileUrl: string,
-  fileName: string,
+  fileUrl: string;
+  fileName: string;
 }
 
 export function AudioFileDisplay({ fileUrl, fileName }: AudioFileDisplayProps) {
@@ -21,5 +21,5 @@ export function AudioFileDisplay({ fileUrl, fileName }: AudioFileDisplayProps) {
         {fileName}
       </span>
     </div>
-  )
+  );
 }

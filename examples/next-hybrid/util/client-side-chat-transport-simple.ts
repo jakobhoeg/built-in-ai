@@ -5,7 +5,6 @@ import {
   streamText,
   convertToModelMessages,
   ChatRequestOptions,
-
 } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 
@@ -19,9 +18,9 @@ export class SimpleClientSideChatTransport implements ChatTransport<UIMessage> {
       abortSignal: AbortSignal | undefined;
     } & {
       trigger:
-      | "submit-user-message"
-      | "submit-tool-result"
-      | "regenerate-assistant-message";
+        | "submit-user-message"
+        | "submit-tool-result"
+        | "regenerate-assistant-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {

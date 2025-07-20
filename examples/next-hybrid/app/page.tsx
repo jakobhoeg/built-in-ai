@@ -44,29 +44,30 @@ import { AudioFileDisplay } from "@/components/audio-file-display";
 const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
 
 export default function Chat() {
-  const { error, status, sendMessage, messages, regenerate, stop } = useChat<BuiltInAIUIMessage>({
-    transport: doesBrowserSupportModel
-      ? new ClientSideChatTransport()
-      : new DefaultChatTransport<UIMessage>({
-        api: "/api/chat",
-      }),
-    onError(error) {
-      toast.error(error.message);
-    },
-    onData(dataPart) {
-      // Handle transient notifications
-      // we can also access the date-modelDownloadProgress here
-      if (dataPart.type === 'data-notification') {
-        if (dataPart.data.level === 'error') {
-          toast.error(dataPart.data.message);
-        } else if (dataPart.data.level === 'warning') {
-          toast.warning(dataPart.data.message);
-        } else {
-          toast.info(dataPart.data.message);
+  const { error, status, sendMessage, messages, regenerate, stop } =
+    useChat<BuiltInAIUIMessage>({
+      transport: doesBrowserSupportModel
+        ? new ClientSideChatTransport()
+        : new DefaultChatTransport<UIMessage>({
+            api: "/api/chat",
+          }),
+      onError(error) {
+        toast.error(error.message);
+      },
+      onData(dataPart) {
+        // Handle transient notifications
+        // we can also access the date-modelDownloadProgress here
+        if (dataPart.type === "data-notification") {
+          if (dataPart.data.level === "error") {
+            toast.error(dataPart.data.message);
+          } else if (dataPart.data.level === "warning") {
+            toast.warning(dataPart.data.message);
+          } else {
+            toast.info(dataPart.data.message);
+          }
         }
-      }
-    },
-  });
+      },
+    });
 
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<FileList | undefined>(undefined);
@@ -158,13 +159,13 @@ export default function Chat() {
               <AIMessageContent>
                 {/* Handle download progress parts first */}
                 {m.parts
-                  .filter(part => part.type === "data-modelDownloadProgress")
+                  .filter((part) => part.type === "data-modelDownloadProgress")
                   .map((part, partIndex) => {
                     // Only show if message is not empty (hiding completed/cleared progress)
                     if (!part.data.message) return null;
 
                     // Don't show the entire div when actively streaming
-                    if (status === 'ready') return null;
+                    if (status === "ready") return null;
 
                     return (
                       <div key={partIndex}>
@@ -174,16 +175,17 @@ export default function Chat() {
                             {part.data.message}
                           </span>
                         </div>
-                        {part.data.status === 'downloading' && part.data.progress !== undefined && (
-                          <Progress value={part.data.progress} />
-                        )}
+                        {part.data.status === "downloading" &&
+                          part.data.progress !== undefined && (
+                            <Progress value={part.data.progress} />
+                          )}
                       </div>
                     );
                   })}
 
                 {/* Handle file parts */}
                 {m.parts
-                  .filter(part => part.type === "file")
+                  .filter((part) => part.type === "file")
                   .map((part, partIndex) => {
                     if (part.mediaType?.startsWith("image/")) {
                       return (
@@ -201,17 +203,21 @@ export default function Chat() {
 
                     if (part.mediaType?.startsWith("audio/")) {
                       return (
-                        <AudioFileDisplay key={partIndex} fileName={part.filename!} fileUrl={part.url} />
-                      )
+                        <AudioFileDisplay
+                          key={partIndex}
+                          fileName={part.filename!}
+                          fileUrl={part.url}
+                        />
+                      );
                     }
 
                     // TODO: Handle other file types
-                    return null
+                    return null;
                   })}
 
                 {/* Handle text parts */}
                 {m.parts
-                  .filter(part => part.type === "text")
+                  .filter((part) => part.type === "text")
                   .map((part, partIndex) => (
                     <AIResponse key={partIndex}>{part.text}</AIResponse>
                   ))}
@@ -354,10 +360,7 @@ export default function Chat() {
                     </div>
                   ) : file.type.startsWith("audio/") ? (
                     <div className="flex text-sm flex-col">
-                      <audio
-                        src={URL.createObjectURL(file)}
-                        className="hidden"
-                      >
+                      <audio src={URL.createObjectURL(file)} className="hidden">
                         Your browser does not support the audio element.
                       </audio>
                       <span className="text-xs text-gray-500 truncate max-w-[100px]">

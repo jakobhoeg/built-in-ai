@@ -25,7 +25,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       promptStreaming: mockPromptStreaming,
     };
     // Mock the global LanguageModel API
-    vi.stubGlobal('LanguageModel', {
+    vi.stubGlobal("LanguageModel", {
       availability: vi.fn().mockResolvedValue("available"),
       create: vi.fn().mockResolvedValue(mockSession),
     });
@@ -43,7 +43,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     expect(model.specificationVersion).toBe("v2");
   });
   it("should throw when LanguageModel is not available", async () => {
-    vi.stubGlobal('LanguageModel', undefined);
+    vi.stubGlobal("LanguageModel", undefined);
 
     await expect(() =>
       generateText({
@@ -53,7 +53,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     ).rejects.toThrow(LoadSettingError);
   });
   it("should throw when model is unavailable", async () => {
-    vi.stubGlobal('LanguageModel', {
+    vi.stubGlobal("LanguageModel", {
       availability: vi.fn().mockResolvedValue("unavailable"),
     });
 
@@ -318,9 +318,7 @@ describe("BuiltInAIChatLanguageModel", () => {
   describe("multimodal support", () => {
     beforeEach(() => {
       // Mock LanguageModel.create to capture the options passed to it
-      LanguageModel.create = vi
-        .fn()
-        .mockResolvedValue(mockSession);
+      LanguageModel.create = vi.fn().mockResolvedValue(mockSession);
     });
 
     it("should handle image files in messages", async () => {
@@ -501,9 +499,10 @@ describe("BuiltInAIChatLanguageModel", () => {
           options.monitor(mockEventTarget as CreateMonitor);
 
           // Simulate the addEventListener call and trigger progress events
-          const addEventListenerCall = mockEventTarget.addEventListener.mock.calls.find(
-            (call) => call[0] === "downloadprogress"
-          );
+          const addEventListenerCall =
+            mockEventTarget.addEventListener.mock.calls.find(
+              (call) => call[0] === "downloadprogress",
+            );
 
           if (addEventListenerCall) {
             const progressHandler = addEventListenerCall[1];
@@ -533,7 +532,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       );
 
       // Wait for the setTimeout to complete
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(progressCallback).toHaveBeenCalledTimes(3);
       expect(progressCallback).toHaveBeenNthCalledWith(1, 0.0);
@@ -557,12 +556,12 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     it("should throw LoadSettingError when LanguageModel is unavailable", async () => {
-      vi.stubGlobal('LanguageModel', undefined);
+      vi.stubGlobal("LanguageModel", undefined);
       const model = new BuiltInAIChatLanguageModel("text");
 
-      await expect(
-        model.createSessionWithProgress(),
-      ).rejects.toThrow(LoadSettingError);
+      await expect(model.createSessionWithProgress()).rejects.toThrow(
+        LoadSettingError,
+      );
     });
   });
 });

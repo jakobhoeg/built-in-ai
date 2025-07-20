@@ -9,19 +9,21 @@ import {
 import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
 
 const PROGRESS_MESSAGES = {
-  downloading: 'Downloading browser AI model...',
+  downloading: "Downloading browser AI model...",
   progress: (percent: number) => `Downloading browser AI model... ${percent}%`,
-  complete: 'Model finished downloading! Getting ready for first time usage...',
+  complete: "Model finished downloading! Getting ready for first time usage...",
 };
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
  * with in-browser AI capabilities.
- *  
+ *
  * @implements {ChatTransport<BuiltInAIUIMessage>}
  *
  */
-export class ClientSideChatTransport implements ChatTransport<BuiltInAIUIMessage> {
+export class ClientSideChatTransport
+  implements ChatTransport<BuiltInAIUIMessage>
+{
   async sendMessages(
     options: {
       chatId: string;
@@ -29,20 +31,14 @@ export class ClientSideChatTransport implements ChatTransport<BuiltInAIUIMessage
       abortSignal: AbortSignal | undefined;
     } & {
       trigger:
-      | "submit-user-message"
-      | "submit-tool-result"
-      | "regenerate-assistant-message";
+        | "submit-user-message"
+        | "submit-tool-result"
+        | "regenerate-assistant-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
-    const {
-      chatId,
-      messages,
-      abortSignal,
-      trigger,
-      messageId,
-      ...rest
-    } = options;
+    const { chatId, messages, abortSignal, trigger, messageId, ...rest } =
+      options;
 
     const prompt = convertToModelMessages(messages);
     const model = builtInAI();
@@ -71,9 +67,14 @@ export class ClientSideChatTransport implements ChatTransport<BuiltInAIUIMessage
           let downloadProgressId: string | undefined;
 
           // Helper to write progress updates
-          const writeProgressUpdate = (status: 'downloading' | 'complete', progress: number, message: string, transient?: boolean) => {
+          const writeProgressUpdate = (
+            status: "downloading" | "complete",
+            progress: number,
+            message: string,
+            transient?: boolean,
+          ) => {
             writer.write({
-              type: 'data-modelDownloadProgress',
+              type: "data-modelDownloadProgress",
               id: downloadProgressId,
               data: { status, progress, message },
               ...(transient && { transient }),
@@ -87,7 +88,11 @@ export class ClientSideChatTransport implements ChatTransport<BuiltInAIUIMessage
             // Handle completion early to reduce nesting
             if (progress >= 1) {
               if (downloadProgressId) {
-                writeProgressUpdate('complete', 100, PROGRESS_MESSAGES.complete);
+                writeProgressUpdate(
+                  "complete",
+                  100,
+                  PROGRESS_MESSAGES.complete,
+                );
               }
               return;
             }
@@ -96,11 +101,20 @@ export class ClientSideChatTransport implements ChatTransport<BuiltInAIUIMessage
             if (!isDownloading) {
               isDownloading = true;
               downloadProgressId = `download-${Date.now()}`;
-              writeProgressUpdate('downloading', percent, PROGRESS_MESSAGES.downloading, true);
+              writeProgressUpdate(
+                "downloading",
+                percent,
+                PROGRESS_MESSAGES.downloading,
+                true,
+              );
               return;
             }
 
-            writeProgressUpdate('downloading', percent, PROGRESS_MESSAGES.progress(percent));
+            writeProgressUpdate(
+              "downloading",
+              percent,
+              PROGRESS_MESSAGES.progress(percent),
+            );
           });
 
           // Now stream the actual text response
@@ -111,33 +125,34 @@ export class ClientSideChatTransport implements ChatTransport<BuiltInAIUIMessage
             onChunk(event) {
               // On first chunk, signal that actual response streaming has started
               // by clearing the message
-              if (event.chunk.type === 'text' && downloadProgressId) {
+              if (event.chunk.type === "text" && downloadProgressId) {
                 writer.write({
-                  type: 'data-modelDownloadProgress',
+                  type: "data-modelDownloadProgress",
                   id: downloadProgressId,
                   data: {
-                    status: 'complete',
+                    status: "complete",
                     progress: 100,
-                    message: '', // Clear the message
+                    message: "", // Clear the message
                   },
                 });
                 // Clear the downloadProgressId so we only send this once
                 downloadProgressId = undefined;
               }
-            }
+            },
           });
 
-          writer.merge(result.toUIMessageStream({
-            sendStart: false, // Don't start a new message, add to existing message
-          }));
-
+          writer.merge(
+            result.toUIMessageStream({
+              sendStart: false, // Don't start a new message, add to existing message
+            }),
+          );
         } catch (error) {
           // Handle download or generation errors
           writer.write({
-            type: 'data-notification',
+            type: "data-notification",
             data: {
-              message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              level: 'error',
+              message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+              level: "error",
             },
             transient: true,
           });

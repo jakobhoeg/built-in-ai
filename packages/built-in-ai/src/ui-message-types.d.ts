@@ -1,17 +1,17 @@
-import { UIMessage } from 'ai';
+import { UIMessage } from "ai";
 
 /**
  * UI message type for built-in AI features with custom data parts.
- * 
+ *
  * Extends base UIMessage to include specific data part schemas
  * for built-in AI functionality such as model download progress tracking
- * 
+ *
  * @example
  * // Import and use with useChat hook from @ai-sdk/react
  * ```typescript
  * import { useChat } from "@ai-sdk/react";
  * import { BuiltInAIUIMessage } from "@built-in-ai/core";
- * 
+ *
  * const { messages, sendMessage } = useChat<BuiltInAIUIMessage>({
  *   onData: (dataPart) => {
  *     if (dataPart.type === 'data-modelDownloadProgress') {
@@ -23,7 +23,7 @@ import { UIMessage } from 'ai';
  *   }
  * });
  * ```
- * 
+ *
  * @see {@link https://v5.ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat | useChat hook documentation}
  */
 export type BuiltInAIUIMessage = UIMessage<
@@ -35,7 +35,7 @@ export type BuiltInAIUIMessage = UIMessage<
      */
     modelDownloadProgress: {
       /** Current download/initialization status */
-      status: 'downloading' | 'complete' | 'error';
+      status: "downloading" | "complete" | "error";
       /** Download progress percentage (0-100), undefined for non-downloading states */
       progress?: number;
       /** Human-readable status message to display to users */
@@ -49,7 +49,7 @@ export type BuiltInAIUIMessage = UIMessage<
       /** The notification message text */
       message: string;
       /** Notification severity level for styling and priority */
-      level: 'info' | 'warning' | 'error';
+      level: "info" | "warning" | "error";
     };
   }
->; 
+>;
