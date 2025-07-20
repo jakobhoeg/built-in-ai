@@ -23,7 +23,16 @@ export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
 }
 
 /**
+ * Check if the browser supports the built-in AI API
+ * @returns true if the browser supports the built-in AI API, false otherwise
+ */
+export function doesBrowserSupportBuiltInAI(): boolean {
+  return typeof LanguageModel !== "undefined";
+}
+
+/**
  * Check if the Prompt API is available
+ * @deprecated Use `doesBrowserSupportBuiltInAI()` instead for clearer naming
  * @returns true if the browser supports the built-in AI API, false otherwise
  */
 export function isBuiltInAIModelAvailable(): boolean {
