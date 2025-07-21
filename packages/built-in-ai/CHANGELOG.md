@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.6.1
+
+### Patch Changes
+
+- 175f3fd: docs: update links + minor adjusments
+
 ## 1.6.0
 
 ### Minor Changes
