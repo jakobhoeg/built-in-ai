@@ -28,13 +28,33 @@ export interface WebLLMSettings {
   engineConfig?: webllm.MLCEngineConfig;
 }
 
+/**
+ * Check if the browser supports WebLLM (requires WebGPU)
+ * @returns true if the browser supports WebLLM, false otherwise
+ */
+export function doesBrowserSupportWebLLM(): boolean {
+  return "gpu" in navigator;
+}
+
+/**
+ * Check if WebLLM is available
+ * @deprecated Use `doesBrowserSupportWebLLM()` instead for clearer naming
+ * @returns true if the browser supports WebLLM, false otherwise
+ */
+export function isWebLLMModelAvailable(): boolean {
+  return "gpu" in navigator;
+}
+
 type WebLLMConfig = {
   provider: string;
   modelId: WebLLMModelId;
-  settings: WebLLMSettings;
+  options: WebLLMSettings;
 };
 
-function convertPromptToWebLLM(
+/**
+ * Convert AI SDK prompt format to WebLLM message format
+ */
+function convertToWebLLMMessages(
   prompt: LanguageModelV2Prompt,
 ): webllm.ChatCompletionMessageParam[] {
   const messages: webllm.ChatCompletionMessageParam[] = [];
@@ -69,7 +89,6 @@ function convertPromptToWebLLM(
           if (part.type === "text") {
             assistantContent += part.text;
           } else if (part.type === "tool-call") {
-            // TODO: Implement tool calls when WebLLM supports them fully
             throw new UnsupportedFunctionalityError({
               functionality: "tool calling",
             });
@@ -81,7 +100,6 @@ function convertPromptToWebLLM(
         });
         break;
       case "tool":
-        // TODO: Implement tool results when WebLLM supports them fully
         throw new UnsupportedFunctionalityError({
           functionality: "tool results",
         });
@@ -101,49 +119,76 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   private isInitialized = false;
   private initializationPromise?: Promise<void>;
 
-  constructor(modelId: WebLLMModelId, settings: WebLLMSettings = {}) {
+  constructor(modelId: WebLLMModelId, options: WebLLMSettings = {}) {
     this.modelId = modelId;
     this.config = {
       provider: this.provider,
       modelId,
-      settings,
+      options,
     };
   }
 
-  private async initializeEngine(
-    progressCallback?: (progress: webllm.InitProgressReport) => void,
-  ): Promise<void> {
-    if (this.isInitialized) {
-      return;
+  readonly supportedUrls: Record<string, RegExp[]> = {
+    // WebLLM doesn't support URLs natively
+  };
+
+  /**
+   * Check if the model is initialized and ready to use
+   * @returns true if the model is initialized, false otherwise
+   */
+  get isModelInitialized(): boolean {
+    return this.isInitialized;
+  }
+
+  private async getEngine(
+    options?: webllm.MLCEngineConfig,
+    onInitProgress?: (progress: webllm.InitProgressReport) => void,
+  ): Promise<webllm.MLCEngineInterface> {
+    if (!doesBrowserSupportWebLLM()) {
+      throw new LoadSettingError({
+        message:
+          "WebLLM is not available. This library requires a browser with WebGPU support.",
+      });
     }
+
+    if (this.engine && this.isInitialized) return this.engine;
 
     // If initialization is already in progress, wait for it
     if (this.initializationPromise) {
-      return this.initializationPromise;
+      await this.initializationPromise;
+      if (this.engine) return this.engine;
     }
 
-    this.initializationPromise = this._initializeEngine(progressCallback);
+    this.initializationPromise = this._initializeEngine(options, onInitProgress);
     await this.initializationPromise;
-    this.isInitialized = true;
+
+    if (!this.engine) {
+      throw new LoadSettingError({
+        message: "Engine initialization failed",
+      });
+    }
+
+    return this.engine;
   }
 
   private async _initializeEngine(
-    progressCallback?: (progress: webllm.InitProgressReport) => void,
+    options?: webllm.MLCEngineConfig,
+    onInitProgress?: (progress: webllm.InitProgressReport) => void,
   ): Promise<void> {
     try {
-      // Create engine instance once
-      if (!this.engine) {
-        const engineConfig = {
-          ...this.config.settings.engineConfig,
-          initProgressCallback:
-            progressCallback || this.config.settings.initProgressCallback,
-        };
+      // Create engine instance
+      const engineConfig = {
+        ...this.config.options.engineConfig,
+        ...options,
+        initProgressCallback:
+          onInitProgress || this.config.options.initProgressCallback,
+      };
 
-        this.engine = new webllm.MLCEngine(engineConfig);
-      }
+      this.engine = new webllm.MLCEngine(engineConfig);
 
-      // Load the model using reload - this will use cache if available
+      // Load the model
       await this.engine.reload(this.modelId);
+      this.isInitialized = true;
     } catch (error) {
       // Reset state on error so we can retry
       this.engine = undefined;
@@ -156,25 +201,23 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     }
   }
 
-  private async getEngine(
-    progressCallback?: (progress: webllm.InitProgressReport) => void,
-  ): Promise<webllm.MLCEngineInterface> {
-    await this.initializeEngine(progressCallback);
-
-    if (!this.engine) {
-      throw new LoadSettingError({
-        message: "Engine initialization failed",
-      });
-    }
-
-    return this.engine;
-  }
-
-  private getRequestOptions(options: LanguageModelV2CallOptions) {
+  private getArgs({
+    prompt,
+    maxOutputTokens,
+    temperature,
+    topP,
+    topK,
+    frequencyPenalty,
+    presencePenalty,
+    stopSequences,
+    responseFormat,
+    seed,
+    tools,
+  }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     const warnings: LanguageModelV2CallWarning[] = [];
 
-    // Check for unsupported settings and add warnings
-    if (options.tools && options.tools.length > 0) {
+    // Add warnings for unsupported settings
+    if (tools && tools.length > 0) {
       warnings.push({
         type: "unsupported-setting",
         setting: "tools",
@@ -182,7 +225,15 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.stopSequences) {
+    if (topK != null) {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "topK",
+        details: "topK is not supported by WebLLM",
+      });
+    }
+
+    if (stopSequences != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "stopSequences",
@@ -190,7 +241,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.presencePenalty) {
+    if (presencePenalty != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "presencePenalty",
@@ -198,7 +249,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       });
     }
 
-    if (options.frequencyPenalty) {
+    if (frequencyPenalty != null) {
       warnings.push({
         type: "unsupported-setting",
         setting: "frequencyPenalty",
@@ -206,34 +257,42 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       });
     }
 
-    const requestOptions: webllm.ChatCompletionRequestNonStreaming = {
-      messages: convertPromptToWebLLM(options.prompt),
-      temperature: options.temperature,
-      max_tokens: options.maxOutputTokens,
-      top_p: options.topP,
-      seed: options.seed,
-      stream: false,
+    // Convert messages to WebLLM format
+    const messages = convertToWebLLMMessages(prompt);
+
+    // Build request options
+    const requestOptions: any = {
+      messages,
+      temperature,
+      max_tokens: maxOutputTokens,
+      top_p: topP,
+      seed,
     };
 
     // Handle response format
-    if (options.responseFormat?.type === "json") {
-      (requestOptions as any).response_format = { type: "json_object" };
+    if (responseFormat?.type === "json") {
+      requestOptions.response_format = { type: "json_object" };
     }
 
-    return { requestOptions, warnings };
-  }
-
-  get supportedUrls(): Record<string, RegExp[]> {
-    // WebLLM doesn't support URLs natively
-    return {};
+    return {
+      messages,
+      warnings,
+      requestOptions,
+    };
   }
 
   /**
    * Generates a complete text response using WebLLM
+   * @param options
+   * @returns Promise resolving to the generated content with finish reason, usage stats, and any warnings
+   * @throws {LoadSettingError} When WebLLM is not available or model needs to be downloaded
+   * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
   public async doGenerate(options: LanguageModelV2CallOptions) {
+    const converted = this.getArgs(options);
+    const { warnings, requestOptions } = converted;
+
     const engine = await this.getEngine();
-    const { requestOptions, warnings } = this.getRequestOptions(options);
 
     try {
       const response = await engine.chat.completions.create({
@@ -278,14 +337,42 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   }
 
   /**
+   * Creates an engine session with download progress monitoring.
+   *
+   * @example
+   * ```typescript
+   * const engine = await model.createSessionWithProgress(
+   *   (progress) => {
+   *     console.log(`Download progress: ${Math.round(progress.loaded * 100)}%`);
+   *   }
+   * );
+   * ```
+   *
+   * @param onInitProgress Optional callback receiving progress reports during model download
+   * @returns Promise resolving to a configured WebLLM engine
+   * @throws {LoadSettingError} When WebLLM is not available or model is unavailable
+   */
+  public async createSessionWithProgress(
+    onInitProgress?: (progress: webllm.InitProgressReport) => void,
+  ): Promise<webllm.MLCEngineInterface> {
+    return this.getEngine(undefined, onInitProgress);
+  }
+
+  /**
    * Generates a streaming text response using WebLLM
+   * @param options
+   * @returns Promise resolving to a readable stream of text chunks and request metadata
+   * @throws {LoadSettingError} When WebLLM is not available or model needs to be downloaded
+   * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
   public async doStream(options: LanguageModelV2CallOptions) {
-    const { requestOptions, warnings } = this.getRequestOptions(options);
+    const converted = this.getArgs(options);
+    const { warnings, requestOptions } = converted;
+
+    const engine = await this.getEngine();
 
     let isFirstChunk = true;
-    let textId = "text-0";
-    const self = this; // Capture this context for use inside the stream
+    const textId = "text-0";
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
       async start(controller) {
@@ -303,27 +390,18 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
         }
 
         try {
-          // Initialize engine with progress reporting
-          // Progress is handled via the initProgressCallback in settings, not through the stream
-          const engine = await self.getEngine();
-
           const streamingRequest: webllm.ChatCompletionRequestStreaming = {
-            messages: convertPromptToWebLLM(options.prompt),
-            temperature: options.temperature,
-            max_tokens: options.maxOutputTokens,
-            top_p: options.topP,
-            seed: options.seed,
+            ...requestOptions,
             stream: true,
             stream_options: { include_usage: true },
           };
 
-          // Handle response format
-          if (options.responseFormat?.type === "json") {
-            (streamingRequest as any).response_format = { type: "json_object" };
+          // Pass abort signal to the native streaming method
+          if (options.abortSignal) {
+            (streamingRequest as any).signal = options.abortSignal;
           }
 
-          const response =
-            await engine.chat.completions.create(streamingRequest);
+          const response = await engine.chat.completions.create(streamingRequest);
 
           for await (const chunk of response) {
             if (options.abortSignal?.aborted) {
@@ -334,7 +412,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
             if (!choice) continue;
 
             if (isFirstChunk && choice.delta.content) {
-              // Send text start event for actual response
+              // Send text start event
               controller.enqueue({
                 type: "text-start",
                 id: textId,
