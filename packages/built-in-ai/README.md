@@ -13,10 +13,6 @@
 
 A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) with the AI SDK.
 
-> We will also aim to add other providers such as [web-llm](https://github.com/mlc-ai/web-llm) and [transformers.js](https://huggingface.co/docs/transformers.js/en/index)
-
-Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, which has been the _missing piece_ needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
-
 > [!IMPORTANT]
 > This package is under constant development as the Prompt API matures, and may contain errors and incompatible changes.
 
@@ -84,7 +80,7 @@ console.log(result.embedding); // [0.1, 0.2, 0.3, ...]
 
 When using the built-in AI models in Chrome & Edge for the first time, the model needs to be downloaded first.
 
-You'll want to show download progress in your applications to improve UX.
+You'll probably want to show download progress in your applications to improve UX.
 
 ### Basic Progress Monitoring
 
@@ -115,9 +111,9 @@ const result = streamText({
 
 ## Integration with useChat Hook
 
-When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress. We can do this by using our `BuiltInAIUIMessage` that extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) such as download progress.
+When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress. You can do this by importing `BuiltInAIUIMessage` from `@built-in-ai/core` that extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) such as download progress.
 
-See the complete working example: **[`/examples/next-hybrid/util/client-side-chat-transport.ts`](/examples/next-hybrid/util/client-side-chat-transport.ts)** and the **[`/examples/next-hybrid/app/page.tsx`](/examples/next-hybrid/app/page.tsx)** components.
+See the complete working example: **[`/examples/next-hybrid/util/client-side-chat-transport.ts`](../../examples/next-hybrid/util/client-side-chat-transport.ts)** and the **[`/examples/next-hybrid/app/page.tsx`](../../examples/next-hybrid/app/page.tsx)** components.
 
 This example includes:
 
