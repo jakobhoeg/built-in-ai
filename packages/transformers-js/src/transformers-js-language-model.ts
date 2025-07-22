@@ -17,22 +17,14 @@ import {
   AutoModelForCausalLM,
   TextStreamer,
   StoppingCriteria,
+  PretrainedModelOptions
 } from "@huggingface/transformers";
 
 export type TransformersJSTextModelId = string;
 
-export interface TransformersJSTextSettings {
-  /**
-   * Whether to use WebGPU for acceleration
-   * @default "webgpu"
-   */
-  device?: "cpu" | "webgpu";
-
-  /**
-   * Model quantization level
-   * @default "q4f16"
-   */
-  dtype?: "fp32" | "fp16" | "q8" | "q4" | "q4f16";
+// Combine model settings with text generation config
+export interface TransformersJSTextSettings extends PretrainedModelOptions, Partial<TextGenerationConfig> {
+  // Additional TransformersJS-specific settings not in PretrainedModelOptions
 
   /**
    * Custom model cache settings
@@ -44,31 +36,6 @@ export interface TransformersJSTextSettings {
    * Progress callback for model loading
    */
   initProgressCallback?: (progress: { progress: number; status: string; message: string }) => void;
-
-  /**
-   * Maximum number of new tokens to generate
-   */
-  max_new_tokens?: number;
-
-  /**
-   * Temperature for sampling
-   */
-  temperature?: number;
-
-  /**
-   * Top-p sampling parameter
-   */
-  top_p?: number;
-
-  /**
-   * Top-k sampling parameter
-   */
-  top_k?: number;
-
-  /**
-   * Whether to use sampling
-   */
-  do_sample?: boolean;
 }
 
 type TransformersJSConfig = {
