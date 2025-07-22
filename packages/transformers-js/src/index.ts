@@ -20,8 +20,4 @@ export {
   type TransformersJSProvider,
 } from "./transformers-js-provider";
 
-// Import for default export
-import { transformersJS } from "./transformers-js-provider";
-
-// Default export for convenience
-export default transformersJS; 
+export type { TransformersUIMessage } from "./ui-message-types";
