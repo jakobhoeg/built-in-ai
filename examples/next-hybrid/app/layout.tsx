@@ -1,5 +1,4 @@
 import { ThemeProvider } from "@/components/theme-provider";
-import { ModeToggle } from "@/components/ui/mode-toggle";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -24,7 +23,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
-            <Toaster position="top-center" />
+            <Toaster position="top-center" style={{ zIndex: 9999 }} />
           </ThemeProvider>
         </body>
       </html>
