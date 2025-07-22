@@ -392,6 +392,54 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     return { warnings };
   }
 
+  /**
+   * Check the availability of the TransformersJS model
+   * @returns Promise resolving to "unavailable", "available", or "available-after-download"
+   */
+  public async availability(): Promise<"unavailable" | "available" | "available-after-download"> {
+    const support = checkBrowserSupport();
+
+    if (!support.supported) {
+      return "unavailable";
+    }
+
+    if (this.isInitialized) {
+      return "available";
+    }
+
+    return "available-after-download";
+  }
+
+  /**
+   * Creates a session with download progress monitoring.
+   *
+   * @example
+   * ```typescript
+   * const session = await model.createSessionWithProgress(
+   *   (progress) => {
+   *     console.log(`Download progress: ${Math.round(progress * 100)}%`);
+   *   }
+   * );
+   * ```
+   *
+   * @param onDownloadProgress Optional callback receiving progress values 0-1 during model download
+   * @returns Promise resolving to the initialized model instance
+   * @throws {LoadSettingError} When model initialization fails
+   */
+  public async createSessionWithProgress(
+    onDownloadProgress?: (progress: number) => void,
+  ): Promise<TransformersJSLanguageModel> {
+    // Convert the simple progress callback to the detailed format
+    const progressCallback = onDownloadProgress ? (progressData: { progress: number; status: string; message: string }) => {
+      // Convert progress percentage to 0-1 range
+      const normalizedProgress = progressData.progress / 100;
+      onDownloadProgress(normalizedProgress);
+    } : undefined;
+
+    await this.initializeModel(progressCallback);
+    return this;
+  }
+
   async doGenerate(options: LanguageModelV2CallOptions) {
     const [tokenizer, model] = await this.getModels(this.config.options.initProgressCallback);
     const { warnings } = this.getRequestOptions(options);
@@ -407,10 +455,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
       const generationOptions = {
         ...inputs,
-        max_new_tokens: options.maxOutputTokens || 256,
-        temperature: options.temperature || 0.7,
-        top_p: options.topP,
-        top_k: options.topK,
+        max_new_tokens: options.maxOutputTokens || this.config.options.max_new_tokens || 256,
+        temperature: options.temperature || this.config.options.temperature || 0.7,
+        top_p: options.topP || this.config.options.top_p,
+        top_k: options.topK || this.config.options.top_k,
         do_sample: (options.temperature !== undefined && options.temperature > 0) ||
           this.config.options.do_sample !== false,
       };
@@ -511,10 +559,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
           const generationOptions = {
             ...inputs,
-            max_new_tokens: options.maxOutputTokens || 256,
-            temperature: options.temperature || 0.7,
-            top_p: options.topP,
-            top_k: options.topK,
+            max_new_tokens: options.maxOutputTokens || self.config.options.max_new_tokens || 256,
+            temperature: options.temperature || self.config.options.temperature || 0.7,
+            top_p: options.topP || self.config.options.top_p,
+            top_k: options.topK || self.config.options.top_k,
             do_sample: (options.temperature !== undefined && options.temperature > 0) ||
               self.config.options.do_sample !== false,
             streamer,
