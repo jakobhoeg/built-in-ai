@@ -159,7 +159,10 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       if (this.engine) return this.engine;
     }
 
-    this.initializationPromise = this._initializeEngine(options, onInitProgress);
+    this.initializationPromise = this._initializeEngine(
+      options,
+      onInitProgress,
+    );
     await this.initializationPromise;
 
     if (!this.engine) {
@@ -382,11 +385,12 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           warnings,
         });
 
-        // Handle abort signal
+        const abortHandler = async () => {
+          await engine.interruptGenerate();
+        };
+
         if (options.abortSignal) {
-          options.abortSignal.addEventListener("abort", () => {
-            controller.close();
-          });
+          options.abortSignal.addEventListener("abort", abortHandler);
         }
 
         try {
@@ -394,33 +398,21 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
             ...requestOptions,
             stream: true,
             stream_options: { include_usage: true },
+            ...(options.abortSignal && { signal: options.abortSignal }),
           };
 
-          // Pass abort signal to the native streaming method
-          if (options.abortSignal) {
-            (streamingRequest as any).signal = options.abortSignal;
-          }
-
-          const response = await engine.chat.completions.create(streamingRequest);
+          const response =
+            await engine.chat.completions.create(streamingRequest);
 
           for await (const chunk of response) {
-            if (options.abortSignal?.aborted) {
-              break;
-            }
-
             const choice = chunk.choices[0];
             if (!choice) continue;
 
             if (isFirstChunk && choice.delta.content) {
-              // Send text start event
-              controller.enqueue({
-                type: "text-start",
-                id: textId,
-              });
+              controller.enqueue({ type: "text-start", id: textId });
               isFirstChunk = false;
             }
 
-            // Send text delta
             if (choice.delta.content) {
               controller.enqueue({
                 type: "text-delta",
@@ -429,20 +421,14 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
               });
             }
 
-            // Handle finish
             if (choice.finish_reason) {
-              // Send text end event
-              controller.enqueue({
-                type: "text-end",
-                id: textId,
-              });
+              controller.enqueue({ type: "text-end", id: textId });
 
               let finishReason: LanguageModelV2FinishReason = "stop";
               if (choice.finish_reason === "abort") {
                 finishReason = "other";
               }
 
-              // Send finish event
               controller.enqueue({
                 type: "finish",
                 finishReason,
@@ -455,6 +441,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
             }
           }
         } catch (error) {
+          // Propagate all other errors.
           controller.error(error);
         } finally {
           controller.close();
