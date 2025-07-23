@@ -40,6 +40,7 @@ import Image from "next/image";
 import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
+import { Kbd, KbdKey } from "@/components/ui/kbd";
 
 const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
 
@@ -320,24 +321,30 @@ export default function Chat() {
                 <span>Search</span>
               </AIInputButton>
             </AIInputTools>
-            <AIInputSubmit
-              disabled={
-                status === "ready" &&
-                !input.trim() &&
-                (!files || files.length === 0)
-              }
-              status={status}
-              onClick={
-                status === "submitted" || status === "streaming"
-                  ? stop
-                  : undefined
-              }
-              type={
-                status === "submitted" || status === "streaming"
-                  ? "button"
-                  : "submit"
-              }
-            />
+            <div className="flex items-center gap-2">
+              <Kbd>
+                <KbdKey aria-label="Control">Ctrl</KbdKey>
+                <KbdKey>Enter</KbdKey>
+              </Kbd>
+              <AIInputSubmit
+                disabled={
+                  status === "ready" &&
+                  !input.trim() &&
+                  (!files || files.length === 0)
+                }
+                status={status}
+                onClick={
+                  status === "submitted" || status === "streaming"
+                    ? stop
+                    : undefined
+                }
+                type={
+                  status === "submitted" || status === "streaming"
+                    ? "button"
+                    : "submit"
+                }
+              />
+            </div>
           </AIInputToolbar>
 
           {/* File preview area - moved inside the form */}
