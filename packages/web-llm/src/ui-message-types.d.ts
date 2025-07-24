@@ -1,4 +1,5 @@
 import { UIMessage } from "ai";
+import { InitProgressReport } from "@mlc-ai/web-llm";
 
 /**
  * UI message type for built-in AI features with custom data parts.
@@ -53,3 +54,8 @@ export type WebLLMUIMessage = UIMessage<
     };
   }
 >;
+
+/**
+ * Progress returned from the model
+ */
+export type { InitProgressReport as WebLLMProgress };
