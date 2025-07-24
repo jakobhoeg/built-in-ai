@@ -50,8 +50,6 @@
   ],
   "license": "Apache License",
   "dependencies": {
-    "@ai-sdk/provider": "^2.0.0-beta.1",
-    "@ai-sdk/provider-utils": "^3.0.0-beta.2",
     "@mlc-ai/web-llm": "^0.2.79"
   },
   "peerDependencies": {
