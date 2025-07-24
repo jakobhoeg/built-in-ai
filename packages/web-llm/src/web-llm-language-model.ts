@@ -9,7 +9,15 @@ import {
 } from "@ai-sdk/provider";
 import { convertToWebLLMMessages } from "./convert-to-webllm-messages";
 
-import { AppConfig, ChatCompletionRequestStreaming, InitProgressReport, MLCEngine, MLCEngineConfig, MLCEngineInterface } from "@mlc-ai/web-llm";
+import {
+  AppConfig,
+  ChatCompletionRequestStreaming,
+  CreateWebWorkerMLCEngine,
+  InitProgressReport,
+  MLCEngine,
+  MLCEngineConfig,
+  MLCEngineInterface,
+} from "@mlc-ai/web-llm";
 
 declare global {
   interface Navigator {
@@ -32,6 +40,13 @@ export interface WebLLMSettings {
    * Engine configuration options
    */
   engineConfig?: MLCEngineConfig;
+  /**
+   * A web worker instance to run the model in.
+   * When provided, the model will run in a separate thread.
+   *
+   * @default undefined
+   */
+  worker?: Worker;
 }
 
 /**
@@ -131,10 +146,18 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           onInitProgress || this.config.options.initProgressCallback,
       };
 
-      this.engine = new MLCEngine(engineConfig);
+      if (this.config.options.worker) {
+        this.engine = await CreateWebWorkerMLCEngine(
+          this.config.options.worker,
+          this.modelId,
+          engineConfig,
+        );
+      } else {
+        this.engine = new MLCEngine(engineConfig);
+        // Load the model
+        await this.engine.reload(this.modelId);
+      }
 
-      // Load the model
-      await this.engine.reload(this.modelId);
       this.isInitialized = true;
     } catch (error) {
       // Reset state on error so we can retry
@@ -241,10 +264,20 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
 
     const engine = await this.getEngine();
 
+    const abortHandler = async () => {
+      await engine.interruptGenerate();
+    };
+
+    if (options.abortSignal) {
+      options.abortSignal.addEventListener("abort", abortHandler);
+    }
+
     try {
       const response = await engine.chat.completions.create({
         ...requestOptions,
         stream: false,
+        ...(options.abortSignal &&
+          !this.config.options.worker && { signal: options.abortSignal }),
       });
 
       const choice = response.choices[0];
@@ -278,8 +311,13 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       };
     } catch (error) {
       throw new Error(
-        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        }`,
       );
+    } finally {
+      if (options.abortSignal) {
+        options.abortSignal.removeEventListener("abort", abortHandler);
+      }
     }
   }
 
@@ -333,32 +371,32 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     const { warnings, requestOptions } = converted;
 
     const engine = await this.getEngine();
+    const useWorker = this.config.options.worker != null;
 
-    let isFirstChunk = true;
-    const textId = "text-0";
+    const abortHandler = async () => {
+      await engine.interruptGenerate();
+    };
+
+    if (options.abortSignal) {
+      options.abortSignal.addEventListener("abort", abortHandler);
+    }
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
       async start(controller) {
+        let isFirstChunk = true;
+        const textId = "text-0";
         // Send stream start event with warnings
         controller.enqueue({
           type: "stream-start",
           warnings,
         });
 
-        const abortHandler = async () => {
-          await engine.interruptGenerate();
-        };
-
-        if (options.abortSignal) {
-          options.abortSignal.addEventListener("abort", abortHandler);
-        }
-
         try {
           const streamingRequest: ChatCompletionRequestStreaming = {
             ...requestOptions,
             stream: true,
             stream_options: { include_usage: true },
-            ...(options.abortSignal && { signal: options.abortSignal }),
+            ...(options.abortSignal && !useWorker && { signal: options.abortSignal }),
           };
 
           const response =
@@ -404,6 +442,9 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           // Propagate all other errors.
           controller.error(error);
         } finally {
+          if (options.abortSignal) {
+            options.abortSignal.removeEventListener("abort", abortHandler);
+          }
           controller.close();
         }
       },
