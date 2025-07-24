@@ -10,12 +10,6 @@ import { webLLM } from "@built-in-ai/web-llm";
 import { BuiltInAIUIMessage } from "@built-in-ai/core";
 import type { InitProgressReport } from "@mlc-ai/web-llm";
 
-const PROGRESS_MESSAGES = {
-  downloading: "Downloading WebLLM model...",
-  progress: (loaded: number) => `Loading WebLLM model... ${Math.round(loaded * 100)}%`,
-  complete: "Model loaded! Ready for inference...",
-};
-
 /**
  * WebLLM chat transport AI SDK implementation that handles AI model communication
  * with WebLLM capabilities.
@@ -50,65 +44,72 @@ export class WebLLMChatTransport implements ChatTransport<BuiltInAIUIMessage> {
 
     const prompt = convertToModelMessages(messages);
 
-    // Create stream with progress monitoring
-    const stream = createUIMessageStream<BuiltInAIUIMessage>({
+    // Check if model is already available to skip progress tracking
+    const availability = await this.model.availability();
+    if (availability === "available") {
+      const result = streamText({
+        model: this.model,
+        messages: prompt,
+        abortSignal: abortSignal,
+      });
+      return result.toUIMessageStream();
+    }
+
+    // Handle model download with progress tracking
+    return createUIMessageStream<BuiltInAIUIMessage>({
       execute: async ({ writer }) => {
         try {
-          let isDownloading = false;
           let downloadProgressId: string | undefined;
 
-          // Helper to write progress updates
-          const writeProgressUpdate = (
-            status: "downloading" | "complete",
-            progress: number,
-            message: string,
-            transient?: boolean,
-          ) => {
-            writer.write({
-              type: "data-modelDownloadProgress",
-              id: downloadProgressId,
-              data: { status, progress, message },
-              ...(transient && { transient }),
-            });
-          };
-
           // Only initialize on first call with progress tracking
-          if (!this.model.isModelInitialized) {
-            await this.model.createSessionWithProgress((progress: InitProgressReport) => {
-              const percent = progress.progress || 0;
+          await this.model.createSessionWithProgress(
+            (progress: InitProgressReport) => {
+              const percent = Math.round((progress.progress || 0) * 100);
 
               // Handle completion
-              if (percent >= 1) {
+              if (percent >= 100) {
                 if (downloadProgressId) {
-                  writeProgressUpdate(
-                    "complete",
-                    100,
-                    PROGRESS_MESSAGES.complete,
-                  );
+                  writer.write({
+                    type: "data-modelDownloadProgress",
+                    id: downloadProgressId,
+                    data: {
+                      status: "complete",
+                      progress: 100,
+                      message:
+                        "Model loaded! Ready for inference...",
+                    },
+                  });
                 }
                 return;
               }
 
               // Handle in-progress state
-              if (!isDownloading) {
-                isDownloading = true;
+              if (!downloadProgressId) {
                 downloadProgressId = `webllm-download-${Date.now()}`;
-                writeProgressUpdate(
-                  "downloading",
-                  Math.round(percent * 100),
-                  PROGRESS_MESSAGES.downloading,
-                  true,
-                );
+                writer.write({
+                  type: "data-modelDownloadProgress",
+                  id: downloadProgressId,
+                  data: {
+                    status: "downloading",
+                    progress: percent,
+                    message: "Downloading WebLLM model...",
+                  },
+                  transient: true,
+                });
                 return;
               }
 
-              writeProgressUpdate(
-                "downloading",
-                Math.round(percent * 100),
-                PROGRESS_MESSAGES.progress(percent),
-              );
-            });
-          }
+              writer.write({
+                type: "data-modelDownloadProgress",
+                id: downloadProgressId,
+                data: {
+                  status: "downloading",
+                  progress: percent,
+                  message: `Loading WebLLM model... ${percent}%`,
+                },
+              });
+            },
+          );
           // For subsequent calls, the model is already ready - no need to create session again
 
           // Now stream the actual text response
@@ -143,7 +144,8 @@ export class WebLLMChatTransport implements ChatTransport<BuiltInAIUIMessage> {
           writer.write({
             type: "data-notification",
             data: {
-              message: `WebLLM Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+              message: `WebLLM Error: ${error instanceof Error ? error.message : "Unknown error"
+                }`,
               level: "error",
             },
             transient: true,
@@ -153,8 +155,6 @@ export class WebLLMChatTransport implements ChatTransport<BuiltInAIUIMessage> {
         }
       },
     });
-
-    return stream;
   }
 
   async reconnectToStream(

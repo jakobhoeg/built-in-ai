@@ -41,20 +41,16 @@ import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 import { WebLLMChatTransport } from "@/util/web-llm-chat-transport";
 
+const doesBrowserSupportModel = doesBrowserSupportWebLLM();
+
 export default function WebLLMChat() {
-  const [doesBrowserSupportModel, setDoesBrowserSupportModel] = useState<boolean | null>(null);
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<FileList | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check browser support only on client side
-  useEffect(() => {
-    setDoesBrowserSupportModel(doesBrowserSupportWebLLM());
-  }, []);
-
   const { error, status, sendMessage, messages, regenerate, stop } =
     useChat<BuiltInAIUIMessage>({
-      transport: true
+      transport: doesBrowserSupportModel
         ? new WebLLMChatTransport()
         : new DefaultChatTransport<UIMessage>({
           api: "/api/chat",
@@ -64,7 +60,6 @@ export default function WebLLMChat() {
       },
       onData(dataPart) {
         // Handle transient notifications
-        // we can also access the date-modelDownloadProgress here
         if (dataPart.type === "data-notification") {
           if (dataPart.data.level === "error") {
             toast.error(dataPart.data.message);
@@ -79,8 +74,6 @@ export default function WebLLMChat() {
 
   // Show browser support toast once support is determined
   useEffect(() => {
-    if (doesBrowserSupportModel === null) return;
-
     const timeoutId = setTimeout(() => {
       if (doesBrowserSupportModel) {
         toast.success("Using WebLLM Worker (Local AI in browser)", {
@@ -98,7 +91,7 @@ export default function WebLLMChat() {
     }, 50);
 
     return () => clearTimeout(timeoutId);
-  }, [doesBrowserSupportModel]);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,26 +139,6 @@ export default function WebLLMChat() {
 
     navigator.clipboard.writeText(textContent);
   };
-
-  // Don't render chat interface until we know browser support status
-  if (doesBrowserSupportModel === null) {
-    return (
-      <div className="flex flex-col h-[calc(100dvh)] max-w-4xl mx-auto">
-        <header>
-          <div className="flex items-center justify-between p-4">
-            <h1 className="text-lg font-semibold">WebLLM Worker Chat</h1>
-            <ModeToggle />
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex items-center gap-2">
-            <Spinner className="size-4" />
-            <span>Checking browser compatibility...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-[calc(100dvh)] max-w-4xl mx-auto">
