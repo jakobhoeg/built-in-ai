@@ -4,12 +4,18 @@ import {
   LanguageModelV2CallWarning,
   LanguageModelV2Content,
   LanguageModelV2FinishReason,
-  LanguageModelV2Prompt,
   LanguageModelV2StreamPart,
   LoadSettingError,
-  UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
-import * as webllm from "@mlc-ai/web-llm";
+import { convertToWebLLMMessages } from "./convert-to-webllm-messages";
+
+import { AppConfig, ChatCompletionRequestStreaming, InitProgressReport, MLCEngine, MLCEngineConfig, MLCEngineInterface } from "@mlc-ai/web-llm";
+
+declare global {
+  interface Navigator {
+    gpu?: unknown;
+  }
+}
 
 export type WebLLMModelId = string;
 
@@ -17,33 +23,28 @@ export interface WebLLMSettings {
   /**
    * Custom app configuration for WebLLM
    */
-  appConfig?: webllm.AppConfig;
+  appConfig?: AppConfig;
   /**
    * Progress callback for model initialization
    */
-  initProgressCallback?: (progress: webllm.InitProgressReport) => void;
+  initProgressCallback?: (progress: InitProgressReport) => void;
   /**
    * Engine configuration options
    */
-  engineConfig?: webllm.MLCEngineConfig;
+  engineConfig?: MLCEngineConfig;
 }
 
 /**
- * Check if the browser supports WebLLM (requires WebGPU)
+ * Check if the browser supports WebLLM
  * @returns true if the browser supports WebLLM, false otherwise
  */
 export function doesBrowserSupportWebLLM(): boolean {
-  return "gpu" in navigator;
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return navigator.gpu !== undefined;
 }
 
-/**
- * Check if WebLLM is available
- * @deprecated Use `doesBrowserSupportWebLLM()` instead for clearer naming
- * @returns true if the browser supports WebLLM, false otherwise
- */
-export function isWebLLMModelAvailable(): boolean {
-  return "gpu" in navigator;
-}
 
 type WebLLMConfig = {
   provider: string;
@@ -51,71 +52,13 @@ type WebLLMConfig = {
   options: WebLLMSettings;
 };
 
-/**
- * Convert AI SDK prompt format to WebLLM message format
- */
-function convertToWebLLMMessages(
-  prompt: LanguageModelV2Prompt,
-): webllm.ChatCompletionMessageParam[] {
-  const messages: webllm.ChatCompletionMessageParam[] = [];
-
-  for (const message of prompt) {
-    switch (message.role) {
-      case "system":
-        messages.push({
-          role: "system",
-          content: message.content,
-        });
-        break;
-      case "user":
-        const userContent: string[] = [];
-        for (const part of message.content) {
-          if (part.type === "text") {
-            userContent.push(part.text);
-          } else if (part.type === "file") {
-            throw new UnsupportedFunctionalityError({
-              functionality: "file input",
-            });
-          }
-        }
-        messages.push({
-          role: "user",
-          content: userContent.join("\n"),
-        });
-        break;
-      case "assistant":
-        let assistantContent = "";
-        for (const part of message.content) {
-          if (part.type === "text") {
-            assistantContent += part.text;
-          } else if (part.type === "tool-call") {
-            throw new UnsupportedFunctionalityError({
-              functionality: "tool calling",
-            });
-          }
-        }
-        messages.push({
-          role: "assistant",
-          content: assistantContent,
-        });
-        break;
-      case "tool":
-        throw new UnsupportedFunctionalityError({
-          functionality: "tool results",
-        });
-    }
-  }
-
-  return messages;
-}
-
 export class WebLLMLanguageModel implements LanguageModelV2 {
   readonly specificationVersion = "v2";
   readonly modelId: WebLLMModelId;
   readonly provider = "web-llm";
 
   private readonly config: WebLLMConfig;
-  private engine?: webllm.MLCEngineInterface;
+  private engine?: MLCEngineInterface;
   private isInitialized = false;
   private initializationPromise?: Promise<void>;
 
@@ -141,10 +84,11 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   }
 
   private async getEngine(
-    options?: webllm.MLCEngineConfig,
-    onInitProgress?: (progress: webllm.InitProgressReport) => void,
-  ): Promise<webllm.MLCEngineInterface> {
-    if (!doesBrowserSupportWebLLM()) {
+    options?: MLCEngineConfig,
+    onInitProgress?: (progress: InitProgressReport) => void,
+  ): Promise<MLCEngineInterface> {
+    const availability = await this.availability();
+    if (availability === "unavailable") {
       throw new LoadSettingError({
         message:
           "WebLLM is not available. This library requires a browser with WebGPU support.",
@@ -175,8 +119,8 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   }
 
   private async _initializeEngine(
-    options?: webllm.MLCEngineConfig,
-    onInitProgress?: (progress: webllm.InitProgressReport) => void,
+    options?: MLCEngineConfig,
+    onInitProgress?: (progress: InitProgressReport) => void,
   ): Promise<void> {
     try {
       // Create engine instance
@@ -187,7 +131,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           onInitProgress || this.config.options.initProgressCallback,
       };
 
-      this.engine = new webllm.MLCEngine(engineConfig);
+      this.engine = new MLCEngine(engineConfig);
 
       // Load the model
       await this.engine.reload(this.modelId);
@@ -224,7 +168,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       warnings.push({
         type: "unsupported-setting",
         setting: "tools",
-        details: "Tool calling is not yet fully supported by WebLLM",
+        details: "Tool calling is not yet fully implemented",
       });
     }
 
@@ -240,7 +184,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       warnings.push({
         type: "unsupported-setting",
         setting: "stopSequences",
-        details: "Stop sequences may not be fully supported by WebLLM",
+        details: "Stop sequences may not be fully implemented",
       });
     }
 
@@ -248,7 +192,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       warnings.push({
         type: "unsupported-setting",
         setting: "presencePenalty",
-        details: "Presence penalty is not supported by WebLLM",
+        details: "Presence penalty is not fully implemented",
       });
     }
 
@@ -256,7 +200,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       warnings.push({
         type: "unsupported-setting",
         setting: "frequencyPenalty",
-        details: "Frequency penalty is not supported by WebLLM",
+        details: "Frequency penalty is not fully implemented",
       });
     }
 
@@ -340,6 +284,22 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   }
 
   /**
+  * Check the availability of the TransformersJS model
+  * @returns Promise resolving to "unavailable", "available", or "available-after-download"
+  */
+  public async availability(): Promise<"unavailable" | "available" | "available-after-download"> {
+    if (!doesBrowserSupportWebLLM()) {
+      return "unavailable";
+    }
+
+    if (this.isInitialized) {
+      return "available";
+    }
+
+    return "available-after-download";
+  }
+
+  /**
    * Creates an engine session with download progress monitoring.
    *
    * @example
@@ -356,8 +316,8 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
    * @throws {LoadSettingError} When WebLLM is not available or model is unavailable
    */
   public async createSessionWithProgress(
-    onInitProgress?: (progress: webllm.InitProgressReport) => void,
-  ): Promise<webllm.MLCEngineInterface> {
+    onInitProgress?: (progress: InitProgressReport) => void,
+  ): Promise<MLCEngineInterface> {
     return this.getEngine(undefined, onInitProgress);
   }
 
@@ -394,7 +354,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
         }
 
         try {
-          const streamingRequest: webllm.ChatCompletionRequestStreaming = {
+          const streamingRequest: ChatCompletionRequestStreaming = {
             ...requestOptions,
             stream: true,
             stream_options: { include_usage: true },
