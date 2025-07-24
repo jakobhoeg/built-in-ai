@@ -21,17 +21,19 @@
     }
   },
   "files": [
-    "dist"
+    "dist/**/*"
   ],
   "scripts": {
-    "build": "npm run test:run && tsup",
+    "build": "npm run clean && tsup",
+    "build:prod": "tsup",
+    "build:test": "npm run test:run && tsup",
     "dev": "tsup --watch",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run clean && npm run build",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "dev:example": "npm run build && npm run -w examples/next-hybrid dev"
   },
   "keywords": [
     "ai",
@@ -46,7 +48,7 @@
     "llm",
     "inference"
   ],
-  "license": "MIT",
+  "license": "Apache License",
   "dependencies": {
     "@ai-sdk/provider": "^2.0.0-beta.1",
     "@ai-sdk/provider-utils": "^3.0.0-beta.2",
@@ -65,5 +67,8 @@
     "typescript": "^5.0.0",
     "vitest": "^1.0.0",
     "zod": "^3.22.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -18,6 +18,7 @@ import {
   MLCEngineConfig,
   MLCEngineInterface,
 } from "@mlc-ai/web-llm";
+import { Availability } from "./types";
 
 declare global {
   interface Navigator {
@@ -325,7 +326,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   * Check the availability of the TransformersJS model
   * @returns Promise resolving to "unavailable", "available", or "available-after-download"
   */
-  public async availability(): Promise<"unavailable" | "available" | "available-after-download"> {
+  public async availability(): Promise<Availability> {
     if (!doesBrowserSupportWebLLM()) {
       return "unavailable";
     }
@@ -334,7 +335,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       return "available";
     }
 
-    return "available-after-download";
+    return "downloadable";
   }
 
   /**

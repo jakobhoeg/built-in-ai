@@ -7,5 +7,5 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  external: ["@mlc-ai/web-llm"],
+  // external: ["@mlc-ai/web-llm"],
 });
