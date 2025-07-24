@@ -53,8 +53,8 @@ export default function WebLLMChat() {
       transport: doesBrowserSupportModel
         ? new WebLLMChatTransport()
         : new DefaultChatTransport<UIMessage>({
-          api: "/api/chat",
-        }),
+            api: "/api/chat",
+          }),
       onError(error) {
         toast.error(error.message);
       },
@@ -388,4 +388,4 @@ export default function WebLLMChat() {
       </div>
     </div>
   );
-} 
+}

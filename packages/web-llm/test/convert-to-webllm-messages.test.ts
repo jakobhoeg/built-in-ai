@@ -171,10 +171,10 @@ describe("convertToWebLLMMessages", () => {
       ];
 
       expect(() => convertToWebLLMMessages(prompt)).toThrow(
-        UnsupportedFunctionalityError
+        UnsupportedFunctionalityError,
       );
       expect(() => convertToWebLLMMessages(prompt)).toThrow(
-        "file input with media type 'audio/mp3'"
+        "file input with media type 'audio/mp3'",
       );
     });
   });
@@ -185,4 +185,4 @@ describe("convertToWebLLMMessages", () => {
       expect(result).toEqual([]);
     });
   });
-}); 
+});

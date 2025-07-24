@@ -33,9 +33,9 @@ export class WebLLMChatTransport implements ChatTransport<BuiltInAIUIMessage> {
       abortSignal: AbortSignal | undefined;
     } & {
       trigger:
-      | "submit-user-message"
-      | "submit-tool-result"
-      | "regenerate-assistant-message";
+        | "submit-user-message"
+        | "submit-tool-result"
+        | "regenerate-assistant-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
@@ -75,8 +75,7 @@ export class WebLLMChatTransport implements ChatTransport<BuiltInAIUIMessage> {
                     data: {
                       status: "complete",
                       progress: 100,
-                      message:
-                        "Model loaded! Ready for inference...",
+                      message: "Model loaded! Ready for inference...",
                     },
                   });
                 }
@@ -144,8 +143,9 @@ export class WebLLMChatTransport implements ChatTransport<BuiltInAIUIMessage> {
           writer.write({
             type: "data-notification",
             data: {
-              message: `WebLLM Error: ${error instanceof Error ? error.message : "Unknown error"
-                }`,
+              message: `WebLLM Error: ${
+                error instanceof Error ? error.message : "Unknown error"
+              }`,
               level: "error",
             },
             transient: true,
@@ -165,4 +165,4 @@ export class WebLLMChatTransport implements ChatTransport<BuiltInAIUIMessage> {
     // WebLLM doesn't support stream reconnection
     return null;
   }
-} 
+}

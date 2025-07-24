@@ -60,4 +60,8 @@ export type WebLLMUIMessage = UIMessage<
  */
 export type { InitProgressReport as WebLLMProgress };
 
-export type Availability = "unavailable" | "downloadable" | "downloading" | "available";
+export type Availability =
+  | "unavailable"
+  | "downloadable"
+  | "downloading"
+  | "available";

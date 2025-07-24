@@ -55,12 +55,11 @@ export interface WebLLMSettings {
  * @returns true if the browser supports WebLLM, false otherwise
  */
 export function doesBrowserSupportWebLLM(): boolean {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return false;
   }
   return navigator.gpu !== undefined;
 }
-
 
 type WebLLMConfig = {
   provider: string;
@@ -312,7 +311,8 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       };
     } catch (error) {
       throw new Error(
-        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `WebLLM generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     } finally {
@@ -323,9 +323,9 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   }
 
   /**
-  * Check the availability of the TransformersJS model
-  * @returns Promise resolving to "unavailable", "available", or "available-after-download"
-  */
+   * Check the availability of the TransformersJS model
+   * @returns Promise resolving to "unavailable", "available", or "available-after-download"
+   */
   public async availability(): Promise<Availability> {
     if (!doesBrowserSupportWebLLM()) {
       return "unavailable";
@@ -397,7 +397,8 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
             ...requestOptions,
             stream: true,
             stream_options: { include_usage: true },
-            ...(options.abortSignal && !useWorker && { signal: options.abortSignal }),
+            ...(options.abortSignal &&
+              !useWorker && { signal: options.abortSignal }),
           };
 
           const response =
