@@ -16,9 +16,10 @@ TypeScript libraries that provide access to in-browser AI models with seamless f
 > [!NOTE]
 > Only works with the new v5 of Vercel AI SDK.
 
-The [`@built-in-ai/core`](/packages/built-in-ai/README.md) package is the AI SDK model provider for your Chrome and Edge browser's [built-in AI models](https://developer.chrome.com/docs/ai/built-in).
+- [`@built-in-ai/core`](/packages/built-in-ai/README.md) package is the AI SDK model provider for your Chrome and Edge browser's [built-in AI models](https://developer.chrome.com/docs/ai/built-in).
+- [`@built-in-ai/web-llm`](/packages/web-llm/README.md) package is the AI SDK model provider for open-source models (using [WebLLM](https://github.com/mlc-ai/web-llm)) running directly in the browser.
 
-The [`@built-in-ai/web-llm`](/packages/web-llm/README.md) package is the AI SDK model provider for open-source models (using [WebLLM](https://github.com/mlc-ai/web-llm)) running directly in the browser.
+> We are also currently working on creating a model provider for [transformers.js](https://github.com/huggingface/transformers.js/)
 
 ## Quick start
 
