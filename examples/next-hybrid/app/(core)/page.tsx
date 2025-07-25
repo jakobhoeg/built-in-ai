@@ -1,7 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { ClientSideChatTransport } from "@/util/client-side-chat-transport";
+import { ClientSideChatTransport } from "@/app/(core)/util/client-side-chat-transport";
 import {
   AIMessage,
   AIMessageAvatar,
@@ -29,6 +29,7 @@ import {
   RefreshCcw,
   Copy,
   X,
+  GithubIcon,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -41,17 +42,33 @@ import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 import { Kbd, KbdKey } from "@/components/ui/kbd";
+import { ModelSelector } from "@/components/model-selector";
+import { SiGithub } from "@icons-pack/react-simple-icons";
+import Link from "next/link";
 
 const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
 
 export default function Chat() {
+  const [browserSupportsModel, setBrowserSupportsModel] = useState<boolean | null>(null)
+  const [isClient, setIsClient] = useState(false)
+
+  const [input, setInput] = useState("");
+  const [files, setFiles] = useState<FileList | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check browser support only on client side
+  useEffect(() => {
+    setIsClient(true)
+    setBrowserSupportsModel(doesBrowserSupportBuiltInAI())
+  }, [])
+
   const { error, status, sendMessage, messages, regenerate, stop } =
     useChat<BuiltInAIUIMessage>({
       transport: doesBrowserSupportModel
         ? new ClientSideChatTransport()
         : new DefaultChatTransport<UIMessage>({
-            api: "/api/chat",
-          }),
+          api: "/api/chat",
+        }),
       onError(error) {
         toast.error(error.message);
       },
@@ -69,31 +86,6 @@ export default function Chat() {
         }
       },
     });
-
-  const [input, setInput] = useState("");
-  const [files, setFiles] = useState<FileList | undefined>(undefined);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // For showcase purposes: show if built-in ai model is supported once page loads
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (doesBrowserSupportModel) {
-        toast.success("Using the built-in AI model", {
-          description:
-            "Your conversations will be processed locally in your browser",
-          duration: 5000,
-        });
-      } else {
-        toast.info("Using server-side AI model", {
-          description:
-            "Your browser doesnt support the Prompt API. Your conversations are processed on the server",
-          duration: 5000,
-        });
-      }
-    }, 50);
-
-    return () => clearTimeout(timeoutId);
-  }, [doesBrowserSupportModel]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,14 +134,49 @@ export default function Chat() {
     navigator.clipboard.writeText(textContent);
   };
 
+  // Show loading state until client-side check completes
+  if (!isClient) {
+    return (
+      <div className="flex flex-col h-[calc(100dvh)] items-center justify-center max-w-4xl mx-auto">
+        <Spinner className="size-4" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-[calc(100dvh)] max-w-4xl mx-auto">
       <header>
         <div className="flex items-center justify-between p-4">
-          <h1 className="text-lg font-semibold">built-in-ai</h1>
-          <ModeToggle />
+          <ModelSelector />
+          <div className="flex gap-2 items-center">
+            <Link
+              href="https://github.com/jakobhoeg/built-in-ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:opacity-80 transition-opacity"
+            >
+              <SiGithub />
+            </Link>
+            <ModeToggle />
+          </div>
         </div>
       </header>
+      {messages.length === 0 && (
+        <div className="flex h-full flex-col items-center justify-center text-center">
+          {browserSupportsModel ? (
+            <>
+              <p className="text-xs">@built-in-ai/core demo</p>
+              <h1 className="text-lg font-medium">Using your browser's built-in AI model</h1>
+              <p className="text-sm max-w-xs">Your browser supports built-in AI models</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-lg font-medium">Using server-side model</h1>
+              <p className="text-sm max-w-xs">Your device doesn&apos;t support built-in AI models</p>
+            </>
+          )}
+        </div>
+      )}
       <AIConversation className="flex-1">
         <AIConversationContent>
           {messages.map((m, index) => (

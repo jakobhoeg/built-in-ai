@@ -19,79 +19,73 @@ import {
   AIInputTools,
   AIInputToolbar,
   AIInputButton,
+  AIInputModelSelect,
+  AIInputModelSelectTrigger,
+  AIInputModelSelectValue,
+  AIInputModelSelectContent,
+  AIInputModelSelectItem,
 } from "@/components/ai/input";
 import { Button } from "@/components/ui/button";
-import {
-  PlusIcon,
-  MicIcon,
-  GlobeIcon,
-  RefreshCcw,
-  Copy,
-  X,
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { PlusIcon, RefreshCcw, Copy, X } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { doesBrowserSupportWebLLM } from "@built-in-ai/web-llm";
+import {
+  doesBrowserSupportWebLLM,
+  webLLM,
+  WebLLMUIMessage,
+} from "@built-in-ai/web-llm";
 import { DefaultChatTransport, UIMessage } from "ai";
 import { toast } from "sonner";
-import { BuiltInAIUIMessage } from "@built-in-ai/core";
 import Image from "next/image";
 import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
-import { WebLLMChatTransport } from "@/util/web-llm-chat-transport";
+import { WebLLMChatTransport } from "@/app/web-llm/util/web-llm-chat-transport";
+import { ModelSelector } from "@/components/model-selector";
 
-const doesBrowserSupportModel = doesBrowserSupportWebLLM();
+const MODELS = [
+  "Qwen3-0.6B-q0f16-MLC",
+  "Qwen3-1.7B-q4f16_1-MLC",
+  "gemma-2-2b-it-q4f16_1-MLC",
+  "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC",
+];
 
-export default function WebLLMChat() {
+function WebLLMChat({
+  browserSupportsWebLLM,
+  modelId,
+  setModelId,
+}: {
+  browserSupportsWebLLM: boolean;
+  modelId: string;
+  setModelId: (modelId: string) => void;
+}) {
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<FileList | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const chatTransport = useMemo(() => {
+    if (browserSupportsWebLLM) {
+      console.log("here");
+      const model = webLLM(modelId, {
+        worker: new Worker(new URL("./util/worker.ts", import.meta.url), {
+          type: "module",
+        }),
+      });
+      return new WebLLMChatTransport(model); // Client side chat transport
+    }
+    return new DefaultChatTransport<UIMessage>({
+      // server side (api route)
+      api: "/api/chat",
+    });
+  }, [modelId, browserSupportsWebLLM]);
+
   const { error, status, sendMessage, messages, regenerate, stop } =
-    useChat<BuiltInAIUIMessage>({
-      transport: doesBrowserSupportModel
-        ? new WebLLMChatTransport()
-        : new DefaultChatTransport<UIMessage>({
-            api: "/api/chat",
-          }),
+    useChat<WebLLMUIMessage>({
+      transport: chatTransport, // use custom transport
       onError(error) {
         toast.error(error.message);
       },
-      onData(dataPart) {
-        // Handle transient notifications
-        if (dataPart.type === "data-notification") {
-          if (dataPart.data.level === "error") {
-            toast.error(dataPart.data.message);
-          } else if (dataPart.data.level === "warning") {
-            toast.warning(dataPart.data.message);
-          } else {
-            toast.info(dataPart.data.message);
-          }
-        }
-      },
     });
-
-  // Show browser support toast once support is determined
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (doesBrowserSupportModel) {
-        toast.success("Using WebLLM Worker (Local AI in browser)", {
-          description:
-            "Your conversations will be processed locally in your browser using WebGPU in a web worker for better performance",
-          duration: 5000,
-        });
-      } else {
-        toast.info("Using server-side AI model", {
-          description:
-            "Your browser doesn't support WebGPU. Your conversations are processed on the server",
-          duration: 5000,
-        });
-      }
-    }, 50);
-
-    return () => clearTimeout(timeoutId);
-  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,10 +138,30 @@ export default function WebLLMChat() {
     <div className="flex flex-col h-[calc(100dvh)] max-w-4xl mx-auto">
       <header>
         <div className="flex items-center justify-between p-4">
-          <h1 className="text-lg font-semibold">WebLLM Chat</h1>
+          <ModelSelector />
           <ModeToggle />
         </div>
       </header>
+      {messages.length === 0 && (
+        <div className="flex h-full flex-col items-center justify-center text-center">
+          {browserSupportsWebLLM ? (
+            <>
+              <p className="text-xs">@built-in-ai/web-llm demo</p>
+              <h1 className="text-lg font-medium">
+                Using WebLLM client-side AI model
+              </h1>
+              <p className="text-sm max-w-xs">Your device supports WebGPU</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-lg font-medium">Using server-side model</h1>
+              <p className="text-sm max-w-xs">
+                Your device doesn&apos;t support WebGPU
+              </p>
+            </>
+          )}
+        </div>
+      )}
       <AIConversation className="flex-1">
         <AIConversationContent>
           {messages.map((m, index) => (
@@ -311,13 +325,18 @@ export default function WebLLMChat() {
                 accept="image/*,text/*,audio/*"
                 className="hidden"
               />
-              <AIInputButton>
-                <MicIcon size={16} />
-              </AIInputButton>
-              <AIInputButton>
-                <GlobeIcon size={16} />
-                <span>Search</span>
-              </AIInputButton>
+              <AIInputModelSelect onValueChange={setModelId} value={modelId}>
+                <AIInputModelSelectTrigger>
+                  <AIInputModelSelectValue />
+                </AIInputModelSelectTrigger>
+                <AIInputModelSelectContent>
+                  {MODELS.map((model) => (
+                    <AIInputModelSelectItem key={model} value={model}>
+                      {model}
+                    </AIInputModelSelectItem>
+                  ))}
+                </AIInputModelSelectContent>
+              </AIInputModelSelect>
             </AIInputTools>
             <AIInputSubmit
               disabled={
@@ -387,5 +406,33 @@ export default function WebLLMChat() {
         </AIInput>
       </div>
     </div>
+  );
+}
+
+export default function WebLLMChatPage() {
+  const [browserSupportsWebLLM, setBrowserSupportsWebLLM] = useState<
+    boolean | null
+  >(null);
+  const [modelId, setModelId] = useState(MODELS[0]);
+
+  useEffect(() => {
+    setBrowserSupportsWebLLM(doesBrowserSupportWebLLM());
+  }, []);
+
+  if (browserSupportsWebLLM === null) {
+    return (
+      <div className="flex flex-col h-[calc(100dvh)] items-center justify-center max-w-4xl mx-auto">
+        <Spinner className="size-4" />
+      </div>
+    );
+  }
+
+  return (
+    <WebLLMChat
+      browserSupportsWebLLM={browserSupportsWebLLM}
+      modelId={modelId}
+      setModelId={setModelId}
+      key={modelId}
+    />
   );
 }
