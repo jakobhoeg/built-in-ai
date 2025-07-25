@@ -157,6 +157,7 @@ for await (const chunk of result.textStream) {
 The `builtInAI` model also allows using the AI SDK `generateObject` and `streamObject`:
 
 ### streamObject
+
 ```typescript
 import { streamObject } from "ai";
 import { builtInAI } from "@built-in-ai/core";
@@ -170,22 +171,23 @@ const { object } = await streamObject({
       steps: z.array(z.string()),
     }),
   }),
-  prompt: 'Generate a lasagna recipe.',
+  prompt: "Generate a lasagna recipe.",
 });
 ```
 
 ### generateObject
+
 ```typescript
 const { object } = await generateObject({
   model: builtInAI(),
-    schema: z.object({
+  schema: z.object({
     recipe: z.object({
       name: z.string(),
       ingredients: z.array(z.object({ name: z.string(), amount: z.string() })),
       steps: z.array(z.string()),
     }),
   }),
-  prompt: 'Generate a lasagna recipe.',
+  prompt: "Generate a lasagna recipe.",
 });
 ```
 
