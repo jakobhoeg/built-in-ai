@@ -113,7 +113,7 @@ const result = streamText({
 
 When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress. You can do this by importing `BuiltInAIUIMessage` from `@built-in-ai/core` that extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) such as download progress.
 
-See the complete working example: **[`/examples/next-hybrid/app/(core)/util/client-side-chat-transport.ts`](../../examples/next-hybrid/app/(core)/util/client-side-chat-transport.ts)** and the **[`/examples/next-hybrid/app/page.tsx`](../../examples/next-hybrid/app/(core)/page.tsx)** components.
+See the complete working example: **[`/examples/next-hybrid/app/(core)/util/client-side-chat-transport.ts`](<../../examples/next-hybrid/app/(core)/util/client-side-chat-transport.ts>)** and the **[`/examples/next-hybrid/app/page.tsx`](<../../examples/next-hybrid/app/(core)/page.tsx>)** components.
 
 This example includes:
 
@@ -161,7 +161,7 @@ for await (const chunk of result.textStream) {
 - [x] **Download progress streaming** - Real-time progress updates during model downloads
 - [x] **Multimodal functionality** (image and audio support)\*
 - [x] **Temperature control**
-- [x] **Response format constraints** (JSON `generateObject()/streamObject()`) 
+- [x] **Response format constraints** (JSON `generateObject()/streamObject()`)
 - [x] **Abort signals**
 
 ### Planned (when implemented in the Prompt API)

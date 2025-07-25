@@ -39,8 +39,9 @@ A WebGPU-compatible browser is needed to run these models. Check out the [API](h
 import { streamText } from "ai";
 import { webLLM } from "@built-in-ai/web-llm";
 
-const result = streamText({ // or generateText
-  model: webLLM('Llama-3.2-3B-Instruct-q4f16_1-MLC'),
+const result = streamText({
+  // or generateText
+  model: webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC"),
   messages: [{ role: "user", content: "Hello, how are you?" }],
 });
 
@@ -96,7 +97,7 @@ You'll probably want to show download progress in your applications to improve U
 import { streamText } from "ai";
 import { webLLM } from "@built-in-ai/web-llm";
 
-const model = webLLM('Llama-3.2-3B-Instruct-q4f16_1-MLC'),
+const model = webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC");
 const availability = await model.availability();
 
 if (availability === "unavailable") {
@@ -119,7 +120,7 @@ const result = streamText({
 
 ## Integration with useChat Hook
 
-When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress. 
+When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress.
 
 You can do this by importing `WebLLMUIMessage` from `@built-in-ai/web-llm` that extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) such as download progress.
 
@@ -208,7 +209,7 @@ Creates a language model session with optional download progress monitoring.
 **Example:**
 
 ```typescript
-const model = webLLM('Llama-3.2-3B-Instruct-q4f16_1-MLC');
+const model = webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC");
 await model.createSessionWithProgress((report) => {
   console.log(`Download: ${report.text}`);
 });
@@ -231,9 +232,9 @@ The progress report type returned during model initialization.
 
 ```typescript
 interface InitProgressReport {
-    progress: number; // 0-1
-    timeElapsed: number; // in ms
-    text: string; // progress text
+  progress: number; // 0-1
+  timeElapsed: number; // in ms
+  text: string; // progress text
 }
 ```
 

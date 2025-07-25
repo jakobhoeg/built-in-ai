@@ -49,8 +49,10 @@ import Link from "next/link";
 const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
 
 export default function Chat() {
-  const [browserSupportsModel, setBrowserSupportsModel] = useState<boolean | null>(null)
-  const [isClient, setIsClient] = useState(false)
+  const [browserSupportsModel, setBrowserSupportsModel] = useState<
+    boolean | null
+  >(null);
+  const [isClient, setIsClient] = useState(false);
 
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<FileList | undefined>(undefined);
@@ -58,17 +60,17 @@ export default function Chat() {
 
   // Check browser support only on client side
   useEffect(() => {
-    setIsClient(true)
-    setBrowserSupportsModel(doesBrowserSupportBuiltInAI())
-  }, [])
+    setIsClient(true);
+    setBrowserSupportsModel(doesBrowserSupportBuiltInAI());
+  }, []);
 
   const { error, status, sendMessage, messages, regenerate, stop } =
     useChat<BuiltInAIUIMessage>({
       transport: doesBrowserSupportModel
         ? new ClientSideChatTransport()
         : new DefaultChatTransport<UIMessage>({
-          api: "/api/chat",
-        }),
+            api: "/api/chat",
+          }),
       onError(error) {
         toast.error(error.message);
       },
@@ -140,7 +142,7 @@ export default function Chat() {
       <div className="flex flex-col h-[calc(100dvh)] items-center justify-center max-w-4xl mx-auto">
         <Spinner className="size-4" />
       </div>
-    )
+    );
   }
 
   return (
@@ -166,13 +168,19 @@ export default function Chat() {
           {browserSupportsModel ? (
             <>
               <p className="text-xs">@built-in-ai/core demo</p>
-              <h1 className="text-lg font-medium">Using your browser's built-in AI model</h1>
-              <p className="text-sm max-w-xs">Your browser supports built-in AI models</p>
+              <h1 className="text-lg font-medium">
+                Using your browser's built-in AI model
+              </h1>
+              <p className="text-sm max-w-xs">
+                Your browser supports built-in AI models
+              </p>
             </>
           ) : (
             <>
               <h1 className="text-lg font-medium">Using server-side model</h1>
-              <p className="text-sm max-w-xs">Your device doesn&apos;t support built-in AI models</p>
+              <p className="text-sm max-w-xs">
+                Your device doesn&apos;t support built-in AI models
+              </p>
             </>
           )}
         </div>

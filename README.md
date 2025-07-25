@@ -11,7 +11,7 @@
 
 </div>
 
-TypeScript libraries that provide access to in-browser AI models with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). 
+TypeScript libraries that provide access to in-browser AI models with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/).
 
 > [!NOTE]
 > Only works with the new v5 of Vercel AI SDK.
@@ -20,7 +20,7 @@ The [`@built-in-ai/core`](/packages/built-in-ai/README.md) package is the AI SDK
 
 The [`@built-in-ai/web-llm`](/packages/web-llm/README.md) package is the AI SDK model provider for open-source models (using [WebLLM](https://github.com/mlc-ai/web-llm)) running directly in the browser.
 
-## Quick start 
+## Quick start
 
 ```bash
 # For Chrome/Edge built-in AI models
@@ -53,7 +53,7 @@ import { streamText } from "ai";
 import { webLLM } from "@built-in-ai/web-llm";
 
 const result = streamText({
-  model: webLLM('Llama-3.2-3B-Instruct-q4f16_1-MLC'),
+  model: webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC"),
   messages: [{ role: "user", content: "Hello, how are you?" }],
 });
 
@@ -78,10 +78,10 @@ Contributions are more than welcome! However, please make sure to check out the 
 If you've ever built apps with local language models, you're likely familiar with the challenges: creating custom hooks and UI components, while also building complex integration layers to fall back to server-side models when compatibility is an issue.
 
 This library bridges this gap by providing a unified solution that lets you:
+
 - Experiment with in-browser AI models using familiar patterns
 - Seamlessly fall back to server-side models when needed
 - Use the same Vercel AI SDK eco system you already know
 - Avoid building complex integration layers from scratch
 
 While there was an [existing package](https://github.com/jeasonstudio/chrome-ai) that attempted to provide similar functionality for Chrome, it has been inactive for the past year with no maintenance or updates. We're grateful for their initial exploration and the foundation they provided for the community.
-
