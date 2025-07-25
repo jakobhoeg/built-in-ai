@@ -67,8 +67,8 @@ for await (const chunk of result.textStream) {
 
 For detailed documentation, browser requirements and advanced usage:
 
-- [@built-in-ai/core](/packages/built-in-ai/README.md) documentation
-- [@built-in-ai/web-llm](/packages/web-llm/README.md) documentation
+- [@built-in-ai/core](https://www.npmjs.com/package/@built-in-ai/core) documentation
+- [@built-in-ai/web-llm](https://www.npmjs.com/package/@built-in-ai/web-llm) documentation
 
 ## Contributing
 
