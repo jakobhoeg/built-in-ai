@@ -11,7 +11,7 @@ If you've encountered an issue/bug/etc., please report it to us.
 
 ## Code contributions
 
-Wether you're looking to improve packages, create new example applications or just make minor adjustments, you're more than welcome to do so! 
+Wether you're looking to improve packages, create new example applications or just make minor adjustments, you're more than welcome to do so!
 Just make sure to follow the steps below.
 
 ### Environment setup
@@ -33,7 +33,7 @@ To set up the repository locally, follow these steps:
 3. Install dependencies from the root folder: `npm install`
 4. Build the project: `npm run build`. Once built, the `dist` folder is updated and the new code is picked up in the example applications. It is here referenced in the `package.json` with: `"@built-in-ai/core": "*"` etc.
 
-You can then run `npm run dev` which will run the local development server and rebuild packages automatically as you make changes. 
+You can then run `npm run dev` which will run the local development server and rebuild packages automatically as you make changes.
 
 To test the packages, run `npm run test`.
 
@@ -43,7 +43,7 @@ To open a PR with changes, do the following:
 
 1. Create new branch. Recommended to name it with alignment to your changes.
 2. Commit changes. Make sure your commits are clear and detailed. Preferably follow a [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) message format.
-3. If your changes include an update to the package you were working on, run `npx changeset` to make sure it gets released. Please DON'T use major or minor changesets - only patch. 
+3. If your changes include an update to the package you were working on, run `npx changeset` to make sure it gets released. Please DON'T use major or minor changesets - only patch.
 4. Fix prettier issues. We use prettier to format code files. Please make sure to run `npm run format` and commit any changes.
 5. Open the Pull Request. Make sure to link any related issues your PR resolves. Please use a conventional format for the title and include package/example:
 
@@ -52,5 +52,3 @@ To open a PR with changes, do the following:
 - `chore(examples/next-hybrid): description`
 
 Thank you so much in advance!
-
-
