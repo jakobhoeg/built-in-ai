@@ -6,12 +6,15 @@
 
 <div align="center">
 
-<!-- [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)
-[![NPM Downloads](https://img.shields.io/npm/dw/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm) -->
+[![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)
+[![NPM Downloads](https://img.shields.io/npm/dw/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)
+
+> [!NOTE]
+> This library is still in a very early state where updates might come quite frequently.
 
 </div>
 
-[WebLLM](https://github.com/mlc-ai/web-llm) model provider for [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to use the AI SDK with popular open-source models running directly in your web browser.
+[WebLLM](https://github.com/mlc-ai/web-llm) model provider for [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to easily use the AI SDK with popular open-source models running directly in your web browser.
 
 ## Installation
 
@@ -118,9 +121,9 @@ const result = streamText({
 
 When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress. 
 
-You can do this by importing `WebLLMUIMessage` from `@built-in-ai/core` that extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) such as download progress.
+You can do this by importing `WebLLMUIMessage` from `@built-in-ai/web-llm` that extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) such as download progress.
 
-<!-- See the complete working example: **[`/examples/next-hybrid/util/client-side-chat-transport.ts`](../../examples/next-hybrid/util/client-side-chat-transport.ts)** and the **[`/examples/next-hybrid/app/page.tsx`](../../examples/next-hybrid/app/page.tsx)** components. -->
+See the complete working example: **[`/examples/next-hybrid/app/web-llm/util/web-llm-chat-transport.ts`](../../examples/next-hybrid/app/web-llm/util/web-llm-chat-transport.ts)** and the **[`/examples/next-hybrid/app/web-llm/page.tsx`](../../examples/next-hybrid/app/web-llm/page.tsx)** components.
 
 This example includes:
 
@@ -129,8 +132,115 @@ This example includes:
 - Error handling and notifications
 - Full integration with `useChat` hook
 
-## Why?
+## API Reference
 
-The AI SDK provides a ton of quality of life improvements for developers creating AI applications. If you've ever tried building an app that utilizes local language models, you're probably familiar with the painpoints of doing so.
+### `webLLM(modelId, settings?)`
 
-This library is supposed to help close the gap between how we use regular AI models and local models. Essentially making it easy for developers to test and integrate smaller models into their applications without having to think too much about the intricasies.
+Creates a WebLLM model instance.
+
+**Parameters:**
+
+- `modelId`: The model identifier from the [supported list of models](https://github.com/mlc-ai/web-llm/blob/main/src/config.ts)
+- `settings` (optional): Configuration options for the WebLLM model
+  - `appConfig?: AppConfig` - Custom app configuration for WebLLM
+  - `initProgressCallback?: (progress: WebLLMProgress) => void` - Progress callback for model initialization
+  - `engineConfig?: MLCEngineConfig` - Engine configuration options
+  - `worker?: Worker` - A web worker instance to run the model in for better performance
+
+**Returns:** `WebLLMLanguageModel` instance
+
+### `doesBrowserSupportWebLLM(): boolean`
+
+Quick check if the browser supports the WebLLM. Useful for component-level decisions and feature flags.
+
+**Returns:** `boolean` - `true` if browser supports WebLLM, `false` otherwise
+
+**Example:**
+
+```typescript
+import { doesBrowserSupportWebLLM } from "@built-in-ai/web-llm";
+
+if (doesBrowserSupportWebLLM()) {
+  // Show built-in AI option in UI
+} else {
+  // Show server-side option only
+}
+```
+
+### `WebLLMUIMessage`
+
+Extended UI message type for use with the `useChat` hook that includes custom data parts for WebLLM functionality.
+
+**Type Definition:**
+
+```typescript
+type WebLLMUIMessage = UIMessage<
+  never,
+  {
+    modelDownloadProgress: {
+      status: "downloading" | "complete" | "error";
+      progress?: number;
+      message: string;
+    };
+    notification: {
+      message: string;
+      level: "info" | "warning" | "error";
+    };
+  }
+>;
+```
+
+**Data Parts:**
+
+- `modelDownloadProgress` - Tracks browser AI model download status and progress
+- `notification` - Displays temporary messages and alerts to users
+
+### `WebLLMLanguageModel.createSessionWithProgress(onDownloadProgress?)`
+
+Creates a language model session with optional download progress monitoring.
+
+**Parameters:**
+
+- `onDownloadProgress?: (progress: WebLLMProgress) => void` - Optional callback that receives progress reports during model download
+
+**Returns:** `Promise<MLCEngineInterface>` - The configured language model session
+
+**Example:**
+
+```typescript
+const model = webLLM('Llama-3.2-3B-Instruct-q4f16_1-MLC');
+await model.createSessionWithProgress((report) => {
+  console.log(`Download: ${report.text}`);
+});
+```
+
+### `WebLLMLanguageModel.availability()`
+
+Checks the current availability status of the WebLLM model.
+
+**Returns:** `Promise<"unavailable" | "downloadable" | "downloading" | "available">`
+
+- `"unavailable"` - Model is not supported in the browser
+- `"downloadable"` - Model is supported but needs to be downloaded first
+- `"downloading"` - Model is currently being downloaded
+- `"available"` - Model is ready to use
+
+### `WebLLMProgress`
+
+The progress report type returned during model initialization.
+
+```typescript
+interface InitProgressReport {
+    progress: number; // 0-1
+    timeElapsed: number; // in ms
+    text: string; // progress text
+}
+```
+
+## Author
+
+2025 © Jakob Hoeg Mørk
+
+## Credits
+
+The WebLLM & Vercel teams
