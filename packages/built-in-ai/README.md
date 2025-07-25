@@ -1,7 +1,7 @@
 # Built-in AI provider for Vercel AI SDK
 
 <div align="center">
-<img src="../../npm-header.png">
+<img src="./hero.png">
 </div>
 
 <div align="center">
@@ -113,7 +113,7 @@ const result = streamText({
 
 When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress. You can do this by importing `BuiltInAIUIMessage` from `@built-in-ai/core` that extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) such as download progress.
 
-See the complete working example: **[`/examples/next-hybrid/util/client-side-chat-transport.ts`](../../examples/next-hybrid/util/client-side-chat-transport.ts)** and the **[`/examples/next-hybrid/app/page.tsx`](../../examples/next-hybrid/app/page.tsx)** components.
+See the complete working example: **[`/examples/next-hybrid/app/(core)/util/client-side-chat-transport.ts`](<../../examples/next-hybrid/app/(core)/util/client-side-chat-transport.ts>)** and the **[`/examples/next-hybrid/app/page.tsx`](<../../examples/next-hybrid/app/(core)/page.tsx>)** components.
 
 This example includes:
 
@@ -151,6 +151,27 @@ for await (const chunk of result.textStream) {
   console.log(chunk);
 }
 ```
+
+## Features
+
+### Supported
+
+- [x] **Text generation** (`generateText()`)
+- [x] **Streaming responses** (`streamText()`)
+- [x] **Download progress streaming** - Real-time progress updates during model downloads
+- [x] **Multimodal functionality** (image and audio support)\*
+- [x] **Temperature control**
+- [x] **Response format constraints** (JSON `generateObject()/streamObject()`)
+- [x] **Abort signals**
+
+### Planned (when implemented in the Prompt API)
+
+- [ ] **Tool calling**
+- [ ] **Token counting**
+- [ ] **Custom stop sequences**
+- [ ] **Presence/frequency penalties**
+
+> \*Multimodal functionality is currently only available in Chrome's Prompt API implementation
 
 ## API Reference
 
@@ -255,3 +276,7 @@ Checks the current availability status of the built-in AI model.
 - `"downloadable"` - Model is supported but needs to be downloaded first
 - `"downloading"` - Model is currently being downloaded
 - `"available"` - Model is ready to use
+
+## Author
+
+2025 © Jakob Hoeg Mørk

@@ -1,0 +1,73 @@
+{
+  "name": "@built-in-ai/web-llm",
+  "version": "0.0.0",
+  "description": "WebLLM provider for Vercel AI SDK v5+ (High-performance in-browser LLM inference)",
+  "author": {
+    "name": "Jakob Hoeg Mørk",
+    "url": "https://jakobhoeg.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakobhoeg/built-in-ai.git",
+    "directory": "packages/web-llm"
+  },
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "npm run clean && tsup",
+    "build:prod": "tsup",
+    "build:test": "npm run test:run && tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run",
+    "dev:example": "npm run build && npm run -w examples/next-hybrid dev"
+  },
+  "keywords": [
+    "ai",
+    "ai-sdk",
+    "vercel",
+    "webllm",
+    "web-llm",
+    "browser-ai",
+    "mlc-ai",
+    "webgpu",
+    "language-model",
+    "llm",
+    "inference"
+  ],
+  "license": "Apache License",
+  "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.79"
+  },
+  "peerDependencies": {
+    "ai": ">=5.0.0-beta.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "ai": "5.0.0-beta.18",
+    "jsdom": "^26.1.0",
+    "rimraf": "^5.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "zod": "^3.22.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
