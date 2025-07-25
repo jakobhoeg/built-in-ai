@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.6.3
+
+### Patch Changes
+
+- 21900b9: docs: include structured data examples
+
 ## 1.6.2
 
 ### Patch Changes
