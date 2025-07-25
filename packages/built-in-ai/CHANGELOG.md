@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.6.2
+
+### Patch Changes
+
+- c3ca577: docs(@built-in-ai/core): update readme
+
 ## 1.6.1
 
 ### Patch Changes
