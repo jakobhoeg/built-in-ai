@@ -5,12 +5,14 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
   createUIMessageStream,
+  tool,
 } from "ai";
 import {
   WebLLMProgress,
   WebLLMUIMessage,
   WebLLMLanguageModel,
 } from "@built-in-ai/web-llm";
+import z from "zod";
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
@@ -51,6 +53,22 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
         model,
         messages: prompt,
         abortSignal: abortSignal,
+        tools: {
+          weather: tool({
+            description: 'Get the weather in a location',
+            inputSchema: z.object({
+              location: z.string().describe('The location to get the weather for'),
+            }),
+            execute: async ({ location }) => {
+              console.log(`--- Executing weather tool for location: ${location} ---`);
+              console.log(`--- ${location} ${50} `);
+              return {
+                location,
+                temperature: 20,
+              };
+            },
+          }),
+        },
       });
       return result.toUIMessageStream();
     }
