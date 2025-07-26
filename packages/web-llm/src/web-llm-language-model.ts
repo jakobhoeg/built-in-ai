@@ -12,13 +12,17 @@ import { convertToWebLLMMessages } from "./convert-to-webllm-messages";
 import {
   AppConfig,
   ChatCompletionRequestStreaming,
+  ChatCompletionTool,
+  ChatCompletionToolChoiceOption,
   CreateWebWorkerMLCEngine,
   InitProgressReport,
   MLCEngine,
   MLCEngineConfig,
   MLCEngineInterface,
+  functionCallingModelIds
 } from "@mlc-ai/web-llm";
 import { Availability } from "./types";
+import { prepareTools } from "./prepare-tools";
 
 declare global {
   interface Navigator {
@@ -183,6 +187,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     responseFormat,
     seed,
     tools,
+    toolChoice
   }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     const warnings: LanguageModelV2CallWarning[] = [];
 
@@ -230,6 +235,26 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     // Convert messages to WebLLM format
     const messages = convertToWebLLMMessages(prompt);
 
+    let webLlmTools: ChatCompletionTool[] | undefined;
+    let webLlmToolChoice: ChatCompletionToolChoiceOption | undefined;
+
+    if (tools || toolChoice) {
+      if (functionCallingModelIds.includes(this.modelId)) {
+        const {
+          tools: preparedTools,
+          toolChoice: preparedToolChoice,
+          toolWarnings,
+        } = prepareTools({
+          tools,
+          toolChoice,
+        });
+
+        webLlmTools = preparedTools;
+        webLlmToolChoice = preparedToolChoice;
+        warnings.push(...toolWarnings);
+      }
+    }
+
     // Build request options
     const requestOptions: any = {
       messages,
@@ -237,6 +262,8 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       max_tokens: maxOutputTokens,
       top_p: topP,
       seed,
+      tools: webLlmTools,
+      tool_choice: webLlmToolChoice,
     };
 
     // Handle response format
@@ -293,6 +320,17 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
         });
       }
 
+      if (choice.message.tool_calls) {
+        for (const toolCall of choice.message.tool_calls) {
+          content.push({
+            type: "tool-call",
+            toolCallId: toolCall.id,
+            toolName: toolCall.function.name,
+            input: toolCall.function.arguments,
+          });
+        }
+      }
+
       let finishReason: LanguageModelV2FinishReason = "stop";
       if (choice.finish_reason === "abort") {
         finishReason = "other";
@@ -311,8 +349,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       };
     } catch (error) {
       throw new Error(
-        `WebLLM generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     } finally {
@@ -404,9 +441,30 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           const response =
             await engine.chat.completions.create(streamingRequest);
 
+          const toolCalls: Record<
+            string,
+            { toolName: string; args: string }
+          > = {};
+
           for await (const chunk of response) {
             const choice = chunk.choices[0];
             if (!choice) continue;
+
+            if (choice.delta.tool_calls) {
+              for (const toolCallDelta of choice.delta.tool_calls) {
+                const toolCallId = toolCallDelta.id!;
+                if (!toolCalls[toolCallId]) {
+                  toolCalls[toolCallId] = { toolName: "", args: "" };
+                }
+                if (toolCallDelta.function?.name) {
+                  toolCalls[toolCallId].toolName = toolCallDelta.function.name;
+                }
+                if (toolCallDelta.function?.arguments) {
+                  toolCalls[toolCallId].args +=
+                    toolCallDelta.function.arguments;
+                }
+              }
+            }
 
             if (isFirstChunk && choice.delta.content) {
               controller.enqueue({ type: "text-start", id: textId });
@@ -422,7 +480,19 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
             }
 
             if (choice.finish_reason) {
-              controller.enqueue({ type: "text-end", id: textId });
+              if (Object.keys(toolCalls).length > 0) {
+                for (const toolCallId in toolCalls) {
+                  const toolCall = toolCalls[toolCallId];
+                  controller.enqueue({
+                    type: "tool-call",
+                    toolCallId,
+                    toolName: toolCall.toolName,
+                    input: toolCall.args,
+                  });
+                }
+              } else {
+                controller.enqueue({ type: "text-end", id: textId });
+              }
 
               let finishReason: LanguageModelV2FinishReason = "stop";
               if (choice.finish_reason === "abort") {
