@@ -44,7 +44,7 @@ import { WebLLMChatTransport } from "@/app/web-llm/util/web-llm-chat-transport";
 import { ModelSelector } from "@/components/model-selector";
 
 const MODELS = [
-  "Qwen3-0.6B-q0f16-MLC",
+  "Hermes-2-Pro-Mistral-7B-q4f16_1-MLC",
   "Qwen3-1.7B-q4f16_1-MLC",
   "gemma-2-2b-it-q4f16_1-MLC",
   "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC",
@@ -65,7 +65,6 @@ function WebLLMChat({
 
   const chatTransport = useMemo(() => {
     if (browserSupportsWebLLM) {
-      console.log("here");
       const model = webLLM(modelId, {
         worker: new Worker(new URL("./util/worker.ts", import.meta.url), {
           type: "module",
@@ -85,6 +84,7 @@ function WebLLMChat({
       onError(error) {
         toast.error(error.message);
       },
+      maxSteps: 5,
     });
 
   const handleSubmit = (e: React.FormEvent) => {
