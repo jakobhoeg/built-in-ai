@@ -105,27 +105,58 @@ export function convertToWebLLMMessages(
         break;
 
       case "assistant":
-        let assistantContent = "";
-        for (const part of message.content) {
+        const assistantParts = message.content;
+        let text = "";
+        const toolCalls: webllm.ChatCompletionMessageToolCall[] = [];
+
+        for (const part of assistantParts) {
           if (part.type === "text") {
-            assistantContent += part.text;
+            text += part.text;
           } else if (part.type === "tool-call") {
-            throw new UnsupportedFunctionalityError({
-              functionality: "tool calling",
+            toolCalls.push({
+              id: part.toolCallId,
+              type: "function",
+              function: {
+                name: part.toolName,
+                arguments: JSON.stringify(part.input),
+              },
             });
           }
         }
+
         messages.push({
           role: "assistant",
-          content: assistantContent,
+          content: text,
+          tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
         });
         break;
+
       case "tool":
-        throw new UnsupportedFunctionalityError({
-          functionality: "tool results",
-        });
+        for (const part of message.content) {
+          messages.push({
+            role: "tool",
+            tool_call_id: part.toolCallId,
+            content:
+              part.output === undefined
+                ? "null"
+                : JSON.stringify(part.output),
+          });
+        }
+        break;
     }
   }
 
   return messages;
+}
+export function convertToWebLLMTools(
+  tools: webllm.ChatCompletionTool[],
+): webllm.ChatCompletionTool[] {
+  return tools.map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters: tool.function.parameters as Record<string, unknown>,
+    },
+  }));
 }
