@@ -1,5 +1,7 @@
 # Built-in AI Next.js Hybrid Chat Example
 
+> This is a very basic example of how to use all packages.
+
 This example demonstrates how to create a hybrid AI chat application that intelligently switches between browser-based AI (Chrome/Edge Prompt API) and server-side AI models. The app includes download progress streaming from the browser AI model, multimodal file support, and graceful fallback when browser AI model is unavailable.
 
 ## Features Demonstrated
@@ -16,7 +18,7 @@ This example demonstrates how to create a hybrid AI chat application that intell
 
 Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=ai-sdk-example):
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fai%2Ftree%2Fmain%2Fexamples%2Fnext-openai&env=OPENAI_API_KEY&project-name=ai-sdk-next-openai&repository-name=ai-sdk-next-openai)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jakobhoeg/built-in-ai/tree/main/examples/next-hybrid next-built-in-ai-hybrid)
 
 ## How to use
 
