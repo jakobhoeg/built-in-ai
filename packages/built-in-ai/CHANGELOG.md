@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.6.4
+
+### Patch Changes
+
+- 224835a: fix: package.json sideEffects
+
 ## 1.6.3
 
 ### Patch Changes
