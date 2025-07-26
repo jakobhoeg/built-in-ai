@@ -23,7 +23,7 @@
   "files": [
     "dist/**/*"
   ],
-  "sideEffects": "false",
+  "sideEffects": false,
   "scripts": {
     "build": "npm run clean && tsup",
     "build:prod": "tsup",
