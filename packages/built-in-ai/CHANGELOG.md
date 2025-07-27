@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.6.5
+
+### Patch Changes
+
+- 565b40a: fix: infer types instead of using any
+
 ## 1.6.4
 
 ### Patch Changes
