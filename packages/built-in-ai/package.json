@@ -1,6 +1,6 @@
 {
   "name": "@built-in-ai/core",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "description": "Browser Built-in AI API provider for Vercel AI SDK v5+ (Chrome & Edge)",
   "author": {
     "name": "Jakob Hoeg Mørk",
