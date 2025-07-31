@@ -18,9 +18,6 @@ A TypeScript library that provides access to browser-based AI capabilities with 
 
 ## Installation
 
-> [!NOTE]
-> This only works with the new v5 of the Vercel AI SDK.
-
 ```bash
 npm i @built-in-ai/core
 ```

@@ -74,7 +74,7 @@ export default function Chat() {
       onError(error) {
         toast.error(error.message);
       },
-      onData(dataPart) {
+      onData: (dataPart) => {
         // Handle transient notifications
         // we can also access the date-modelDownloadProgress here
         if (dataPart.type === "data-notification") {
