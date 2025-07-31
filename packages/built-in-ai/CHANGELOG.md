@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 1.7.0
+
+### Minor Changes
+
+- 3a08107: chore: update ai to v5 stable
+
 ## 1.6.5
 
 ### Patch Changes

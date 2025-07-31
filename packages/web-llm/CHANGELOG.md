@@ -1,5 +1,11 @@
 # @built-in-ai/web-llm
 
+## 0.2.0
+
+### Minor Changes
+
+- f89062e: chore: update ai to v5 stable
+
 ## 0.1.0
 
 ### Minor Changes
