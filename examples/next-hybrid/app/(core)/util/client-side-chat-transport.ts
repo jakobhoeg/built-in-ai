@@ -15,8 +15,7 @@ import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
  * @implements {ChatTransport<BuiltInAIUIMessage>}
  */
 export class ClientSideChatTransport
-  implements ChatTransport<BuiltInAIUIMessage>
-{
+  implements ChatTransport<BuiltInAIUIMessage> {
   async sendMessages(
     options: {
       chatId: string;
@@ -24,9 +23,9 @@ export class ClientSideChatTransport
       abortSignal: AbortSignal | undefined;
     } & {
       trigger:
-        | "submit-user-message"
-        | "submit-tool-result"
-        | "regenerate-assistant-message";
+      | "submit-message"
+      | "submit-tool-result"
+      | "regenerate-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
@@ -109,7 +108,7 @@ export class ClientSideChatTransport
             abortSignal: abortSignal,
             onChunk(event) {
               // Clear progress message on first text chunk
-              if (event.chunk.type === "text" && downloadProgressId) {
+              if (event.chunk.type === "text-delta" && downloadProgressId) {
                 writer.write({
                   type: "data-modelDownloadProgress",
                   id: downloadProgressId,
