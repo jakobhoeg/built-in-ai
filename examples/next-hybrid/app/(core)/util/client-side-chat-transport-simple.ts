@@ -17,10 +17,7 @@ export class SimpleClientSideChatTransport implements ChatTransport<UIMessage> {
       messages: UIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
-      trigger:
-      | "submit-message"
-      | "submit-tool-result"
-      | "regenerate-message";
+      trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {

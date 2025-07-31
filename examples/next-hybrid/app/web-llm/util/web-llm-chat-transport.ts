@@ -31,10 +31,7 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
       messages: WebLLMUIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
-      trigger:
-      | "submit-message"
-      | "submit-tool-result"
-      | "regenerate-message";
+      trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {

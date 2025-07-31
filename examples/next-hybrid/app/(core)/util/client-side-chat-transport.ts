@@ -15,17 +15,15 @@ import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
  * @implements {ChatTransport<BuiltInAIUIMessage>}
  */
 export class ClientSideChatTransport
-  implements ChatTransport<BuiltInAIUIMessage> {
+  implements ChatTransport<BuiltInAIUIMessage>
+{
   async sendMessages(
     options: {
       chatId: string;
       messages: BuiltInAIUIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
-      trigger:
-      | "submit-message"
-      | "submit-tool-result"
-      | "regenerate-message";
+      trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
