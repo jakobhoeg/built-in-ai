@@ -23,10 +23,7 @@ export class ClientSideChatTransport
       messages: BuiltInAIUIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
-      trigger:
-        | "submit-user-message"
-        | "submit-tool-result"
-        | "regenerate-assistant-message";
+      trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
@@ -109,7 +106,7 @@ export class ClientSideChatTransport
             abortSignal: abortSignal,
             onChunk(event) {
               // Clear progress message on first text chunk
-              if (event.chunk.type === "text" && downloadProgressId) {
+              if (event.chunk.type === "text-delta" && downloadProgressId) {
                 writer.write({
                   type: "data-modelDownloadProgress",
                   id: downloadProgressId,

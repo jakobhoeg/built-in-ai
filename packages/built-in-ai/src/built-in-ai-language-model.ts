@@ -7,6 +7,7 @@ import {
   LanguageModelV2Prompt,
   LanguageModelV2StreamPart,
   LoadSettingError,
+  JSONValue,
 } from "@ai-sdk/provider";
 import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 
@@ -52,7 +53,7 @@ function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
   for (const message of prompt) {
     if (message.role === "user") {
       for (const part of message.content) {
-        if ((part as any).type === "image" || part.type === "file") {
+        if (part.type === "file") {
           return true;
         }
       }
@@ -73,9 +74,7 @@ function getExpectedInputs(
   for (const message of prompt) {
     if (message.role === "user") {
       for (const part of message.content) {
-        if ((part as any).type === "image") {
-          inputs.add("image");
-        } else if (part.type === "file") {
+        if (part.type === "file") {
           if (part.mediaType?.startsWith("image/")) {
             inputs.add("image");
           } else if (part.mediaType?.startsWith("audio/")) {
@@ -154,7 +153,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     // Add download progress monitoring if callback provided
     if (onDownloadProgress) {
-      mergedOptions.monitor = (m: any) => {
+      mergedOptions.monitor = (m: CreateMonitor) => {
         m.addEventListener("downloadprogress", (e: ProgressEvent) => {
           onDownloadProgress(e.loaded); // e.loaded is between 0 and 1
         });
@@ -245,9 +244,13 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     const { systemMessage, messages } = convertToBuiltInAIMessages(prompt);
 
     // Handle response format for Prompt API
-    const promptOptions: any = {};
+    const promptOptions: LanguageModelPromptOptions &
+      LanguageModelCreateCoreOptions = {};
     if (responseFormat?.type === "json") {
-      promptOptions.responseConstraint = responseFormat.schema;
+      promptOptions.responseConstraint = responseFormat.schema as Record<
+        string,
+        JSONValue
+      >;
     }
 
     // Map supported settings

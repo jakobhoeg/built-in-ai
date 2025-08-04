@@ -18,9 +18,6 @@
 
 ## Installation
 
-> [!NOTE]
-> This only works with the new v5 of the Vercel AI SDK.
-
 ```bash
 npm i @built-in-ai/web-llm
 ```
