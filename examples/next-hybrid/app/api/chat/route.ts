@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     model: openai("gpt-4o"),
     messages: prompt,
     tools: {
-      getWeatherInformation: {
+      get_weather_information: {
         description: "Get the weather for a location",
         inputSchema: z.object({
           location: z.string().describe("City and country, e.g. Paris, FR"),

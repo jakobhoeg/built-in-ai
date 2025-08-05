@@ -7,6 +7,14 @@ import {
   LanguageModelV2StreamPart,
   LoadSettingError,
 } from "@ai-sdk/provider";
+
+import {
+  isParsableJson,
+  generateId,
+  Tool,
+  ToolCall,
+  ToolCallOptions,
+} from '@ai-sdk/provider-utils';
 import { convertToWebLLMMessages } from "./convert-to-webllm-messages";
 
 import {
@@ -14,6 +22,7 @@ import {
   ChatCompletionRequestStreaming,
   ChatCompletionTool,
   ChatCompletionToolChoiceOption,
+  ChatCompletionMessageToolCall,
   CreateWebWorkerMLCEngine,
   InitProgressReport,
   MLCEngine,
@@ -191,12 +200,12 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     const warnings: LanguageModelV2CallWarning[] = [];
 
-    // Add warnings for unsupported settings
-    if (tools && tools.length > 0) {
+    // Check if model supports function calling
+    if (tools && tools.length > 0 && !functionCallingModelIds.includes(this.modelId)) {
       warnings.push({
         type: "unsupported-setting",
         setting: "tools",
-        details: "Tool calling is not yet fully implemented",
+        details: "Tool calling is not supported by this model. Use a function calling enabled model.",
       });
     }
 
@@ -324,7 +333,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
         for (const toolCall of choice.message.tool_calls) {
           content.push({
             type: "tool-call",
-            toolCallId: toolCall.id,
+            toolCallId: toolCall.id ?? generateId(),
             toolName: toolCall.function.name,
             input: toolCall.function.arguments,
           });
@@ -441,10 +450,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           const response =
             await engine.chat.completions.create(streamingRequest);
 
-          const toolCalls: Record<
-            string,
-            { toolName: string; args: string }
-          > = {};
+          const toolCalls: Array<ChatCompletionMessageToolCall & { hasFinished: boolean }> = [];
 
           for await (const chunk of response) {
             const choice = chunk.choices[0];
@@ -452,16 +458,111 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
 
             if (choice.delta.tool_calls) {
               for (const toolCallDelta of choice.delta.tool_calls) {
-                const toolCallId = toolCallDelta.id!;
-                if (!toolCalls[toolCallId]) {
-                  toolCalls[toolCallId] = { toolName: "", args: "" };
+                const index = toolCallDelta.index || 0;
+
+                // Tool call start. WebLLM returns all information except the arguments in the first chunk.
+                if (toolCalls[index] == null) {
+                  if (toolCallDelta.type !== 'function') {
+                    console.warn(`Expected 'function' type, got ${toolCallDelta.type}`);
+                    continue;
+                  }
+
+                  const toolCallId = toolCallDelta.id ?? generateId();
+
+                  if (toolCallDelta.function?.name == null) {
+                    console.warn(`Expected 'function.name' to be a string.`);
+                    continue;
+                  }
+
+                  controller.enqueue({
+                    type: "tool-input-start",
+                    id: toolCallId,
+                    toolName: toolCallDelta.function.name,
+                  });
+
+                  toolCalls[index] = {
+                    id: toolCallId,
+                    type: 'function',
+                    function: {
+                      name: toolCallDelta.function.name,
+                      arguments: toolCallDelta.function.arguments ?? '',
+                    },
+                    hasFinished: false,
+                  };
+
+                  const toolCall = toolCalls[index];
+
+                  if (
+                    toolCall.function?.name != null &&
+                    toolCall.function?.arguments != null
+                  ) {
+                    // send delta if the argument text has already started:
+                    if (toolCall.function.arguments.length > 0) {
+                      controller.enqueue({
+                        type: "tool-input-delta",
+                        id: toolCall.id,
+                        delta: toolCall.function.arguments,
+                      });
+                    }
+
+                    // check if tool call is complete
+                    // (some providers send the full tool call in one chunk):
+                    if (isParsableJson(toolCall.function.arguments)) {
+                      controller.enqueue({
+                        type: "tool-input-end",
+                        id: toolCall.id,
+                      });
+
+                      controller.enqueue({
+                        type: "tool-call",
+                        toolCallId: toolCall.id,
+                        toolName: toolCall.function.name,
+                        input: toolCall.function.arguments,
+                      });
+                      toolCall.hasFinished = true;
+                    }
+                  }
+
+                  continue;
                 }
-                if (toolCallDelta.function?.name) {
-                  toolCalls[toolCallId].toolName = toolCallDelta.function.name;
+
+                // existing tool call, merge if not finished
+                const toolCall = toolCalls[index];
+
+                if (toolCall.hasFinished) {
+                  continue;
                 }
-                if (toolCallDelta.function?.arguments) {
-                  toolCalls[toolCallId].args +=
-                    toolCallDelta.function.arguments;
+
+                if (toolCallDelta.function?.arguments != null) {
+                  toolCall.function!.arguments +=
+                    toolCallDelta.function?.arguments ?? '';
+                }
+
+                // send delta
+                controller.enqueue({
+                  type: "tool-input-delta",
+                  id: toolCall.id,
+                  delta: toolCallDelta.function?.arguments ?? '',
+                });
+
+                // check if tool call is complete
+                if (
+                  toolCall.function?.name != null &&
+                  toolCall.function?.arguments != null &&
+                  isParsableJson(toolCall.function.arguments)
+                ) {
+                  controller.enqueue({
+                    type: "tool-input-end",
+                    id: toolCall.id,
+                  });
+
+                  controller.enqueue({
+                    type: "tool-call",
+                    toolCallId: toolCall.id,
+                    toolName: toolCall.function.name,
+                    input: toolCall.function.arguments,
+                  });
+                  toolCall.hasFinished = true;
                 }
               }
             }
@@ -480,23 +581,36 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
             }
 
             if (choice.finish_reason) {
-              if (Object.keys(toolCalls).length > 0) {
-                for (const toolCallId in toolCalls) {
-                  const toolCall = toolCalls[toolCallId];
+              // Handle any unfinished tool calls
+              for (const toolCall of toolCalls) {
+                if (!toolCall.hasFinished) {
+                  // End of tool input for incomplete tool calls
+                  controller.enqueue({
+                    type: "tool-input-end",
+                    id: toolCall.id,
+                  });
+
+                  // Pass the raw arguments string, even if incomplete
+                  // The AI SDK will handle parsing and validation
                   controller.enqueue({
                     type: "tool-call",
-                    toolCallId,
-                    toolName: toolCall.toolName,
-                    input: toolCall.args,
+                    toolCallId: toolCall.id,
+                    toolName: toolCall.function.name,
+                    input: toolCall.function.arguments || "{}",
                   });
                 }
-              } else {
+              }
+
+              if (toolCalls.length === 0 && !isFirstChunk) {
                 controller.enqueue({ type: "text-end", id: textId });
               }
 
               let finishReason: LanguageModelV2FinishReason = "stop";
               if (choice.finish_reason === "abort") {
                 finishReason = "other";
+              }
+              if (choice.finish_reason === "tool_calls") {
+                finishReason = "tool-calls";
               }
 
               controller.enqueue({

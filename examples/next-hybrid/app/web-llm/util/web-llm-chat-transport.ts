@@ -6,6 +6,7 @@ import {
   ChatRequestOptions,
   createUIMessageStream,
   tool,
+  stepCountIs,
 } from "ai";
 import {
   WebLLMProgress,
@@ -51,17 +52,18 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
         messages: prompt,
         abortSignal: abortSignal,
         tools: {
-          weather: tool({
+          get_weather_information: tool({
             description: 'Get the weather in a location',
             inputSchema: z.object({
               location: z.string().describe('The location to get the weather for'),
             }),
             execute: async ({ location }) => {
-              console.log(`--- Executing weather tool for location: ${location} ---`);
-              console.log(`--- ${location} ${50} `);
+              // Add 4-second delay
+              await new Promise(resolve => setTimeout(resolve, 4000));
+
               return {
                 location,
-                temperature: 20,
+                temperature: 72 + Math.floor(Math.random() * 21) - 10,
               };
             },
           }),
@@ -140,6 +142,23 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
                 });
                 downloadProgressId = undefined;
               }
+            },
+            tools: {
+              get_weather_information: tool({
+                description: 'Get the weather in a location',
+                inputSchema: z.object({
+                  location: z.string().describe('The location to get the weather for'),
+                }),
+                execute: async ({ location }) => {
+                  // Add 4-second delay
+                  await new Promise(resolve => setTimeout(resolve, 4000));
+
+                  return {
+                    location,
+                    temperature: 72 + Math.floor(Math.random() * 21) - 10,
+                  };
+                },
+              }),
             },
           });
 

@@ -34,7 +34,13 @@ import {
   webLLM,
   WebLLMUIMessage,
 } from "@built-in-ai/web-llm";
-import { DefaultChatTransport, UIMessage } from "ai";
+import {
+  DefaultChatTransport,
+  UIMessage,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  isToolUIPart,
+  getToolName
+} from "ai";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Spinner } from "@/components/ui/spinner";
@@ -78,13 +84,12 @@ function WebLLMChat({
     });
   }, [modelId, browserSupportsWebLLM]);
 
-  const { error, status, sendMessage, messages, regenerate, stop } =
+  const { error, status, sendMessage, messages, regenerate, stop, addToolResult } =
     useChat<WebLLMUIMessage>({
       transport: chatTransport, // use custom transport
       onError(error) {
         toast.error(error.message);
       },
-      maxSteps: 5,
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -235,31 +240,51 @@ function WebLLMChat({
                     <AIResponse key={partIndex}>{part.text}</AIResponse>
                   ))}
 
-                {/* Action buttons for assistant messages */}
-                {(m.role === "assistant" || m.role === "system") &&
-                  index === messages.length - 1 &&
-                  status === "ready" && (
-                    <div className="flex gap-1 mt-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyMessageToClipboard(m)}
-                        className="text-muted-foreground hover:text-foreground h-4 w-4 [&_svg]:size-3.5"
-                      >
-                        <Copy />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => regenerate()}
-                        className="text-muted-foreground hover:text-foreground h-4 w-4 [&_svg]:size-3.5"
-                      >
-                        <RefreshCcw />
-                      </Button>
-                    </div>
-                  )}
+                {/* Handle tool parts */}
+                {m.parts.map((part, partIndex) => {
+
+                  if ('dynamic' in part && part.dynamic) {
+                    return null;
+                  }
+
+                  // Now check for static tools
+                  if (isToolUIPart(part)) {
+                    const toolName = getToolName(part);
+                    const toolCallId = part.toolCallId;
+
+                    // Handle get_weather_information tool
+                    if (toolName === 'get_weather_information') {
+                      if (part.state === 'output-available' && part.output) {
+                        const output = part.output as { location: string; temperature: number };
+                        return (
+                          <div
+                            key={toolCallId}
+                            className="mt-2 flex flex-col gap-2 p-4 bg-blue-400 rounded-lg"
+                          >
+                            <div className="flex flex-row justify-between items-center">
+                              <div className="text-4xl text-blue-50 font-medium">
+                                {output.temperature}°F
+                              </div>
+                              <div className="h-9 w-9 bg-amber-400 rounded-full flex-shrink-0" />
+                            </div>
+                            <div className="text-blue-50 text-sm">
+                              Weather in {output.location}
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        // Loading state
+                        return (
+                          <div key={toolCallId} className="mt-2 text-gray-500 flex items-center gap-2">
+                            <Spinner className="size-4" />
+                            Getting weather information...
+                          </div>
+                        );
+                      }
+                    }
+                  }
+                  return null;
+                })}
               </AIMessageContent>
               <AIMessageAvatar
                 name={m.role}

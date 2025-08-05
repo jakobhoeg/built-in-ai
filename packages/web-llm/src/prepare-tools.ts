@@ -16,9 +16,7 @@ export function prepareTools({
   tools?: webllm.ChatCompletionTool[];
   toolChoice?: webllm.ChatCompletionToolChoiceOption;
 } {
-  console.log("--- prepareTools ---");
-  console.log("Input tools:", JSON.stringify(tools, null, 2));
-  console.log("Input toolChoice:", JSON.stringify(toolChoice, null, 2));
+
   // when the tools array is empty, change it to undefined to prevent errors:
   tools = tools?.length ? tools : undefined;
 
@@ -52,8 +50,6 @@ export function prepareTools({
         break;
     }
   }
-
-  console.log("Output webLlmTools:", JSON.stringify(webLlmTools, null, 2));
 
   if (toolChoice == null) {
     return { tools: webLlmTools, toolChoice: undefined, toolWarnings };

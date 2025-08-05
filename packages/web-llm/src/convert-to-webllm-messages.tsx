@@ -118,7 +118,7 @@ export function convertToWebLLMMessages(
               type: "function",
               function: {
                 name: part.toolName,
-                arguments: JSON.stringify(part.input),
+                arguments: typeof part.input === 'string' ? part.input : JSON.stringify(part.input),
               },
             });
           }
@@ -133,13 +133,27 @@ export function convertToWebLLMMessages(
 
       case "tool":
         for (const part of message.content) {
+          const output = part.output;
+
+          let contentValue: string;
+          switch (output.type) {
+            case 'text':
+            case 'error-text':
+              contentValue = output.value;
+              break;
+            case 'content':
+            case 'json':
+            case 'error-json':
+              contentValue = JSON.stringify(output.value);
+              break;
+            default:
+              contentValue = "null";
+              break;
+          }
           messages.push({
             role: "tool",
             tool_call_id: part.toolCallId,
-            content:
-              part.output === undefined
-                ? "null"
-                : JSON.stringify(part.output),
+            content: contentValue,
           });
         }
         break;
@@ -147,16 +161,4 @@ export function convertToWebLLMMessages(
   }
 
   return messages;
-}
-export function convertToWebLLMTools(
-  tools: webllm.ChatCompletionTool[],
-): webllm.ChatCompletionTool[] {
-  return tools.map((tool) => ({
-    type: "function",
-    function: {
-      name: tool.function.name,
-      description: tool.function.description,
-      parameters: tool.function.parameters as Record<string, unknown>,
-    },
-  }));
 }
