@@ -19,7 +19,6 @@ import {
   StoppingCriteria,
   PretrainedModelOptions
 } from "@huggingface/transformers";
-import { convertPromptToMessages } from "./convert-to-transformers-messages";
 
 export type TransformersJSTextModelId = string;
 
@@ -125,6 +124,59 @@ function checkBrowserSupport(): { supported: boolean; warnings: string[] } {
     supported: true, // Only block if not in browser at all
     warnings
   };
+}
+
+function convertPromptToMessages(prompt: LanguageModelV2Prompt): Array<{ role: string; content: string }> {
+  const messages: Array<{ role: string; content: string }> = [];
+
+  for (const message of prompt) {
+    switch (message.role) {
+      case "system":
+        messages.push({
+          role: "system",
+          content: message.content,
+        });
+        break;
+      case "user":
+        const userContent: string[] = [];
+        for (const part of message.content) {
+          if (part.type === "text") {
+            userContent.push(part.text);
+          } else if (part.type === "file") {
+            throw new UnsupportedFunctionalityError({
+              functionality: "file input",
+            });
+          }
+        }
+        messages.push({
+          role: "user",
+          content: userContent.join("\n"),
+        });
+        break;
+      case "assistant":
+        let assistantContent = "";
+        for (const part of message.content) {
+          if (part.type === "text") {
+            assistantContent += part.text;
+          } else if (part.type === "tool-call") {
+            throw new UnsupportedFunctionalityError({
+              functionality: "tool calling",
+            });
+          }
+        }
+        messages.push({
+          role: "assistant",
+          content: assistantContent,
+        });
+        break;
+      case "tool":
+        throw new UnsupportedFunctionalityError({
+          functionality: "tool results",
+        });
+    }
+  }
+
+  return messages;
 }
 
 export class TransformersJSLanguageModel implements LanguageModelV2 {
@@ -344,7 +396,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
    * Check the availability of the TransformersJS model
    * @returns Promise resolving to "unavailable", "available", or "available-after-download"
    */
-  public async availability(): Promise<"unavailable" | "downloadable" | "available"> {
+  public async availability(): Promise<"unavailable" | "available" | "available-after-download"> {
     const support = checkBrowserSupport();
 
     if (!support.supported) {
@@ -355,7 +407,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       return "available";
     }
 
-    return "downloadable";
+    return "available-after-download";
   }
 
   /**

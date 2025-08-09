@@ -7,47 +7,28 @@
 <div align="center">
 
 [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
-[![NPM Downloads](https://img.shields.io/npm/dw/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
+[![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
 
 </div>
 
-A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage built-in AI models with the AI SDK.
+TypeScript libraries that provide access to in-browser AI models with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/).
 
-> We are currently in the process of adding other providers such as [web-llm](https://github.com/mlc-ai/web-llm) and [transformers.js](https://huggingface.co/docs/transformers.js/en/index)
+- [`@built-in-ai/core`](/packages/built-in-ai/README.md) package is the AI SDK model provider for your Chrome and Edge browser's [built-in AI models](https://developer.chrome.com/docs/ai/built-in).
+- [`@built-in-ai/web-llm`](/packages/web-llm/README.md) package is the AI SDK model provider for open-source models (using [WebLLM](https://github.com/mlc-ai/web-llm)) running directly in the browser.
 
-Vercel AI SDK v5 introduces [custom Transport support](https://v5.ai-sdk.dev/docs/announcing-ai-sdk-5-beta#enhanced-usechat-architecture) for the `useChat()` hook, which has been the _missing piece_ needed to fully integrate browser-based Prompt API capabilities with the Vercel AI SDK.
+> We are also currently working on creating a model provider for [transformers.js](https://github.com/huggingface/transformers.js/)
 
-> [!IMPORTANT]
-> This package is under constant development as the Prompt API matures, and may contain errors and incompatible changes.
-
-## Installation
-
-> [!NOTE]
-> This only works with the new v5 of the Vercel AI SDK.
+## Quick start
 
 ```bash
+# For Chrome/Edge built-in AI models
 npm i @built-in-ai/core
+
+# For open-source models via WebLLM
+npm i @built-in-ai/web-llm
 ```
 
-The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge browser's built-in AI models.
-
-## Browser Requirements
-
-> [!IMPORTANT]
-> The Prompt API is currently experimental and might change as it matures. The below enablement guide of the API might also change in the future.
-
-1. You need Chrome (v. 128 or higher) or Edge Dev/Canary (v. 138.0.3309.2 or higher)
-
-2. Enable these experimental flags:
-   - If you're using Chrome:
-     1. Go to `chrome://flags/`, search for _'Prompt API for Gemini Nano with Multimodal Input'_ and set it to Enabled
-     2. Go to `chrome://components` and click Check for Update on Optimization Guide On Device Model
-   - If you're using Edge:
-     1. Go to `edge://flags/#prompt-api-for-phi-mini` and set it to Enabled
-
-For more information, check out [this guide](https://developer.chrome.com/docs/extensions/ai/prompt-api)
-
-## Basic usage
+### Basic Usage with Chrome/Edge AI
 
 ```typescript
 import { streamText } from "ai";
@@ -63,35 +44,42 @@ for await (const chunk of result.textStream) {
 }
 ```
 
-Look [here](/packages/built-in-ai/README.md) for more usage examples and API reference.
+### Basic Usage with WebLLM
 
-## Features
+```typescript
+import { streamText } from "ai";
+import { webLLM } from "@built-in-ai/web-llm";
 
-### Supported
+const result = streamText({
+  model: webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC"),
+  messages: [{ role: "user", content: "Hello, how are you?" }],
+});
 
-- [x] **Text generation** (`generateText()`)
-- [x] **Streaming responses** (`streamText()`)
-- [x] **Download progress streaming** - Real-time progress updates during model downloads
-- [x] **Multimodal functionality** (image and audio support)\*
-- [x] **Temperature control**
-- [x] **Response format constraints** (JSON)
-- [x] **Abort signals**
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
+```
 
-### Planned (when implemented in the Prompt API)
+## Documentation
 
-- [ ] **Tool calling**
-- [ ] **Token counting**
-- [ ] **Custom stop sequences**
-- [ ] **Presence/frequency penalties**
+For detailed documentation, browser requirements and advanced usage:
 
-> \*Multimodal functionality is currently only available in Chrome's Prompt API implementation
+- [@built-in-ai/core](https://www.npmjs.com/package/@built-in-ai/core) documentation
+- [@built-in-ai/web-llm](https://www.npmjs.com/package/@built-in-ai/web-llm) documentation
 
 ## Contributing
 
-Contributions are more than welcome!
+Contributions are more than welcome! However, please make sure to check out the [contribution guidelines](https://github.com/jakobhoeg/built-in-ai/blob/main/CONTRIBUTING.md) before contributing.
 
-## Why This Package?
+## Why?
 
-While there is an [existing package](https://github.com/jeasonstudio/chrome-ai) that attempted to provide similar functionality, it has been inactive for the past year with no maintenance or updates. We're grateful for their initial exploration and the foundation they provided for the community.
+If you've ever built apps with local language models, you're likely familiar with the challenges: creating custom hooks and UI components, while also building complex integration layers to fall back to server-side models when compatibility is an issue.
 
-This package was created to provide a reliable, actively maintained solution for integrating browser-based AI capabilities with modern web applications, ensuring ongoing support and compatibility with the latest browser AI features.
+This library bridges this gap by providing a unified solution that lets you:
+
+- Experiment with in-browser AI models using familiar patterns
+- Seamlessly fall back to server-side models when needed
+- Use the same Vercel AI SDK eco system you already know
+- Avoid building complex integration layers from scratch
+
+While there was an [existing package](https://github.com/jeasonstudio/chrome-ai) that attempted to provide similar functionality for Chrome, it has been inactive for the past year with no maintenance or updates. We're grateful for their initial exploration and the foundation they provided for the community.
