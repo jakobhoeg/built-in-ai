@@ -2,7 +2,7 @@ export {
   TransformersJSLanguageModel,
   type TransformersJSTextModelId,
   type TransformersJSTextSettings,
-  isTransformersJSAvailable,
+  doesBrowserSupportTransformersJS,
 } from "./transformers-js-language-model";
 
 export {
@@ -21,3 +21,16 @@ export {
 } from "./transformers-js-provider";
 
 export type { TransformersUIMessage } from "./ui-message-types";
+
+export type {
+  TransformersJSProgressCallback,
+  TransformersJSWorkerMessage,
+  TransformersJSWorkerResponse,
+  TransformersJSGenerationOutput,
+  TransformersJSKeyValueCache,
+  TransformersJSWorkerGlobalScope,
+  TransformersJSModelInstance,
+  TransformersJSWorkerLoadOptions,
+} from "./transformers-js-worker-types";
+
+export { TransformersJSWorkerHandler } from "./transformers-js-worker-handler";

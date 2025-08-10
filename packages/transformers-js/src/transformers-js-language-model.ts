@@ -20,6 +20,12 @@ import {
   PretrainedModelOptions
 } from "@huggingface/transformers";
 
+declare global {
+  interface Navigator {
+    gpu?: unknown;
+  }
+}
+
 export type TransformersJSTextModelId = string;
 
 // Combine model settings with text generation config
@@ -36,6 +42,13 @@ export interface TransformersJSTextSettings extends PretrainedModelOptions, Part
    * Progress callback for model loading
    */
   initProgressCallback?: (progress: { progress: number; status: string; message: string }) => void;
+
+  /**
+   * Optional Web Worker to run the model off the main thread.
+   * If provided, the language model will communicate with the worker using
+   * the message protocol shown in the React worker example (load/generate/interrupt/reset).
+   */
+  worker?: Worker;
 }
 
 type TransformersJSConfig = {
@@ -191,6 +204,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   private isInitialized = false;
   private initializationPromise?: Promise<void>;
   private stoppingCriteria = new InterruptableStoppingCriteria();
+  private workerReady = false;
 
   constructor(
     modelId: TransformersJSTextModelId,
@@ -201,8 +215,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       provider: this.provider,
       modelId,
       options: {
-        device: "webgpu",
-        dtype: "q4f16",
+        device: "auto",
+        dtype: "auto",
         cache: true,
         ...options,
       },
@@ -226,9 +240,59 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       return this.initializationPromise;
     }
 
-    this.initializationPromise = this._initializeModel(progressCallback);
+    // If a worker is provided, initialize via worker and skip local model load
+    if (this.config.options.worker) {
+      this.initializationPromise = this._initializeWorker(progressCallback);
+    } else {
+      this.initializationPromise = this._initializeModel(progressCallback);
+    }
     await this.initializationPromise;
     this.isInitialized = true;
+  }
+
+  private async _initializeWorker(
+    progressCallback?: (progress: { progress: number; status: string; message: string }) => void,
+  ): Promise<void> {
+    const worker = this.config.options.worker!;
+
+    // Early return if already ready
+    if (this.workerReady) return;
+
+    await new Promise<void>((resolve, reject) => {
+      const onMessage = (e: MessageEvent) => {
+        const msg = e.data;
+        if (!msg) return;
+        if (msg.status === "error") {
+          worker.removeEventListener("message", onMessage);
+          reject(new LoadSettingError({ message: msg.data || "Worker error" }));
+          return;
+        }
+        if (msg.status === "loading") {
+          progressCallback?.({ progress: 0, status: "loading", message: String(msg.data ?? "Loading model...") });
+        }
+        if (typeof msg.progress === "number") {
+          // Map raw worker progress to percentage if provided
+          const pct = Math.round(msg.progress);
+          progressCallback?.({ progress: pct, status: "loading", message: msg.message ?? "Loading..." });
+        }
+        if (msg.status === "ready") {
+          worker.removeEventListener("message", onMessage);
+          this.workerReady = true;
+          resolve();
+        }
+      };
+      worker.addEventListener("message", onMessage);
+      // Trigger worker load with model options
+      worker.postMessage({
+        type: "load",
+        data: {
+          modelId: this.modelId,
+          dtype: (this.config.options as any).dtype,
+          device: (this.config.options as any).device,
+          use_external_data_format: (this.config.options as any).use_external_data_format,
+        },
+      });
+    });
   }
 
   private async _initializeModel(
@@ -347,7 +411,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
   }
 
-  private async getModels(
+  private async getModel(
     progressCallback?: (progress: { progress: number; status: string; message: string }) => void,
   ): Promise<[any, any]> {
     await this.initializeModel(progressCallback);
@@ -396,7 +460,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
    * Check the availability of the TransformersJS model
    * @returns Promise resolving to "unavailable", "available", or "available-after-download"
    */
-  public async availability(): Promise<"unavailable" | "available" | "available-after-download"> {
+  public async availability(): Promise<"unavailable" | "downloadable" | "available"> {
     const support = checkBrowserSupport();
 
     if (!support.supported) {
@@ -407,7 +471,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       return "available";
     }
 
-    return "available-after-download";
+    return "downloadable";
   }
 
   /**
@@ -429,23 +493,78 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   public async createSessionWithProgress(
     onDownloadProgress?: (progress: number) => void,
   ): Promise<TransformersJSLanguageModel> {
-    // Convert the simple progress callback to the detailed format
-    const progressCallback = onDownloadProgress ? (progressData: { progress: number; status: string; message: string }) => {
-      // Convert progress percentage to 0-1 range
-      const normalizedProgress = progressData.progress / 100;
-      onDownloadProgress(normalizedProgress);
-    } : undefined;
+    // Convert the simple progress callback to the detailed format with throttling
+    const progressCallback = onDownloadProgress ? (() => {
+      let lastReportedProgress = -1;
+      let lastUpdateTime = 0;
+
+      return (progressData: { progress: number; status: string; message: string }) => {
+        // Convert progress percentage to 0-1 range
+        const normalizedProgress = progressData.progress / 100;
+        const roundedProgress = Math.round(progressData.progress);
+        const now = Date.now();
+
+        // Only call callback if progress has changed significantly and enough time has passed
+        // This prevents the infinite re-render loop in React
+        if (roundedProgress === lastReportedProgress || (now - lastUpdateTime < 100 && roundedProgress > 0)) {
+          return;
+        }
+
+        lastReportedProgress = roundedProgress;
+        lastUpdateTime = now;
+        onDownloadProgress(normalizedProgress);
+      };
+    })() : undefined;
 
     await this.initializeModel(progressCallback);
     return this;
   }
 
   async doGenerate(options: LanguageModelV2CallOptions) {
-    const [tokenizer, model] = await this.getModels(this.config.options.initProgressCallback);
     const { warnings } = this.getRequestOptions(options);
 
     try {
       const messages = convertPromptToMessages(options.prompt);
+
+      // Worker-backed path
+      if (this.config.options.worker) {
+        await this.initializeModel(this.config.options.initProgressCallback);
+
+        const worker = this.config.options.worker!;
+        const result = await new Promise<string>((resolve, reject) => {
+          const onMessage = (e: MessageEvent) => {
+            const msg = e.data;
+            if (!msg) return;
+            if (msg.status === "complete" && Array.isArray(msg.output)) {
+              worker.removeEventListener("message", onMessage);
+              resolve(String(msg.output[0] ?? ""));
+            } else if (msg.status === "error") {
+              worker.removeEventListener("message", onMessage);
+              reject(new Error(String(msg.data || "Worker error")));
+            }
+          };
+          worker.addEventListener("message", onMessage);
+          worker.postMessage({ type: "generate", data: messages });
+          if (options.abortSignal) {
+            const onAbort = () => {
+              worker.postMessage({ type: "interrupt" });
+              options.abortSignal?.removeEventListener("abort", onAbort);
+            };
+            options.abortSignal.addEventListener("abort", onAbort);
+          }
+        });
+
+        const content: LanguageModelV2Content[] = [{ type: "text", text: result }];
+        return {
+          content,
+          finishReason: "stop" as LanguageModelV2FinishReason,
+          usage: { inputTokens: undefined, outputTokens: undefined, totalTokens: undefined },
+          request: { body: { messages } },
+          warnings,
+        };
+      }
+
+      const [tokenizer, model] = await this.getModel(this.config.options.initProgressCallback);
 
       // Apply chat template
       const inputs = tokenizer.apply_chat_template(messages, {
@@ -485,6 +604,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           outputTokens: newTokens.length,
           totalTokens: inputLength + newTokens.length,
         },
+        request: { body: generationOptions },
         warnings,
       };
     } catch (error) {
@@ -501,6 +621,58 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     let textId = "text-0";
     const self = this; // Capture this context for use inside the stream
 
+    // Worker-backed streaming
+    if (this.config.options.worker) {
+      await this.initializeModel(this.config.options.initProgressCallback);
+
+      const worker = this.config.options.worker!;
+      const messages = convertPromptToMessages(options.prompt);
+
+      const stream = new ReadableStream<LanguageModelV2StreamPart>({
+        start: (controller) => {
+          let isFirst = true;
+          const textId = "text-0";
+          controller.enqueue({ type: "stream-start", warnings });
+
+          const onMessage = (e: MessageEvent) => {
+            const msg = e.data;
+            if (!msg) return;
+            if (msg.status === "start") {
+              // no-op
+            } else if (msg.status === "update" && typeof msg.output === "string") {
+              if (isFirst) {
+                controller.enqueue({ type: "text-start", id: textId });
+                isFirst = false;
+              }
+              controller.enqueue({ type: "text-delta", id: textId, delta: msg.output });
+            } else if (msg.status === "complete") {
+              if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
+              controller.enqueue({ type: "finish", finishReason: "stop", usage: { inputTokens: undefined, outputTokens: msg.numTokens, totalTokens: undefined } });
+              worker.removeEventListener("message", onMessage);
+              controller.close();
+            } else if (msg.status === "error") {
+              worker.removeEventListener("message", onMessage);
+              controller.error(new Error(String(msg.data || "Worker error")));
+            }
+          };
+          worker.addEventListener("message", onMessage);
+
+          // Abort support
+          if (options.abortSignal) {
+            const onAbort = () => {
+              worker.postMessage({ type: "interrupt" });
+              options.abortSignal?.removeEventListener("abort", onAbort);
+            };
+            options.abortSignal.addEventListener("abort", onAbort);
+          }
+
+          worker.postMessage({ type: "generate", data: messages });
+        },
+      });
+
+      return { stream, request: { body: { messages } }, warnings };
+    }
+
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
       async start(controller) {
         // Send stream start event with warnings
@@ -511,7 +683,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
         try {
           // Initialize model with progress reporting
-          const [tokenizer, model] = await self.getModels(self.config.options.initProgressCallback);
+          const [tokenizer, model] = await self.getModel(self.config.options.initProgressCallback);
 
           const messages = convertPromptToMessages(options.prompt);
 
@@ -605,25 +777,19 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
     return {
       stream,
+      request: { body: { /* prompt handled via chat template */ } },
       warnings,
     };
   }
 }
 
 /**
- * Check if the browser environment supports TransformersJS
- * @returns true if the browser supports TransformersJS, false otherwise
+ * Check if the browser supports WebLLM
+ * @returns true if the browser supports WebLLM, false otherwise
  */
-export function isTransformersJSAvailable(): boolean {
-  try {
-    // Check if we're in a real browser environment (not Node.js or jsdom)
-    return typeof window !== "undefined" &&
-      typeof document !== "undefined" &&
-      typeof navigator !== "undefined" &&
-      typeof window.location !== "undefined" &&
-      window.location.protocol.startsWith("http") &&
-      !(typeof process !== 'undefined' && process?.versions?.node); // Exclude Node.js environments
-  } catch {
+export function doesBrowserSupportTransformersJS(): boolean {
+  if (typeof window === "undefined") {
     return false;
   }
-} 
+  return navigator.gpu !== undefined;
+}
