@@ -2,6 +2,7 @@ import type {
   PreTrainedTokenizer,
   PreTrainedModel,
   PretrainedModelOptions,
+  Processor,
 } from "@huggingface/transformers";
 
 /**
@@ -61,9 +62,14 @@ export interface TransformersJSWorkerGlobalScope {
 }
 
 /**
- * Return type for TextGenerationPipeline.getInstance()
+ * Return type for TextGenerationPipeline.getInstance() - text models
  */
 export type TransformersJSModelInstance = [PreTrainedTokenizer, PreTrainedModel];
+
+/**
+ * Return type for VisionGenerationPipeline.getInstance() - vision models
+ */
+export type TransformersJSVisionModelInstance = [Processor, PreTrainedModel];
 
 /**
  * Configuration options for worker model loading
@@ -73,4 +79,5 @@ export interface TransformersJSWorkerLoadOptions {
   dtype?: PretrainedModelOptions["dtype"];
   device?: PretrainedModelOptions["device"];
   use_external_data_format?: boolean;
+  isVisionModel?: boolean;
 }

@@ -30,4 +30,11 @@ export const MODELS: ModelConfig[] = [
     dtype: 'q4f16',
     use_external_data_format: true,
   },
+  {
+    id: "HuggingFaceTB/SmolVLM-256M-Instruct",
+    name: "SmolVLM 256M (Vision)",
+    device: 'webgpu',
+    dtype: 'fp32',
+    isVisionModel: true,
+  },
 ];

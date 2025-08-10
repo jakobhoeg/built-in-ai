@@ -19,6 +19,7 @@ import {
   StoppingCriteria,
   PretrainedModelOptions
 } from "@huggingface/transformers";
+import { convertToTransformersMessages } from "./convert-to-transformers-message";
 
 declare global {
   interface Navigator {
@@ -49,6 +50,12 @@ export interface TransformersJSTextSettings extends PretrainedModelOptions, Part
    * the message protocol shown in the React worker example (load/generate/interrupt/reset).
    */
   worker?: Worker;
+
+  /**
+   * Whether this is a vision model that should use AutoModelForVision2Seq
+   * @default false
+   */
+  isVisionModel?: boolean;
 }
 
 type TransformersJSConfig = {
@@ -137,59 +144,6 @@ function checkBrowserSupport(): { supported: boolean; warnings: string[] } {
     supported: true, // Only block if not in browser at all
     warnings
   };
-}
-
-function convertPromptToMessages(prompt: LanguageModelV2Prompt): Array<{ role: string; content: string }> {
-  const messages: Array<{ role: string; content: string }> = [];
-
-  for (const message of prompt) {
-    switch (message.role) {
-      case "system":
-        messages.push({
-          role: "system",
-          content: message.content,
-        });
-        break;
-      case "user":
-        const userContent: string[] = [];
-        for (const part of message.content) {
-          if (part.type === "text") {
-            userContent.push(part.text);
-          } else if (part.type === "file") {
-            throw new UnsupportedFunctionalityError({
-              functionality: "file input",
-            });
-          }
-        }
-        messages.push({
-          role: "user",
-          content: userContent.join("\n"),
-        });
-        break;
-      case "assistant":
-        let assistantContent = "";
-        for (const part of message.content) {
-          if (part.type === "text") {
-            assistantContent += part.text;
-          } else if (part.type === "tool-call") {
-            throw new UnsupportedFunctionalityError({
-              functionality: "tool calling",
-            });
-          }
-        }
-        messages.push({
-          role: "assistant",
-          content: assistantContent,
-        });
-        break;
-      case "tool":
-        throw new UnsupportedFunctionalityError({
-          functionality: "tool results",
-        });
-    }
-  }
-
-  return messages;
 }
 
 export class TransformersJSLanguageModel implements LanguageModelV2 {
@@ -290,6 +244,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           dtype: (this.config.options as any).dtype,
           device: (this.config.options as any).device,
           use_external_data_format: (this.config.options as any).use_external_data_format,
+          isVisionModel: (this.config.options as any).isVisionModel,
         },
       });
     });
@@ -524,7 +479,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     const { warnings } = this.getRequestOptions(options);
 
     try {
-      const messages = convertPromptToMessages(options.prompt);
+      const messages = convertToTransformersMessages(options.prompt, this.config.options.isVisionModel);
 
       // Worker-backed path
       if (this.config.options.worker) {
@@ -626,7 +581,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       await this.initializeModel(this.config.options.initProgressCallback);
 
       const worker = this.config.options.worker!;
-      const messages = convertPromptToMessages(options.prompt);
+      const messages = convertToTransformersMessages(options.prompt, this.config.options.isVisionModel);
 
       const stream = new ReadableStream<LanguageModelV2StreamPart>({
         start: (controller) => {
@@ -685,7 +640,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           // Initialize model with progress reporting
           const [tokenizer, model] = await self.getModel(self.config.options.initProgressCallback);
 
-          const messages = convertPromptToMessages(options.prompt);
+          const messages = convertToTransformersMessages(options.prompt, self.config.options.isVisionModel);
 
           // Apply chat template
           const inputs = tokenizer.apply_chat_template(messages, {
