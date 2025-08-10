@@ -6,7 +6,7 @@ import {
   ChatRequestOptions,
   createUIMessageStream,
 } from "ai";
-import { transformersJS, TransformersUIMessage } from "@built-in-ai/transformers-js";
+import { TransformersJSLanguageModel, TransformersUIMessage } from "@built-in-ai/transformers-js";
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
@@ -14,18 +14,20 @@ import { transformersJS, TransformersUIMessage } from "@built-in-ai/transformers
  *
  * @implements {ChatTransport<TransformersUIMessage>}
  */
-export class TransformersChatTransport
-  implements ChatTransport<TransformersUIMessage> {
+export class TransformersChatTransport implements ChatTransport<TransformersUIMessage> {
+  private readonly model: TransformersJSLanguageModel;
+
+  constructor(model: TransformersJSLanguageModel) {
+    this.model = model;
+  }
+
   async sendMessages(
     options: {
       chatId: string;
       messages: TransformersUIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
-      trigger:
-      | "submit-user-message"
-      | "submit-tool-result"
-      | "regenerate-assistant-message";
+      trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
@@ -33,7 +35,7 @@ export class TransformersChatTransport
       options;
 
     const prompt = convertToModelMessages(messages);
-    const model = transformersJS('HuggingFaceTB/SmolLM2-360M-Instruct');
+    const model = this.model;
 
     // Check if model is already available to skip progress tracking
     const availability = await model.availability();
@@ -108,7 +110,7 @@ export class TransformersChatTransport
             abortSignal: abortSignal,
             onChunk(event) {
               // Clear progress message on first text chunk
-              if (event.chunk.type === "text" && downloadProgressId) {
+              if (event.chunk.type === "text-delta" && downloadProgressId) {
                 writer.write({
                   type: "data-modelDownloadProgress",
                   id: downloadProgressId,

@@ -22,6 +22,10 @@ const demos = [
     href: "/web-llm",
     label: "@built-in-ai/web-llm",
   },
+  {
+    href: "/transformers-js",
+    label: "@built-in-ai/transformers-js",
+  },
 ];
 
 export function ModelSelector() {
