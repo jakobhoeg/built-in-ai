@@ -1,7 +1,7 @@
 export {
   TransformersJSLanguageModel,
-  type TransformersJSTextModelId,
-  type TransformersJSTextSettings,
+  type TransformersJSModelId,
+  type TransformersJSModelSettings,
   doesBrowserSupportTransformersJS,
 } from "./transformers-js-language-model";
 

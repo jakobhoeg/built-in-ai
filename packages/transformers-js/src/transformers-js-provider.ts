@@ -1,7 +1,7 @@
 import {
   TransformersJSLanguageModel,
-  TransformersJSTextModelId,
-  TransformersJSTextSettings
+  TransformersJSModelId,
+  TransformersJSModelSettings
 } from "./transformers-js-language-model";
 import {
   TransformersJSEmbeddingModel,
@@ -20,8 +20,8 @@ function createCacheKey(modelId: string, settings?: any): string {
 
 export interface TransformersJSProvider {
   languageModel: (
-    modelId: TransformersJSTextModelId,
-    settings?: TransformersJSTextSettings
+    modelId: TransformersJSModelId,
+    settings?: TransformersJSModelSettings
   ) => TransformersJSLanguageModel;
 
   embeddingModel: (
@@ -37,8 +37,8 @@ export interface TransformersJSProvider {
  * @returns TransformersJS language model instance
  */
 export function transformersJS(
-  modelId: TransformersJSTextModelId,
-  settings?: TransformersJSTextSettings,
+  modelId: TransformersJSModelId,
+  settings?: TransformersJSModelSettings,
 ): TransformersJSLanguageModel;
 
 /**
@@ -69,8 +69,8 @@ export function transformersJS(
 ): TransformersJSProvider;
 
 export function transformersJS(
-  modelIdOrOptions?: TransformersJSTextModelId | TransformersJSEmbeddingModelId | { baseUrl?: string },
-  settings?: TransformersJSTextSettings | (TransformersJSEmbeddingSettings & { type: 'embedding' })
+  modelIdOrOptions?: TransformersJSModelId | TransformersJSEmbeddingModelId | { baseUrl?: string },
+  settings?: TransformersJSModelSettings | (TransformersJSEmbeddingSettings & { type: 'embedding' })
 ): TransformersJSLanguageModel | TransformersJSEmbeddingModel | TransformersJSProvider {
 
   // Legacy factory pattern support
@@ -78,8 +78,8 @@ export function transformersJS(
     const options = modelIdOrOptions as { baseUrl?: string };
     return {
       languageModel: (
-        modelId: TransformersJSTextModelId,
-        settings?: TransformersJSTextSettings
+        modelId: TransformersJSModelId,
+        settings?: TransformersJSModelSettings
       ) => {
         const cacheKey = createCacheKey(modelId, settings);
         let cachedModel = modelCache.get(cacheKey) as TransformersJSLanguageModel;
@@ -131,7 +131,7 @@ export function transformersJS(
   let cachedModel = modelCache.get(cacheKey) as TransformersJSLanguageModel;
 
   if (!cachedModel) {
-    cachedModel = new TransformersJSLanguageModel(modelId, settings as TransformersJSTextSettings);
+    cachedModel = new TransformersJSLanguageModel(modelId, settings as TransformersJSModelSettings);
     modelCache.set(cacheKey, cachedModel);
   }
 

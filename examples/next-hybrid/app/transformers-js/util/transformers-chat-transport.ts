@@ -55,10 +55,10 @@ export class TransformersChatTransport implements ChatTransport<TransformersUIMe
           let downloadProgressId: string | undefined;
 
           // Download/prepare model with progress monitoring
-          await model.createSessionWithProgress((progress: number) => {
-            const percent = Math.round(progress * 100);
+          await model.createSessionWithProgress((progress: { progress: number }) => {
+            const percent = Math.round(progress.progress * 100);
 
-            if (progress >= 1) {
+            if (progress.progress >= 1) {
               // Download complete
               if (downloadProgressId) {
                 writer.write({

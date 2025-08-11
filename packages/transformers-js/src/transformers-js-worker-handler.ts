@@ -301,7 +301,6 @@ export class TransformersJSWorkerHandler {
   }
 
   onmessage(e: MessageEvent<TransformersJSWorkerMessage>) {
-    console.log("TransformersJSWorkerHandler.onmessage called with:", e.data);
     try {
       const { type, data } = e.data || {} as TransformersJSWorkerMessage;
       switch (type) {
