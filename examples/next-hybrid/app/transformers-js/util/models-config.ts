@@ -1,6 +1,6 @@
-import { TransformersJSWorkerLoadOptions } from "@built-in-ai/transformers-js";
+import { WorkerLoadOptions } from "@built-in-ai/transformers-js";
 
-export interface ModelConfig extends Omit<TransformersJSWorkerLoadOptions, 'modelId'> {
+export interface ModelConfig extends Omit<WorkerLoadOptions, 'modelId'> {
   id: string;
   name: string;
 }

@@ -41,7 +41,6 @@ import {
   doesBrowserSupportTransformersJS,
   transformersJS,
   TransformersUIMessage,
-  type TransformersJSWorkerLoadOptions
 } from "@built-in-ai/transformers-js";
 import { ModelConfig, MODELS } from "./util/models-config";
 

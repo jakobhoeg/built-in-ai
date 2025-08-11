@@ -14,10 +14,11 @@ import {
   AutoModelForVision2Seq,
   TextStreamer,
   StoppingCriteria,
-  PretrainedModelOptions,
+  type PretrainedModelOptions,
   type ProgressInfo,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
+import type { ModelInstance, GenerationOptions } from "./transformers-js-worker-types";
 
 declare global {
   interface Navigator {
@@ -27,24 +28,13 @@ declare global {
 
 export type TransformersJSModelId = string;
 
-export interface TransformersJSModelSettings {
-  /**
-   * Device to run the model on
-   * @default "auto"
-   */
-  device?: PretrainedModelOptions["device"];
-  /**
-   * Data type for the model
-   * @default "auto"
-   */
-  dtype?: PretrainedModelOptions["dtype"];
+export interface TransformersJSModelSettings extends Pick<PretrainedModelOptions, 'device' | 'dtype'> {
   /**
    * Progress callback for model initialization
    */
   initProgressCallback?: (progress: { progress: number }) => void;
   /**
-   * Raw progress callback, receiving detailed file-level events from Transformers.js
-   * Matches ProgressInfo from @huggingface/transformers (initiate, download, progress, done, ready)
+   * Raw progress callback from Transformers.js
    */
   rawInitProgressCallback?: (progress: ProgressInfo) => void;
   /**
@@ -54,7 +44,6 @@ export interface TransformersJSModelSettings {
   isVisionModel?: boolean;
   /**
    * Optional Web Worker to run the model off the main thread
-   * If provided, the model will use the worker for generation
    */
   worker?: Worker;
 }
@@ -69,11 +58,10 @@ export function doesBrowserSupportTransformersJS(): boolean {
   return true;
 }
 
-type TransformersJSConfig = {
-  provider: string;
+// Simplified config - just extend the settings with modelId
+interface ModelConfig extends TransformersJSModelSettings {
   modelId: TransformersJSModelId;
-  options: TransformersJSModelSettings;
-};
+}
 
 class InterruptableStoppingCriteria extends StoppingCriteria {
   interrupted = false;
@@ -112,9 +100,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   readonly modelId: TransformersJSModelId;
   readonly provider = "transformers-js";
 
-  private readonly config: TransformersJSConfig;
-  private model?: any;
-  private tokenizer?: any;
+  private readonly config: ModelConfig;
+  private modelInstance?: ModelInstance;
   private isInitialized = false;
   private initializationPromise?: Promise<void>;
   private stoppingCriteria = new InterruptableStoppingCriteria();
@@ -123,14 +110,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   constructor(modelId: TransformersJSModelId, options: TransformersJSModelSettings = {}) {
     this.modelId = modelId;
     this.config = {
-      provider: this.provider,
       modelId,
-      options: {
-        device: "auto",
-        dtype: "auto",
-        isVisionModel: false,
-        ...options,
-      },
+      device: "auto",
+      dtype: "auto",
+      isVisionModel: false,
+      ...options,
     };
   }
 
@@ -140,28 +124,28 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
   private async getSession(
     onInitProgress?: (progress: { progress: number }) => void,
-  ): Promise<[any, any]> {
-    if (this.model && this.tokenizer && this.isInitialized) {
-      return [this.tokenizer, this.model];
+  ): Promise<ModelInstance> {
+    if (this.modelInstance && this.isInitialized) {
+      return this.modelInstance;
     }
 
     if (this.initializationPromise) {
       await this.initializationPromise;
-      if (this.model && this.tokenizer) {
-        return [this.tokenizer, this.model];
+      if (this.modelInstance) {
+        return this.modelInstance;
       }
     }
 
     this.initializationPromise = this._initializeModel(onInitProgress);
     await this.initializationPromise;
 
-    if (!this.model || !this.tokenizer) {
+    if (!this.modelInstance) {
       throw new LoadSettingError({
         message: "Model initialization failed",
       });
     }
 
-    return [this.tokenizer, this.model];
+    return this.modelInstance;
   }
 
   private async _initializeModel(
@@ -174,95 +158,80 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         });
       }
 
-      const isVision = this.config.options.isVisionModel;
-
+      const { isVisionModel, device, dtype } = this.config;
       const progress_callback = this.createProgressTracker(onInitProgress);
 
-      this.tokenizer = isVision
-        ? await AutoProcessor.from_pretrained(this.modelId, { progress_callback })
-        : await AutoTokenizer.from_pretrained(this.modelId, { legacy: true, progress_callback });
+      // Create model instance based on type
+      if (isVisionModel) {
+        const [processor, model] = await Promise.all([
+          AutoProcessor.from_pretrained(this.modelId, { progress_callback }),
+          AutoModelForVision2Seq.from_pretrained(this.modelId, {
+            dtype: dtype || "auto",
+            device: device || "auto",
+            progress_callback,
+          })
+        ]);
+        this.modelInstance = [processor, model];
+      } else {
+        const [tokenizer, model] = await Promise.all([
+          AutoTokenizer.from_pretrained(this.modelId, { legacy: true, progress_callback }),
+          AutoModelForCausalLM.from_pretrained(this.modelId, {
+            dtype: dtype || "auto",
+            device: device || "auto",
+            progress_callback,
+          })
+        ]);
+        this.modelInstance = [tokenizer, model];
 
-      this.model = isVision
-        ? await AutoModelForVision2Seq.from_pretrained(this.modelId, {
-          dtype: this.config.options.dtype,
-          device: this.config.options.device,
-          progress_callback,
-        })
-        : await AutoModelForCausalLM.from_pretrained(this.modelId, {
-          dtype: this.config.options.dtype,
-          device: this.config.options.device,
-          progress_callback,
-        });
-
-      // Warm up the model (skip for vision models)
-      if (!isVision) {
-        const dummyInputs = this.tokenizer("Hello");
-        await this.model.generate({ ...dummyInputs, max_new_tokens: 1 });
+        // Warm up text models
+        const dummyInputs = tokenizer("Hello");
+        await model.generate({ ...dummyInputs, max_new_tokens: 1 });
       }
 
       onInitProgress?.({ progress: 1.0 });
       this.isInitialized = true;
     } catch (error) {
-      this.model = undefined;
-      this.tokenizer = undefined;
+      this.modelInstance = undefined;
       this.isInitialized = false;
       this.initializationPromise = undefined;
 
       throw new LoadSettingError({
-        message: `Failed to initialize TransformersJS model: ${error instanceof Error ? error.message : "Unknown error"
-          }`,
+        message: `Failed to initialize TransformersJS model: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     }
   }
 
-  // Create a shared progress tracker to unify main-thread and worker init paths
-  private createProgressTracker(
-    onInitProgress?: (progress: { progress: number }) => void,
-  ) {
-    // Aggregate progress across all files being downloaded by @huggingface/transformers
+  private createProgressTracker(onInitProgress?: (progress: { progress: number }) => void) {
     const fileProgress = new Map<string, { loaded: number; total: number }>();
 
-    const updateOverallProgress = () => {
-      if (!onInitProgress) return;
+    return (p: ProgressInfo) => {
+      // Pass through raw progress
+      this.config.rawInitProgressCallback?.(p);
+
+      if (!onInitProgress || !(p as any).file) return;
+
+      const file = (p as any).file;
+      if (p.status === "progress" && file) {
+        fileProgress.set(file, { loaded: (p as any).loaded || 0, total: (p as any).total || 0 });
+      } else if (p.status === "done" && file) {
+        const prev = fileProgress.get(file);
+        if (prev?.total) {
+          fileProgress.set(file, { loaded: prev.total, total: prev.total });
+        }
+      }
+
+      // Calculate overall progress
       let totalLoaded = 0;
       let totalBytes = 0;
       for (const { loaded, total } of fileProgress.values()) {
-        if (Number.isFinite(total) && total > 0) {
-          totalLoaded += Math.max(0, loaded);
+        if (total > 0) {
+          totalLoaded += loaded;
           totalBytes += total;
         }
       }
+
       if (totalBytes > 0) {
-        const overall = Math.max(0, Math.min(1, totalLoaded / totalBytes));
-        onInitProgress({ progress: overall });
-      }
-    };
-
-    return (p: ProgressInfo | any) => {
-      // Optional pass-through for raw callback
-      this.config.options.rawInitProgressCallback?.(p as ProgressInfo);
-
-      // Only handle ProgressInfo-like events that include a file
-      const file = p && (p as any).file;
-      if (!file) return;
-
-      const status = (p as any).status as string | undefined;
-      if (status === "progress") {
-        const loaded = Number((p as any).loaded) || 0;
-        const total = Number((p as any).total) || 0;
-        fileProgress.set(file, { loaded, total });
-        updateOverallProgress();
-      } else if (status === "done") {
-        const prev = fileProgress.get(file);
-        if (prev && Number.isFinite(prev.total) && prev.total > 0) {
-          fileProgress.set(file, { loaded: prev.total, total: prev.total });
-          updateOverallProgress();
-        }
-      } else if (status === "initiate" || status === "download") {
-        if (!fileProgress.has(file)) {
-          fileProgress.set(file, { loaded: 0, total: 0 });
-          updateOverallProgress();
-        }
+        onInitProgress({ progress: Math.min(1, totalLoaded / totalBytes) });
       }
     };
   }
@@ -332,18 +301,29 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
 
     // Convert messages to TransformersJS format
-    const messages = convertToTransformersMessages(prompt, this.config.options.isVisionModel);
+    const messages = convertToTransformersMessages(prompt, this.config.isVisionModel);
+
+    const generationOptions: GenerationOptions = {
+      max_new_tokens: maxOutputTokens || 256,
+      temperature: temperature || 0.7,
+      top_p: topP,
+      top_k: topK,
+      do_sample: temperature !== undefined && temperature > 0,
+    };
+
+    // Log what the AI SDK is passing to us
+    console.log("📥 AI SDK parameters:", {
+      temperature,
+      topK,
+      topP,
+      maxOutputTokens,
+    });
+    console.log("📤 Converted to generation options:", generationOptions);
 
     return {
       messages,
       warnings,
-      generationOptions: {
-        max_new_tokens: maxOutputTokens || 256,
-        temperature: temperature || 0.7,
-        top_p: topP,
-        top_k: topK,
-        do_sample: temperature !== undefined && temperature > 0,
-      },
+      generationOptions,
     };
   }
 
@@ -356,7 +336,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
 
     // If using a worker, reflect worker readiness instead of main-thread state
-    if (this.config.options.worker) {
+    if (this.config.worker) {
       return this.workerReady ? "available" : "downloadable";
     }
 
@@ -375,7 +355,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   ): Promise<TransformersJSLanguageModel> {
     // If a worker is provided, initialize the worker (and forward progress) instead of
     // initializing the model on the main thread to avoid double-initialization/downloads.
-    if (this.config.options.worker) {
+    if (this.config.worker) {
       await this.initializeWorker(onDownloadProgress);
       return this;
     }
@@ -391,34 +371,34 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     const { messages, warnings, generationOptions } = this.getArgs(options);
 
     // Use worker if available
-    if (this.config.options.worker) {
+    if (this.config.worker) {
       return this.doGenerateWithWorker(messages, warnings, generationOptions, options);
     }
 
     // Main thread generation
-    const [tokenizer, model] = await this.getSession(this.config.options.initProgressCallback);
+    const [processor, model] = await this.getSession(this.config.initProgressCallback);
 
     try {
-      const isVision = this.config.options.isVisionModel;
+      const isVision = this.config.isVisionModel;
       let inputs: any;
       let generatedText: string;
 
       if (isVision) {
-        const text = tokenizer.apply_chat_template(messages, { add_generation_prompt: true });
+        const text = processor.apply_chat_template(messages, { add_generation_prompt: true });
         const images = messages
           .flatMap(msg => Array.isArray(msg.content) ? msg.content : [])
           .filter(part => part.type === 'image')
           .map(part => part.image);
 
-        inputs = await tokenizer(text, images.length > 0 ? images : undefined);
+        inputs = await processor(text, images.length > 0 ? images : undefined);
         const outputs = await model.generate({ ...inputs, ...generationOptions });
-        generatedText = tokenizer.batch_decode(outputs, { skip_special_tokens: true })[0];
+        generatedText = processor.batch_decode(outputs as any, { skip_special_tokens: true })[0];
       } else {
-        inputs = tokenizer.apply_chat_template(messages, { add_generation_prompt: true, return_dict: true });
+        inputs = processor.apply_chat_template(messages, { add_generation_prompt: true, return_dict: true });
         const outputs = await model.generate({ ...inputs, ...generationOptions });
-        const inputLength = inputs.input_ids.data.length;
-        const newTokens = outputs[0].slice(inputLength);
-        generatedText = tokenizer.decode(newTokens, { skip_special_tokens: true });
+        const inputLength = (inputs as any).input_ids.data.length;
+        const newTokens = (outputs as any)[0].slice(inputLength);
+        generatedText = processor.decode(newTokens, { skip_special_tokens: true });
       }
 
       const content: LanguageModelV2Content[] = [
@@ -452,12 +432,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   private async doGenerateWithWorker(
     messages: Array<{ role: string; content: any }>,
     warnings: LanguageModelV2CallWarning[],
-    generationOptions: any,
+    generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
   ) {
-    const worker = this.config.options.worker!;
+    const worker = this.config.worker!;
 
-    // Ensure worker is ready
     await this.initializeWorker();
 
     const result = await new Promise<string>((resolve, reject) => {
@@ -473,7 +452,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         }
       };
       worker.addEventListener("message", onMessage);
-      worker.postMessage({ type: "generate", data: messages });
+      worker.postMessage({ type: "generate", data: messages, generationOptions });
 
       if (options.abortSignal) {
         const onAbort = () => {
@@ -497,7 +476,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   private async initializeWorker(
     onInitProgress?: (progress: { progress: number }) => void,
   ): Promise<void> {
-    if (!this.config.options.worker) return;
+    if (!this.config.worker) return;
 
     // If already ready, optionally emit completion progress
     if (this.workerReady) {
@@ -505,7 +484,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       return;
     }
 
-    const worker = this.config.options.worker;
+    const worker = this.config.worker;
 
     await new Promise<void>((resolve, reject) => {
       const trackProgress = this.createProgressTracker(onInitProgress);
@@ -515,7 +494,6 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         if (!msg) return;
 
         // Forward raw download progress events coming from @huggingface/transformers running in the worker
-        // Those events have a 'status' field like 'initiate' | 'download' | 'progress' | 'done' | 'ready'
         if (msg && typeof msg === "object" && "status" in msg) {
           if (msg.status === "ready") {
             worker.removeEventListener("message", onMessage);
@@ -530,10 +508,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             return;
           }
 
-          // Only aggregate file-related messages (raw ProgressInfo events)
+          // Only track file-related messages (raw ProgressInfo events)
           if ((msg as any).file) trackProgress(msg);
-
-          // Ignore other worker lifecycle messages like { status: 'loading', data: '...' }
         }
       };
 
@@ -542,9 +518,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         type: "load",
         data: {
           modelId: this.modelId,
-          dtype: this.config.options.dtype,
-          device: this.config.options.device,
-          isVisionModel: this.config.options.isVisionModel,
+          dtype: this.config.dtype,
+          device: this.config.device,
+          isVisionModel: this.config.isVisionModel,
         },
       });
     });
@@ -556,38 +532,33 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   public async doStream(options: LanguageModelV2CallOptions) {
     const { messages, warnings, generationOptions } = this.getArgs(options);
 
-    // Use worker if available
-    if (this.config.options.worker) {
+    if (this.config.worker) {
       return this.doStreamWithWorker(messages, warnings, generationOptions, options);
     }
 
-    // Main thread streaming
-    const self = this; // Capture this context
+    const self = this;
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
       async start(controller) {
         let isFirstChunk = true;
         const textId = "text-0";
 
-        // Send stream start event with warnings
         controller.enqueue({
           type: "stream-start",
           warnings,
         });
 
         try {
-          const [tokenizer, model] = await self.getSession(self.config.options.initProgressCallback);
+          const [tokenizer, model] = await self.getSession(self.config.initProgressCallback);
 
-          // Apply chat template
           const inputs = tokenizer.apply_chat_template(messages, {
             add_generation_prompt: true,
             return_dict: true,
           });
 
-          let inputLength = inputs.input_ids.data.length;
+          let inputLength = (inputs as any).input_ids.data.length;
           let outputTokens = 0;
 
-          // Create streaming callback
           const streamCallback = (text: string) => {
             if (isFirstChunk) {
               controller.enqueue({ type: "text-start", id: textId });
@@ -605,16 +576,14 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           const streamer = new CallbackTextStreamer(tokenizer, streamCallback);
           self.stoppingCriteria.reset();
 
-          // Handle abort signal
           if (options.abortSignal) {
             options.abortSignal.addEventListener("abort", () => {
               self.stoppingCriteria.interrupt();
             });
           }
 
-          // Generate with streaming
           await model.generate({
-            ...inputs,
+            ...(inputs as any),
             ...generationOptions,
             streamer,
             stopping_criteria: self.stoppingCriteria,
@@ -625,7 +594,6 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             controller.enqueue({ type: "text-end", id: textId });
           }
 
-          // Send finish event
           controller.enqueue({
             type: "finish",
             finishReason: "stop" as LanguageModelV2FinishReason,
@@ -652,10 +620,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   private async doStreamWithWorker(
     messages: Array<{ role: string; content: any }>,
     warnings: LanguageModelV2CallWarning[],
-    generationOptions: any,
+    generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
   ) {
-    const worker = this.config.options.worker!;
+    const worker = this.config.worker!;
 
     // Ensure worker is ready
     await this.initializeWorker();
@@ -701,7 +669,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           options.abortSignal.addEventListener("abort", onAbort);
         }
 
-        worker.postMessage({ type: "generate", data: messages });
+        worker.postMessage({ type: "generate", data: messages, generationOptions });
       },
     });
 

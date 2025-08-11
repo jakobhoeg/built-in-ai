@@ -3,81 +3,67 @@ import type {
   PreTrainedModel,
   PretrainedModelOptions,
   Processor,
+  ProgressInfo,
 } from "@huggingface/transformers";
 
-/**
- * Progress callback type for model loading in workers
- */
-export type TransformersJSProgressCallback = (progress: {
-  status: string;
-  progress?: number;
-  loaded?: number;
-  total?: number;
-  file?: string;
-  message?: string;
-}) => void;
+export interface GenerationOptions {
+  max_new_tokens?: number;
+  temperature?: number;
+  top_k?: number;
+  top_p?: number;
+  do_sample?: boolean;
+  repetition_penalty?: number;
+  num_beams?: number;
+  early_stopping?: boolean;
+}
+
+export type { ProgressInfo } from "@huggingface/transformers";
 
 /**
  * Message types for worker communication
  */
-export type TransformersJSWorkerMessage = {
+export type WorkerMessage = {
   type: 'load' | 'generate' | 'interrupt' | 'reset';
   data?: any;
+  generationOptions?: {
+    max_new_tokens?: number;
+    temperature?: number;
+    top_k?: number;
+    top_p?: number;
+    do_sample?: boolean;
+    repetition_penalty?: number;
+  };
 };
 
 /**
  * Worker response types
  */
-export type TransformersJSWorkerResponse = {
+export type WorkerResponse = {
   status: 'loading' | 'ready' | 'start' | 'update' | 'complete' | 'error';
   output?: string | string[];
   data?: string;
   tps?: number;
   numTokens?: number;
-  progress?: number;
-  message?: string;
-};
-
-/**
- * Type for model generation output
- */
-export type TransformersJSGenerationOutput = {
-  past_key_values?: any;
-  sequences: any;
-};
-
-/**
- * Type for key-value cache from model generation
- */
-export type TransformersJSKeyValueCache = {
-  [key: string]: any; // The exact structure depends on the model architecture
-} | null;
+} | ProgressInfo;
 
 /**
  * Type for worker global scope
  */
-export interface TransformersJSWorkerGlobalScope {
+export interface WorkerGlobalScope {
   postMessage(message: any): void;
   addEventListener(type: string, listener: (e: any) => void): void;
 }
 
 /**
- * Return type for TextGenerationPipeline.getInstance() - text models
+ * Model instance types
  */
-export type TransformersJSModelInstance = [PreTrainedTokenizer, PreTrainedModel];
-
-/**
- * Return type for VisionGenerationPipeline.getInstance() - vision models
- */
-export type TransformersJSVisionModelInstance = [Processor, PreTrainedModel];
+export type ModelInstance = [PreTrainedTokenizer, PreTrainedModel] | [Processor, PreTrainedModel];
 
 /**
  * Configuration options for worker model loading
  */
-export interface TransformersJSWorkerLoadOptions {
+export interface WorkerLoadOptions extends Pick<PretrainedModelOptions, 'dtype' | 'device'> {
   modelId?: string;
-  dtype?: PretrainedModelOptions["dtype"];
-  device?: PretrainedModelOptions["device"];
   use_external_data_format?: boolean;
   isVisionModel?: boolean;
 }

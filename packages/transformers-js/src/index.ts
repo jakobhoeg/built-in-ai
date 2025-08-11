@@ -14,23 +14,19 @@ export {
 
 export {
   transformersJS,
-  transformersjs,
-  models,
-  checkTransformersJSSupport,
   type TransformersJSProvider,
 } from "./transformers-js-provider";
 
 export type { TransformersUIMessage } from "./ui-message-types";
 
 export type {
-  TransformersJSProgressCallback,
-  TransformersJSWorkerMessage,
-  TransformersJSWorkerResponse,
-  TransformersJSGenerationOutput,
-  TransformersJSKeyValueCache,
-  TransformersJSWorkerGlobalScope,
-  TransformersJSModelInstance,
-  TransformersJSWorkerLoadOptions,
+  ProgressInfo,
+  WorkerMessage,
+  WorkerResponse,
+  WorkerGlobalScope,
+  ModelInstance,
+  WorkerLoadOptions,
+  GenerationOptions,
 } from "./transformers-js-worker-types";
 
 export { TransformersJSWorkerHandler } from "./transformers-js-worker-handler";
