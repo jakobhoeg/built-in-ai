@@ -102,9 +102,6 @@ export class TransformersJSWorkerHandler {
     const [processor, model] = modelInstance;
     const isVision = this.isVisionModel;
 
-    // Log the generation options being used
-    console.log("🎛️ Generation options received:", userGenerationOptions);
-
     // Prepare inputs based on model type
     let inputs: any;
     if (isVision) {
@@ -170,15 +167,6 @@ export class TransformersJSWorkerHandler {
       stopping_criteria: stoppingCriteriaList,
       return_dict_in_generate: true,
     };
-
-    // Log the final merged options being sent to the model
-    console.log("🚀 Final generation options for model:", {
-      temperature: generationOptions.temperature,
-      top_k: generationOptions.top_k,
-      max_new_tokens: generationOptions.max_new_tokens,
-      do_sample: generationOptions.do_sample,
-      repetition_penalty: generationOptions.repetition_penalty,
-    });
 
     this.sendMessage({ status: "start" });
 

@@ -311,15 +311,6 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       do_sample: temperature !== undefined && temperature > 0,
     };
 
-    // Log what the AI SDK is passing to us
-    console.log("📥 AI SDK parameters:", {
-      temperature,
-      topK,
-      topP,
-      maxOutputTokens,
-    });
-    console.log("📤 Converted to generation options:", generationOptions);
-
     return {
       messages,
       warnings,

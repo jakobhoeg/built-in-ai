@@ -24,13 +24,6 @@ export const MODELS: ModelConfig[] = [
     device: 'webgpu',
   },
   {
-    id: "onnx-community/Phi-3.5-mini-instruct-onnx-web",
-    name: "Phi-3.5 Mini Instruct",
-    device: 'webgpu',
-    dtype: 'q4f16',
-    use_external_data_format: true,
-  },
-  {
     id: "HuggingFaceTB/SmolVLM-256M-Instruct",
     name: "SmolVLM 256M (Vision)",
     device: 'webgpu',
