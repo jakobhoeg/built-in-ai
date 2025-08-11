@@ -256,17 +256,27 @@ export class TransformersJSWorkerHandler {
       const loadingResponse: TransformersJSWorkerResponse = { status: "loading", data: "Loading model..." };
       self.postMessage(loadingResponse);
 
+      // Throttle raw progress events to reduce postMessage overhead 
+      const throttleMs = 100;
+      let lastProgressTs = 0;
+      const throttledProgress = (progress: any) => {
+        const status = (progress && (progress as any).status) || undefined;
+        const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+        if (status === "progress") {
+          if (now - lastProgressTs < throttleMs) return;
+          lastProgressTs = now;
+        }
+        self.postMessage(progress);
+
+      };
+
       if (this.isVisionModel) {
-        const [processor, model] = await VisionGenerationPipeline.getInstance((progress) => {
-          self.postMessage(progress);
-        });
+        const [processor, model] = await VisionGenerationPipeline.getInstance(throttledProgress);
 
         const compilingResponse: TransformersJSWorkerResponse = { status: "loading", data: "Model loaded and ready..." };
         self.postMessage(compilingResponse);
       } else {
-        const [tokenizer, model] = await TextGenerationPipeline.getInstance((progress) => {
-          self.postMessage(progress);
-        });
+        const [tokenizer, model] = await TextGenerationPipeline.getInstance(throttledProgress);
 
         const compilingResponse: TransformersJSWorkerResponse = { status: "loading", data: "Compiling shaders and warming up model..." };
         self.postMessage(compilingResponse);

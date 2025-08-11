@@ -176,48 +176,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
       const isVision = this.config.options.isVisionModel;
 
-      // Aggregate progress across all files being downloaded by @huggingface/transformers
-      const fileProgress = new Map<string, { loaded: number; total: number }>();
-      const updateOverallProgress = () => {
-        let totalLoaded = 0;
-        let totalBytes = 0;
-        for (const { loaded, total } of fileProgress.values()) {
-          if (Number.isFinite(total) && total > 0) {
-            totalLoaded += Math.max(0, loaded);
-            totalBytes += total;
-          }
-        }
-        if (totalBytes > 0) {
-          const overall = Math.max(0, Math.min(1, totalLoaded / totalBytes));
-          onInitProgress?.({ progress: overall });
-        }
-      };
-
-      const progress_callback = (p: ProgressInfo) => {
-        this.config.options.rawInitProgressCallback?.(p);
-        if (p && (p as any).file) {
-          if (p.status === "progress") {
-            // ProgressStatusInfo
-            const prog = p as any;
-            fileProgress.set(prog.file, {
-              loaded: Number(prog.loaded) || 0,
-              total: Number(prog.total) || 0,
-            });
-          } else if (p.status === "done") {
-            const done = p as any;
-            const prev = fileProgress.get(done.file);
-            if (prev && Number.isFinite(prev.total) && prev.total > 0) {
-              fileProgress.set(done.file, { loaded: prev.total, total: prev.total });
-            }
-          } else if (p.status === "initiate" || p.status === "download") {
-            const info = p as any;
-            // Initialize entry with unknown total until first progress event
-            const prev = fileProgress.get(info.file);
-            if (!prev) fileProgress.set(info.file, { loaded: 0, total: 0 });
-          }
-          updateOverallProgress();
-        }
-      };
+      const progress_callback = this.createProgressTracker(onInitProgress);
 
       this.tokenizer = isVision
         ? await AutoProcessor.from_pretrained(this.modelId, { progress_callback })
@@ -254,6 +213,58 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           }`,
       });
     }
+  }
+
+  // Create a shared progress tracker to unify main-thread and worker init paths
+  private createProgressTracker(
+    onInitProgress?: (progress: { progress: number }) => void,
+  ) {
+    // Aggregate progress across all files being downloaded by @huggingface/transformers
+    const fileProgress = new Map<string, { loaded: number; total: number }>();
+
+    const updateOverallProgress = () => {
+      if (!onInitProgress) return;
+      let totalLoaded = 0;
+      let totalBytes = 0;
+      for (const { loaded, total } of fileProgress.values()) {
+        if (Number.isFinite(total) && total > 0) {
+          totalLoaded += Math.max(0, loaded);
+          totalBytes += total;
+        }
+      }
+      if (totalBytes > 0) {
+        const overall = Math.max(0, Math.min(1, totalLoaded / totalBytes));
+        onInitProgress({ progress: overall });
+      }
+    };
+
+    return (p: ProgressInfo | any) => {
+      // Optional pass-through for raw callback
+      this.config.options.rawInitProgressCallback?.(p as ProgressInfo);
+
+      // Only handle ProgressInfo-like events that include a file
+      const file = p && (p as any).file;
+      if (!file) return;
+
+      const status = (p as any).status as string | undefined;
+      if (status === "progress") {
+        const loaded = Number((p as any).loaded) || 0;
+        const total = Number((p as any).total) || 0;
+        fileProgress.set(file, { loaded, total });
+        updateOverallProgress();
+      } else if (status === "done") {
+        const prev = fileProgress.get(file);
+        if (prev && Number.isFinite(prev.total) && prev.total > 0) {
+          fileProgress.set(file, { loaded: prev.total, total: prev.total });
+          updateOverallProgress();
+        }
+      } else if (status === "initiate" || status === "download") {
+        if (!fileProgress.has(file)) {
+          fileProgress.set(file, { loaded: 0, total: 0 });
+          updateOverallProgress();
+        }
+      }
+    };
   }
 
   private getArgs({
@@ -344,6 +355,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       return "unavailable";
     }
 
+    // If using a worker, reflect worker readiness instead of main-thread state
+    if (this.config.options.worker) {
+      return this.workerReady ? "available" : "downloadable";
+    }
+
     if (this.isInitialized) {
       return "available";
     }
@@ -357,6 +373,13 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   public async createSessionWithProgress(
     onDownloadProgress?: (progress: { progress: number }) => void,
   ): Promise<TransformersJSLanguageModel> {
+    // If a worker is provided, initialize the worker (and forward progress) instead of
+    // initializing the model on the main thread to avoid double-initialization/downloads.
+    if (this.config.options.worker) {
+      await this.initializeWorker(onDownloadProgress);
+      return this;
+    }
+
     await this._initializeModel(onDownloadProgress);
     return this;
   }
@@ -471,27 +494,49 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     };
   }
 
-  private async initializeWorker(): Promise<void> {
+  private async initializeWorker(
+    onInitProgress?: (progress: { progress: number }) => void,
+  ): Promise<void> {
     if (!this.config.options.worker) return;
 
-    // Early return if already ready
-    if (this.workerReady) return;
+    // If already ready, optionally emit completion progress
+    if (this.workerReady) {
+      if (onInitProgress) onInitProgress({ progress: 1 });
+      return;
+    }
 
     const worker = this.config.options.worker;
 
     await new Promise<void>((resolve, reject) => {
+      const trackProgress = this.createProgressTracker(onInitProgress);
+
       const onMessage = (e: MessageEvent) => {
-        const msg = e.data;
+        const msg: any = e.data;
         if (!msg) return;
-        if (msg.status === "ready") {
-          worker.removeEventListener("message", onMessage);
-          this.workerReady = true;
-          resolve();
-        } else if (msg.status === "error") {
-          worker.removeEventListener("message", onMessage);
-          reject(new Error(msg.data || "Worker initialization failed"));
+
+        // Forward raw download progress events coming from @huggingface/transformers running in the worker
+        // Those events have a 'status' field like 'initiate' | 'download' | 'progress' | 'done' | 'ready'
+        if (msg && typeof msg === "object" && "status" in msg) {
+          if (msg.status === "ready") {
+            worker.removeEventListener("message", onMessage);
+            this.workerReady = true;
+            if (onInitProgress) onInitProgress({ progress: 1 });
+            resolve();
+            return;
+          }
+          if (msg.status === "error") {
+            worker.removeEventListener("message", onMessage);
+            reject(new Error(String(msg.data || "Worker initialization failed")));
+            return;
+          }
+
+          // Only aggregate file-related messages (raw ProgressInfo events)
+          if ((msg as any).file) trackProgress(msg);
+
+          // Ignore other worker lifecycle messages like { status: 'loading', data: '...' }
         }
       };
+
       worker.addEventListener("message", onMessage);
       worker.postMessage({
         type: "load",
