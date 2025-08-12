@@ -9,6 +9,7 @@ import {
   load_image,
   type ProgressInfo,
 } from "@huggingface/transformers";
+import { decodeGeneratedText } from "./decode-utils";
 
 import type {
   WorkerMessage,
@@ -174,7 +175,8 @@ export class TransformersJSWorkerHandler {
     const generationOutput = await model.generate(allOptions);
     const sequences = (generationOutput as any).sequences || generationOutput;
 
-    const decoded = processor.batch_decode(sequences, { skip_special_tokens: true });
+    const decoded = decodeGeneratedText(processor, sequences, isVision, isVision ? 0 : inputs.input_ids.data.length);
+
     self.postMessage({ status: "complete", output: decoded });
   }
 

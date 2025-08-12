@@ -22,6 +22,7 @@ import {
   type Tensor,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
+import { decodeSingleSequence } from "./decode-utils";
 import type { ModelInstance, GenerationOptions } from "./transformers-js-worker-types";
 
 declare global {
@@ -426,7 +427,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   public async doGenerate(options: LanguageModelV2CallOptions) {
     const { messages, warnings, generationOptions } = this.getArgs(options);
 
-    // Use worker if available and in browser environment
+    // Use worker if provided and in browser environment
     if (this.config.worker && isBrowserEnvironment()) {
       return this.doGenerateWithWorker(messages, warnings, generationOptions, options);
     }
@@ -438,6 +439,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       const isVision = this.config.isVisionModel;
       let inputs: { input_ids: Tensor; attention_mask?: Tensor; pixel_values?: Tensor };
       let generatedText: string;
+      let inputLength: number = 0;
+      let newTokens: any[] = [];
 
       if (isVision) {
         const text = processor.apply_chat_template(messages, { add_generation_prompt: true });
@@ -452,10 +455,14 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       } else {
         inputs = processor.apply_chat_template(messages, { add_generation_prompt: true, return_dict: true }) as { input_ids: Tensor; attention_mask?: Tensor };
         const outputs = await model.generate({ ...inputs, ...generationOptions } as any);
-        const inputLength = inputs.input_ids.data.length;
-        const outputTensor = Array.isArray(outputs) ? outputs[0] : (outputs as any).sequences?.[0] || outputs;
-        const newTokens = outputTensor.slice(inputLength);
-        generatedText = processor.decode(newTokens, { skip_special_tokens: true });
+        inputLength = inputs.input_ids.data.length;
+
+        // Extract first sequence from outputs
+        const sequences = (outputs as any).sequences || outputs;
+        const firstSequence = Array.isArray(sequences) ? sequences[0] : sequences;
+
+        generatedText = decodeSingleSequence(processor as PreTrainedTokenizer, firstSequence, inputLength);
+        newTokens = generatedText.split('');
       }
 
       const content: LanguageModelV2Content[] = [
@@ -471,9 +478,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         usage: isVision
           ? { inputTokens: undefined, outputTokens: undefined, totalTokens: undefined }
           : {
-            inputTokens: inputs.input_ids.data.length,
+            inputTokens: inputLength,
             outputTokens: generatedText.length,
-            totalTokens: inputs.input_ids.data.length + generatedText.length,
+            totalTokens: inputLength + generatedText.length,
           },
         request: { body: { messages, ...generationOptions } },
         warnings,
@@ -687,7 +694,6 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   ) {
     const worker = this.config.worker!;
 
-    // Ensure worker is ready
     await this.initializeWorker();
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
