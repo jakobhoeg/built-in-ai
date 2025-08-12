@@ -139,19 +139,7 @@ function TransformersJSChat({
       <header>
         <div className="flex items-center justify-between p-4">
           <ModelSelector />
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label htmlFor="inference-mode" className="text-xs sm:text-sm font-medium">
-                {useClientSideInference ? "Client-side" : "Server-side"}
-              </label>
-              <Switch
-                id="inference-mode"
-                checked={useClientSideInference}
-                onCheckedChange={setUseClientSideInference}
-              />
-            </div>
-            <ModeToggle />
-          </div>
+          <ModeToggle />
         </div>
       </header>
       {messages.length === 0 && (

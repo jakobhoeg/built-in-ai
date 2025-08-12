@@ -37,7 +37,7 @@ export function ModelSelector() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="text-lg font-semibold px-2 max-w-40 sm:max-w-full flex items-center justify-between"
+          className="text-lg font-semibold px-2 max-w-56 sm:max-w-full flex items-center justify-between"
         >
           <span className="truncate mr-2">
             {currentDemo?.label ?? "Select a demo"}

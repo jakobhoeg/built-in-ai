@@ -14,8 +14,12 @@ import {
   AutoModelForVision2Seq,
   TextStreamer,
   StoppingCriteria,
+  StoppingCriteriaList,
   type PretrainedModelOptions,
   type ProgressInfo,
+  type PreTrainedTokenizer,
+  type Processor,
+  type Tensor,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
 import type { ModelInstance, GenerationOptions } from "./transformers-js-worker-types";
@@ -101,7 +105,7 @@ class InterruptableStoppingCriteria extends StoppingCriteria {
     this.interrupted = false;
   }
 
-  _call(input_ids: any, scores: any) {
+  _call(input_ids: number[][], scores: number[][]): boolean[] {
     return new Array(input_ids.length).fill(this.interrupted);
   }
 }
@@ -109,7 +113,7 @@ class InterruptableStoppingCriteria extends StoppingCriteria {
 class CallbackTextStreamer extends TextStreamer {
   private cb: (text: string) => void;
 
-  constructor(tokenizer: any, cb: (text: string) => void) {
+  constructor(tokenizer: PreTrainedTokenizer, cb: (text: string) => void) {
     super(tokenizer, {
       skip_prompt: true,
       skip_special_tokens: true,
@@ -117,7 +121,7 @@ class CallbackTextStreamer extends TextStreamer {
     this.cb = cb;
   }
 
-  on_finalized_text(text: string) {
+  on_finalized_text(text: string): void {
     this.cb(text);
   }
 }
@@ -183,8 +187,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       const progress_callback = this.createProgressTracker(onInitProgress);
 
       // Set device based on environment
-      const resolvedDevice = this.resolveDevice(device as string);
-      const resolvedDtype = this.resolveDtype(dtype as string);
+      const resolvedDevice = this.resolveDevice(device as string) as PretrainedModelOptions['device'];
+      const resolvedDtype = this.resolveDtype(dtype as string) as PretrainedModelOptions['dtype'];
 
       // Create model instance based on type
       if (isVisionModel) {
@@ -228,7 +232,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
   }
 
-  private resolveDevice(device?: string): any {
+  private resolveDevice(device?: string): string {
     if (device && device !== "auto") {
       return device;
     }
@@ -246,7 +250,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     return "cpu";
   }
 
-  private resolveDtype(dtype?: string): any {
+  private resolveDtype(dtype?: string): string {
     if (dtype && dtype !== "auto") {
       return dtype;
     }
@@ -261,11 +265,16 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       // Pass through raw progress
       this.config.rawInitProgressCallback?.(p);
 
-      if (!onInitProgress || !(p as any).file) return;
+      if (!onInitProgress) return;
 
-      const file = (p as any).file;
+      // Type guard to check if p has file property
+      const progressWithFile = p as ProgressInfo & { file?: string; loaded?: number; total?: number };
+      const file = progressWithFile.file;
+
+      if (!file) return;
+
       if (p.status === "progress" && file) {
-        fileProgress.set(file, { loaded: (p as any).loaded || 0, total: (p as any).total || 0 });
+        fileProgress.set(file, { loaded: progressWithFile.loaded || 0, total: progressWithFile.total || 0 });
       } else if (p.status === "done" && file) {
         const prev = fileProgress.get(file);
         if (prev?.total) {
@@ -427,7 +436,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
     try {
       const isVision = this.config.isVisionModel;
-      let inputs: any;
+      let inputs: { input_ids: Tensor; attention_mask?: Tensor; pixel_values?: Tensor };
       let generatedText: string;
 
       if (isVision) {
@@ -438,13 +447,14 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           .map(part => part.image);
 
         inputs = await processor(text, images.length > 0 ? images : undefined);
-        const outputs = await model.generate({ ...inputs, ...generationOptions });
-        generatedText = processor.batch_decode(outputs as any, { skip_special_tokens: true })[0];
+        const outputs = await model.generate({ ...inputs, ...generationOptions } as any);
+        generatedText = processor.batch_decode(outputs as Tensor, { skip_special_tokens: true })[0];
       } else {
-        inputs = processor.apply_chat_template(messages, { add_generation_prompt: true, return_dict: true });
-        const outputs = await model.generate({ ...inputs, ...generationOptions });
-        const inputLength = (inputs as any).input_ids.data.length;
-        const newTokens = (outputs as any)[0].slice(inputLength);
+        inputs = processor.apply_chat_template(messages, { add_generation_prompt: true, return_dict: true }) as { input_ids: Tensor; attention_mask?: Tensor };
+        const outputs = await model.generate({ ...inputs, ...generationOptions } as any);
+        const inputLength = inputs.input_ids.data.length;
+        const outputTensor = Array.isArray(outputs) ? outputs[0] : (outputs as any).sequences?.[0] || outputs;
+        const newTokens = outputTensor.slice(inputLength);
         generatedText = processor.decode(newTokens, { skip_special_tokens: true });
       }
 
@@ -477,7 +487,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   }
 
   private async doGenerateWithWorker(
-    messages: Array<{ role: string; content: any }>,
+    messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image?: string }> }>,
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
@@ -537,7 +547,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       const trackProgress = this.createProgressTracker(onInitProgress);
 
       const onMessage = (e: MessageEvent) => {
-        const msg: any = e.data;
+        const msg = e.data;
         if (!msg) return;
 
         // Forward raw download progress events coming from @huggingface/transformers running in the worker
@@ -556,7 +566,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           }
 
           // Only track file-related messages (raw ProgressInfo events)
-          if ((msg as any).file) trackProgress(msg);
+          const msgWithFile = msg as ProgressInfo & { file?: string };
+          if (msgWithFile.file) trackProgress(msg as ProgressInfo);
         }
       };
 
@@ -602,9 +613,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           const inputs = tokenizer.apply_chat_template(messages, {
             add_generation_prompt: true,
             return_dict: true,
-          });
+          }) as { input_ids: Tensor; attention_mask?: Tensor };
 
-          let inputLength = (inputs as any).input_ids.data.length;
+          let inputLength = inputs.input_ids.data.length;
           let outputTokens = 0;
 
           const streamCallback = (text: string) => {
@@ -621,7 +632,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             });
           };
 
-          const streamer = new CallbackTextStreamer(tokenizer, streamCallback);
+          const streamer = new CallbackTextStreamer(tokenizer as PreTrainedTokenizer, streamCallback);
           self.stoppingCriteria.reset();
 
           if (options.abortSignal) {
@@ -630,11 +641,14 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             });
           }
 
+          const stoppingCriteriaList = new StoppingCriteriaList();
+          stoppingCriteriaList.extend([self.stoppingCriteria]);
+
           await model.generate({
-            ...(inputs as any),
+            ...inputs,
             ...generationOptions,
             streamer,
-            stopping_criteria: self.stoppingCriteria,
+            stopping_criteria: stoppingCriteriaList,
           });
 
           // Send text end event
@@ -644,7 +658,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
           controller.enqueue({
             type: "finish",
-            finishReason: "stop" as LanguageModelV2FinishReason,
+            finishReason: "stop",
             usage: {
               inputTokens: inputLength,
               outputTokens,
@@ -666,7 +680,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   }
 
   private async doStreamWithWorker(
-    messages: Array<{ role: string; content: any }>,
+    messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image?: string }> }>,
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,

@@ -1,7 +1,8 @@
 import {
   TransformersJSLanguageModel,
   TransformersJSModelId,
-  TransformersJSModelSettings
+  TransformersJSModelSettings,
+  isServerEnvironment,
 } from "./chat/transformers-js-language-model";
 import {
   TransformersJSEmbeddingModel,
@@ -9,98 +10,61 @@ import {
   TransformersJSEmbeddingSettings
 } from "./transformers-js-embedding-model";
 
-const modelCache = new Map<string, TransformersJSLanguageModel | TransformersJSEmbeddingModel>();
-
-function createCacheKey(modelId: string, settings?: any): string {
-  return `${modelId}:${settings ? JSON.stringify(settings) : ''}`;
-}
-
-function getCachedModel<T>(modelId: string, settings: any, factory: () => T): T {
-  const cacheKey = createCacheKey(modelId, settings);
-  let cached = modelCache.get(cacheKey) as T;
-  if (!cached) {
-    cached = factory();
-    modelCache.set(cacheKey, cached as any);
-  }
-  return cached;
-}
-
-export interface TransformersJSProvider {
-  languageModel: (
-    modelId: TransformersJSModelId,
-    settings?: TransformersJSModelSettings
-  ) => TransformersJSLanguageModel;
-
-  embeddingModel: (
-    modelId: TransformersJSEmbeddingModelId,
-    settings?: TransformersJSEmbeddingSettings
-  ) => TransformersJSEmbeddingModel;
-}
-
 /**
- * Create a new TransformersJS language model (default behavior).
- * @param modelId - The model identifier (e.g., 'Xenova/gpt2')
- * @param settings - Configuration options for the language model (without type field)
- * @returns TransformersJS language model instance
+ * Create a TransformersJS language model
+ * @param modelId - The model identifier
+ * @param settings - Configuration options for the language model
+ * @returns Language model instance
  */
 export function transformersJS(
   modelId: TransformersJSModelId,
-  settings?: Omit<TransformersJSModelSettings, 'type'>,
+  settings?: TransformersJSModelSettings
 ): TransformersJSLanguageModel;
 
 /**
- * Create a new TransformersJS embedding model.
- * @param modelId - The model identifier for embeddings
+ * Create a TransformersJS embedding model
+ * @param modelId - The model identifier
  * @param settings - Configuration options with type: 'embedding'
- * @returns TransformersJS embedding model instance
+ * @returns Embedding model instance
  */
 export function transformersJS(
   modelId: TransformersJSEmbeddingModelId,
-  settings: TransformersJSEmbeddingSettings & { type: 'embedding' },
+  settings: TransformersJSEmbeddingSettings & { type: 'embedding' }
 ): TransformersJSEmbeddingModel;
 
-// Implementation with proper function overload resolution
 export function transformersJS(
   modelId: string,
-  settings?: any
+  settings?: TransformersJSModelSettings | (TransformersJSEmbeddingSettings & { type: 'embedding' })
 ): TransformersJSLanguageModel | TransformersJSEmbeddingModel {
-  // Check if it's an embedding model
-  if (settings?.type === 'embedding') {
+  if (settings && 'type' in settings && settings.type === 'embedding') {
     const { type, ...embeddingSettings } = settings;
-    return getCachedModel(modelId, embeddingSettings, () =>
-      new TransformersJSEmbeddingModel(modelId, embeddingSettings)
-    );
+    return new TransformersJSEmbeddingModel(modelId, embeddingSettings);
   }
 
-  // Default to language model (even if settings has other properties)
-  return getCachedModel(modelId, settings, () =>
-    new TransformersJSLanguageModel(modelId, settings)
-  );
-}
+  // On the server, return a singleton per model + device + dtype + isVision configuration
+  // so initialization state persists across uses (e.g. within a warm process).
+  if (isServerEnvironment()) {
+    // Avoid carrying a worker field on the server (workers are not used)
+    const { worker: _ignoredWorker, ...serverSettings } = (settings || {}) as TransformersJSModelSettings & { worker?: unknown };
 
-/**
- * Clear the model cache to free up memory or force reload models
- * @param modelId - Optional specific model ID to clear. If not provided, clears all cached models
- */
-export function clearModelCache(modelId?: string): void {
-  if (modelId) {
-    // Clear specific model (all variants with different settings)
-    const keysToDelete = Array.from(modelCache.keys()).filter(key => key.startsWith(`${modelId}:`));
-    keysToDelete.forEach(key => modelCache.delete(key));
-  } else {
-    // Clear all cached models
-    modelCache.clear();
+    const key = getLanguageModelKey(modelId, serverSettings);
+    const cached = serverLanguageModelSingletons.get(key);
+    if (cached) return cached;
+
+    const instance = new TransformersJSLanguageModel(modelId, serverSettings);
+    serverLanguageModelSingletons.set(key, instance);
+    return instance;
   }
+
+  return new TransformersJSLanguageModel(modelId, settings as TransformersJSModelSettings);
 }
 
-/**
- * Get information about currently cached models
- * @returns Array of cached model information
- */
-export function getCacheInfo(): Array<{ modelId: string; settings: any; cacheKey: string }> {
-  return Array.from(modelCache.keys()).map(cacheKey => {
-    const [modelId, settingsStr] = cacheKey.split(':', 2);
-    const settings = settingsStr ? JSON.parse(settingsStr) : undefined;
-    return { modelId, settings, cacheKey };
-  });
+// Server-side singleton cache for language model instances
+const serverLanguageModelSingletons = new Map<string, TransformersJSLanguageModel>();
+
+function getLanguageModelKey(modelId: string, settings?: TransformersJSModelSettings): string {
+  const device = (settings?.device ?? "auto").toString();
+  const dtype = (settings?.dtype ?? "auto").toString();
+  const isVision = !!settings?.isVisionModel;
+  return `${modelId}::${device}::${dtype}::${isVision ? "vision" : "text"}`;
 }

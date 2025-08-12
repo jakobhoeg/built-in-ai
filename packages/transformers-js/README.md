@@ -10,7 +10,7 @@
 
 </div>
 
-[Transformers.js](https://github.com/xenova/transformers.js) provider for the [Vercel AI SDK](https://ai-sdk.dev/). Run popular open-source 🤗 Transformers models directly in the browser with optional WebGPU acceleration.
+[Transformers.js](https://github.com/xenova/transformers.js) provider for the [Vercel AI SDK](https://ai-sdk.dev/). Run popular open-source 🤗 Transformers models directly in the browser with optional WebGPU acceleration, OR even on the server.
 
 ## Installation
 
@@ -18,23 +18,28 @@
 npm i @built-in-ai/transformers-js
 ```
 
-The `@built-in-ai/transformers-js` package is the AI SDK provider for browser-based Transformers models powered by the official `@huggingface/transformers` Web runtime.
+The `@built-in-ai/transformers-js` package is the AI SDK provider for Transformers models powered by the official `@huggingface/transformers` library. It supports both client-side (browser) and server-side (Node.js) inference.
 
-## Browser Requirements
+## Requirements
 
-- A modern browser is required. WebGPU is strongly recommended for good performance, but CPU fallback works for many smaller models (slower).
-- For WebGPU info, see the MDN page: https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API
+### Browser (Client-side)
+- A modern browser with WebAssembly/WebGPU support
+- WebGPU is strongly recommended for optimal performance
+
+### Server (Node.js)
+- Node.js 18+ recommended
+- Automatic CPU inference
+- GPU acceleration available with appropriate hardware setup
 
 ## Usage
 
-### Basic Usage (Text)
+### Basic Usage (chat)
 
 ```typescript
 import { streamText } from "ai";
 import { transformersJS } from "@built-in-ai/transformers-js";
 
-const result = streamText({
-  // or generateText
+const result = streamText({ // or generateText
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
   messages: [{ role: "user", content: "Hello, how are you?" }],
 });
@@ -44,6 +49,55 @@ for await (const chunk of result.textStream) {
 }
 ```
 
+### Server-side Inference
+
+Although Transformers.js was originally designed to be used in the browser, it's also able to run inference on the server. This enables hybrid applications where you can seamlessly switch between client-side and server-side inference.
+
+#### Basic Server-side Usage
+
+```typescript
+// In a Next.js API route (app/api/chat/route.ts)
+import { streamText } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const model = transformersJS("HuggingFaceTB/SmolLM2-135M-Instruct"); // Be mindful not to pick a too large model
+
+  const result = streamText({
+    model,
+    messages,
+    temperature: 0.7,
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+#### Hybrid Client/Server Setup
+
+You can create applications that automatically choose between client-side and server-side inference:
+
+```typescript
+import { transformersJS, doesBrowserSupportTransformersJS } from "@built-in-ai/transformers-js";
+
+const useClientSide = doesBrowserSupportTransformersJS();
+
+if (useClientSide) {
+  // Browser: Use WebGPU for fast client-side inference
+  const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
+    device: "webgpu",
+    worker: new Worker(new URL("./worker.ts", import.meta.url), { type: "module" })
+  });
+} else {
+  // Fallback: Use server-side API route
+  // (handled by your application routing)
+}
+```
+
+Look at the [Complete Hybrid Example section](#complete-hybrid-example) for more information.
+
 ### Vision Models
 
 ```typescript
@@ -52,7 +106,7 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolVLM-256M-Instruct", {
   isVisionModel: true,
-  device: "webgpu", // recommended
+  device: "webgpu",
 });
 
 const result = streamText({
@@ -69,7 +123,8 @@ const result = streamText({
 
 ### Advanced Usage (Web Worker)
 
-Heavy model execution should run off the main thread using Web Workers. This package ships a ready-to-use handler, which removes complexity and allows you to just build your app.
+Heavy model execution should preferably run off the main thread using Web Workers. 
+This package ships a ready-to-use handler, which removes complexity and allows you to just build your app.
 
 1) Create `worker.ts`:
 
@@ -103,7 +158,7 @@ for await (const chunk of result.textStream) {
 }
 ```
 
-## Download/Load Progress Tracking
+## Download Progress Tracking (browser)
 
 When a model is first used, weights and tokenizer files must be loaded. Progress is handled internally and streamed back.
 
@@ -115,11 +170,6 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct");
 const availability = await model.availability();
-
-if (availability === "unavailable") {
-  console.log("Browser doesn't support this runtime");
-  return;
-}
 
 if (availability === "downloadable") {
   await model.createSessionWithProgress(({ progress }) => {
@@ -143,8 +193,10 @@ import { embed } from "ai";
 import { transformersJS } from "@built-in-ai/transformers-js";
 
 const embeddingModel = transformersJS(
-  "Xenova/all-MiniLM-L6-v2",
-  { type: "embedding", device: "webgpu" }
+  "Xenova/all-MiniLM-L6-v2", { 
+    type: "embedding", 
+    device: "webgpu" 
+  }
 );
 
 const { embeddings } = await embed({
@@ -155,18 +207,56 @@ const { embeddings } = await embed({
 
 ## Integration with useChat Hook
 
-When using this library with the `useChat` hook, create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) to support client-side AI and download progress.
+When using this library with the `useChat` hook, you can create hybrid applications that seamlessly switch between client-side and server-side inference.
 
-You can import `TransformersUIMessage` which extends `UIMessage` to include [data parts](https://v5.ai-sdk.dev/docs/ai-sdk-ui/streaming-data) for progress and notifications.
+### Client-side Integration
 
-See the complete working example: `examples/next-hybrid/app/transformers-js/util/transformers-chat-transport.ts` and the page component at `examples/next-hybrid/app/transformers-js/page.tsx`.
+Create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) to support client-side AI and download progress:
 
-This example includes:
+```typescript
+import { ChatTransport, createUIMessageStream } from "ai";
+import { transformersJS, TransformersUIMessage } from "@built-in-ai/transformers-js";
 
-- Download progress with UI updates
-- Hybrid client/server architecture with fallback
-- Error handling and notifications
-- Full integration with `useChat`
+export class TransformersChatTransport implements ChatTransport<TransformersUIMessage> {
+  private readonly model: TransformersJSLanguageModel;
+
+  constructor(model: TransformersJSLanguageModel) {
+    this.model = model;
+  }
+
+  async sendMessages(options) {
+    // Handle download progress and streaming
+    // See full example below
+  }
+}
+```
+
+### Server-side Integration
+
+For server-side inference, use standard API routes:
+
+```typescript
+// app/api/chat/route.ts
+export async function POST(req: Request) {
+  const model = transformersJS("HuggingFaceTB/SmolLM2-135M-Instruct");
+  const result = streamText({ model, messages });
+  return result.toUIMessageStreamResponse();
+}
+```
+
+### Complete Hybrid Example
+
+See the complete working example in `examples/next-hybrid/` which includes:
+
+- **Automatic fallback**: Client-side when supported, server-side otherwise
+- **User control**: Toggle switch to choose inference location
+- **Download progress**: Real-time progress tracking for model downloads
+- **Error handling**: Graceful error handling and notifications
+- **Full integration**: Complete integration with `useChat` hook
+
+Files to check:
+- `examples/next-hybrid/app/transformers-js/page.tsx` – Main component with hybrid logic
+- `examples/next-hybrid/app/transformers-js/util/transformers-chat-transport.ts` – Client-side transport
 
 ## API Reference
 
@@ -178,12 +268,10 @@ Parameters:
 
 - `modelId`: A Hugging Face model ID (e.g. `"HuggingFaceTB/SmolLM2-360M-Instruct"`, `"onnx-community/Llama-3.2-1B-Instruct-q4f16"`).
 - `settings` (optional):
-  - `device?: "cpu" | "webgpu"` – inference device
-  - `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4" | "q4f16"` – precision/quantization
-  - `isVisionModel?: boolean` – enable VLM pipeline
-  - `initProgressCallback?: (p: { progress: number }) => void` – aggregated progress callback
-  - `rawInitProgressCallback?: (p: ProgressInfo) => void` – raw file-level progress from Transformers.js
-  - `worker?: Worker` – run on a Web Worker for better UX/perf
+  - `device?: "auto" | "cpu" | "webgpu" | "gpu"` – Inference device
+  - `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4" | "q4f16"` – Data type for model weights
+  - `isVisionModel?: boolean` – Whether this is a vision model that can process images (default: false)
+  - `worker?: Worker` – Optional Web Worker to run the model off the main thread (browser only)
 
 Returns: `TransformersJSLanguageModel`
 
@@ -193,21 +281,17 @@ Creates a Transformers.js embedding model instance.
 
 Embedding settings:
 
-- `device?: "cpu" | "webgpu"`
-- `dtype?: "fp32" | "fp16" | "q8" | "q4" | "q4f16"`
-- `normalize?: boolean` (default: true)
-- `pooling?: "mean" | "cls" | "max"` (default: "mean")
-- `maxTokens?: number` (default: 512)
+- `device?: "auto" | "cpu" | "webgpu"` – Inference device (same as language models)
+- `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4" | "q4f16"` – Data type for model weights
+- `normalize?: boolean` (default: true) – Whether to normalize embeddings
+- `pooling?: "mean" | "cls" | "max"` (default: "mean") – Pooling strategy
+- `maxTokens?: number` (default: 512) – Maximum input tokens
 
 Returns: `TransformersJSEmbeddingModel`
 
 ### `doesBrowserSupportTransformersJS(): boolean`
 
-Quick check for runtime support in the current browser.
-
-### `isTransformersJSEmbeddingAvailable(): boolean`
-
-Checks if the environment is suitable for client-side embeddings (real browser context).
+Checks if the browser supports TransformersJS with optimal performance. Returns `true` if the browser has WebGPU or WebAssembly support, `false` otherwise.
 
 ### `TransformersUIMessage`
 

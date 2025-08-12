@@ -4,7 +4,9 @@ import {
 } from "@ai-sdk/provider";
 import {
   pipeline,
-  AutoTokenizer
+  AutoTokenizer,
+  type PreTrainedTokenizer,
+  type ProgressInfo,
 } from "@huggingface/transformers";
 
 export type TransformersJSEmbeddingModelId = string;
@@ -31,7 +33,7 @@ export interface TransformersJSEmbeddingSettings {
   /**
    * Progress callback for model loading
    */
-  progress_callback?: (progress: any) => void;
+  progress_callback?: (progress: ProgressInfo) => void;
 
   /**
    * Whether to normalize embeddings
@@ -52,12 +54,6 @@ export interface TransformersJSEmbeddingSettings {
   maxTokens?: number;
 }
 
-type TransformersJSEmbeddingConfig = {
-  provider: string;
-  modelId: TransformersJSEmbeddingModelId;
-  options: TransformersJSEmbeddingSettings;
-};
-
 export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
   readonly specificationVersion = "v2";
   readonly provider = "transformers-js";
@@ -66,8 +62,8 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
   readonly supportsParallelCalls = false;
 
   private readonly options: TransformersJSEmbeddingSettings;
-  private pipeline: any = null;
-  private tokenizer: any = null;
+  private pipeline: any = null; // FeatureExtractionPipelineType causes complex union type error
+  private tokenizer: PreTrainedTokenizer | null = null;
 
   constructor(
     modelId: TransformersJSEmbeddingModelId,
@@ -85,76 +81,57 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
     };
   }
 
-  private async getOrCreatePipeline(): Promise<any> {
-    if (this.pipeline) {
-      return this.pipeline;
-    }
-
-    try {
-      const pipelineOptions: any = {
-        device: this.options.device,
-        dtype: this.options.dtype,
-        progress_callback: this.options.progress_callback,
-      };
-
-      this.pipeline = await pipeline(
-        "feature-extraction",
-        this.modelId,
-        pipelineOptions
-      ) as any;
-
-      return this.pipeline;
-    } catch (error) {
-      throw new Error(`Failed to load TransformersJS embedding model: ${error}`);
-    }
-  }
-
-  private async getOrCreateTokenizer(): Promise<any> {
-    if (this.tokenizer) {
-      return this.tokenizer;
-    }
-
-    try {
-      this.tokenizer = await AutoTokenizer.from_pretrained(this.modelId) as any;
-      return this.tokenizer;
-    } catch (error) {
-      throw new Error(`Failed to load tokenizer for model ${this.modelId}: ${error}`);
-    }
-  }
-
-  private meanPooling(embeddings: number[][], attentionMask: number[][]): number[] {
-    const batchSize = embeddings.length;
-    const hiddenSize = embeddings[0].length;
-    const pooled = new Array(hiddenSize).fill(0);
-
-    let totalTokens = 0;
-    for (let i = 0; i < batchSize; i++) {
-      const mask = attentionMask[i];
-      for (let j = 0; j < hiddenSize; j++) {
-        pooled[j] += embeddings[i][j] * mask[0]; // Simplified pooling
+  private async getOrCreatePipeline() {
+    if (!this.pipeline) {
+      try {
+        this.pipeline = await pipeline("feature-extraction", this.modelId, {
+          device: this.options.device as any,
+          dtype: this.options.dtype as any,
+          progress_callback: this.options.progress_callback,
+        });
+      } catch (error) {
+        throw new Error(`Failed to load TransformersJS embedding model: ${error}`);
       }
-      totalTokens += mask.reduce((sum, val) => sum + val, 0);
+    }
+    return this.pipeline;
+  }
+
+  private async getOrCreateTokenizer(): Promise<PreTrainedTokenizer> {
+    if (!this.tokenizer) {
+      try {
+        this.tokenizer = await AutoTokenizer.from_pretrained(this.modelId);
+      } catch (error) {
+        throw new Error(`Failed to load tokenizer for model ${this.modelId}: ${error}`);
+      }
+    }
+    return this.tokenizer;
+  }
+
+  private applyPooling(embeddings: number[][], pooling: string): number[] {
+    if (pooling === "cls") {
+      return embeddings[0]; // Return first token (CLS token)
     }
 
-    return pooled.map(val => val / totalTokens);
-  }
-
-  private clsPooling(embeddings: number[][]): number[] {
-    // Return the first token (CLS token) embedding
-    return embeddings[0];
-  }
-
-  private maxPooling(embeddings: number[][]): number[] {
     const hiddenSize = embeddings[0].length;
-    const pooled = new Array(hiddenSize).fill(-Infinity);
 
+    if (pooling === "max") {
+      const pooled = new Array(hiddenSize).fill(-Infinity);
+      for (const embedding of embeddings) {
+        for (let j = 0; j < hiddenSize; j++) {
+          pooled[j] = Math.max(pooled[j], embedding[j]);
+        }
+      }
+      return pooled;
+    }
+
+    // Default: mean pooling
+    const result = new Array(hiddenSize).fill(0);
     for (const embedding of embeddings) {
       for (let j = 0; j < hiddenSize; j++) {
-        pooled[j] = Math.max(pooled[j], embedding[j]);
+        result[j] += embedding[j];
       }
     }
-
-    return pooled;
+    return result.map(val => val / embeddings.length);
   }
 
   private normalizeVector(vector: number[]): number[] {
@@ -183,86 +160,53 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
     const model = await this.getOrCreatePipeline();
     const tokenizer = await this.getOrCreateTokenizer();
 
-    const embeddings: number[][] = [];
-    let totalTokens = 0;
+    const embeddings = await Promise.all(
+      values.map(async (text) => {
+        try {
+          // Tokenize the input
+          const tokens = await tokenizer(text, {
+            padding: true,
+            truncation: true,
+            max_length: this.options.maxTokens,
+            return_tensors: false,
+          });
 
-    for (const text of values) {
-      try {
-        // Tokenize the input
-        const tokens = await tokenizer(text, {
-          padding: true,
-          truncation: true,
-          max_length: this.options.maxTokens,
-          return_tensors: false,
-        });
+          // Get embeddings
+          const result = await model(text, {
+            pooling: "none", // We'll handle pooling ourselves
+            normalize: false, // We'll handle normalization ourselves
+          });
 
-        // Get embeddings
-        const result = await model(text, {
-          pooling: "none", // We'll handle pooling ourselves
-          normalize: false, // We'll handle normalization ourselves
-        });
+          let embedding: number[];
 
-        let embedding: number[];
-
-        // Handle different result formats
-        if (Array.isArray(result) && Array.isArray(result[0]) && Array.isArray(result[0][0])) {
-          // Result is [batch_size, sequence_length, hidden_size]
-          const sequenceEmbeddings = result[0] as number[][];
-
-          switch (this.options.pooling) {
-            case "cls":
-              embedding = this.clsPooling(sequenceEmbeddings);
-              break;
-            case "max":
-              embedding = this.maxPooling(sequenceEmbeddings);
-              break;
-            case "mean":
-            default:
-              // For mean pooling, we'd need attention mask - simplified here
-              embedding = this.meanPooling(sequenceEmbeddings, [[1]]);
-              break;
+          // Handle different result formats
+          if (Array.isArray(result) && Array.isArray(result[0]) && Array.isArray(result[0][0])) {
+            // Result is [batch_size, sequence_length, hidden_size]
+            embedding = this.applyPooling(result[0] as number[][], this.options.pooling || "mean");
+          } else if (Array.isArray(result) && typeof result[0] === "number") {
+            // Result is already pooled
+            embedding = result as number[];
+          } else {
+            throw new Error("Unexpected embedding result format");
           }
-        } else if (Array.isArray(result) && typeof result[0] === "number") {
-          // Result is already pooled
-          embedding = result as number[];
-        } else {
-          throw new Error("Unexpected embedding result format");
+
+          // Normalize if requested
+          if (this.options.normalize) {
+            embedding = this.normalizeVector(embedding);
+          }
+
+          return { embedding, tokenCount: Array.isArray(tokens.input_ids) ? tokens.input_ids.length : 0 };
+        } catch (error) {
+          throw new Error(`Failed to generate embedding for text: ${error}`);
         }
+      })
+    );
 
-        // Normalize if requested
-        if (this.options.normalize) {
-          embedding = this.normalizeVector(embedding);
-        }
-
-        embeddings.push(embedding);
-        totalTokens += Array.isArray(tokens.input_ids) ? tokens.input_ids.length : 0;
-
-      } catch (error) {
-        throw new Error(`Failed to generate embedding for text: ${error}`);
-      }
-    }
+    const totalTokens = embeddings.reduce((sum, { tokenCount }) => sum + tokenCount, 0);
 
     return {
-      embeddings,
+      embeddings: embeddings.map(({ embedding }) => embedding),
       usage: { tokens: totalTokens },
     };
   }
 }
-
-/**
- * Check if the browser environment supports TransformersJS embeddings
- * @returns true if the browser supports TransformersJS embeddings, false otherwise
- */
-export function isTransformersJSEmbeddingAvailable(): boolean {
-  try {
-    // Check if we're in a real browser environment (not Node.js or jsdom)
-    return typeof window !== "undefined" &&
-      typeof document !== "undefined" &&
-      typeof navigator !== "undefined" &&
-      typeof window.location !== "undefined" &&
-      window.location.protocol.startsWith("http") &&
-      !(typeof process !== 'undefined' && process?.versions?.node); // Exclude Node.js environments
-  } catch {
-    return false;
-  }
-} 
