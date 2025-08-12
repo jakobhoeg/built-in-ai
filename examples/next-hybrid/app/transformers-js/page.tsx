@@ -26,6 +26,7 @@ import {
   AIInputModelSelectItem,
 } from "@/components/ai/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { PlusIcon, RefreshCcw, Copy, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -45,11 +46,13 @@ import {
 import { ModelConfig, MODELS } from "./util/models-config";
 
 function TransformersJSChat({
-  browserSupportsTransformers,
+  useClientSideInference,
+  setUseClientSideInference,
   modelConfig,
   setModelConfig,
 }: {
-  browserSupportsTransformers: boolean;
+  useClientSideInference: boolean;
+  setUseClientSideInference: (value: boolean) => void;
   modelConfig: ModelConfig;
   setModelConfig: (modelConfig: ModelConfig) => void;
 }) {
@@ -58,7 +61,7 @@ function TransformersJSChat({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const chatTransport = useMemo(() => {
-    if (browserSupportsTransformers) {
+    if (useClientSideInference) {
       const { id, name, ...modelOptions } = modelConfig;
 
       const model = transformersJS(modelConfig.id, {
@@ -71,9 +74,9 @@ function TransformersJSChat({
     }
     return new DefaultChatTransport<UIMessage>({
       // server side (api route)
-      api: "/api/chat",
+      api: "/api/transformers-chat",
     });
-  }, [modelConfig, browserSupportsTransformers]);
+  }, [modelConfig, useClientSideInference]);
 
   const { error, status, sendMessage, messages, regenerate, stop } =
     useChat<TransformersUIMessage>({
@@ -81,6 +84,7 @@ function TransformersJSChat({
       onError(error) {
         toast.error(error.message);
       },
+      id: `chat-${useClientSideInference ? 'client' : 'server'}-${useClientSideInference ? modelConfig.id : 'default'}`, // Forces state refresh (not necessary)
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -135,24 +139,37 @@ function TransformersJSChat({
       <header>
         <div className="flex items-center justify-between p-4">
           <ModelSelector />
-          <ModeToggle />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="inference-mode" className="text-xs sm:text-sm font-medium">
+                {useClientSideInference ? "Client-side" : "Server-side"}
+              </label>
+              <Switch
+                id="inference-mode"
+                checked={useClientSideInference}
+                onCheckedChange={setUseClientSideInference}
+              />
+            </div>
+            <ModeToggle />
+          </div>
         </div>
       </header>
       {messages.length === 0 && (
         <div className="flex h-full flex-col items-center justify-center text-center">
-          {browserSupportsTransformers ? (
+          {useClientSideInference ? (
             <>
               <p className="text-xs">@built-in-ai/transformers-js demo</p>
               <h1 className="text-lg font-medium">
-                Using Transformers.js client-side AI model
+                Using Transformers.js client-side
               </h1>
-              <p className="text-sm max-w-xs">Your device supports WebGPU</p>
+              <p className="text-sm max-w-xs">Switch model at the bottom of this page</p>
             </>
           ) : (
             <>
-              <h1 className="text-lg font-medium">Using server-side model</h1>
+              <p className="text-xs">@built-in-ai/transformers-js demo</p>
+              <h1 className="text-lg font-medium">Using server-side TransformersJS</h1>
               <p className="text-sm max-w-xs">
-                Your device doesn&apos;t support WebGPU
+                Your device doesn&apos;t support client side inference
               </p>
             </>
           )}
@@ -303,14 +320,18 @@ function TransformersJSChat({
           <AIInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="What would you like to know? (Powered by WebLLM Worker)"
+            placeholder={useClientSideInference
+              ? "What would you like to know? (Powered by TransformersJS)"
+              : "What would you like to know? (Powered by Server-side TransformersJS)"
+            }
             minHeight={48}
             maxHeight={164}
             className="bg-accent dark:bg-card"
           />
           <AIInputToolbar>
             <AIInputTools>
-              <AIInputButton onClick={() => fileInputRef.current?.click()}>
+              <AIInputButton
+                onClick={() => fileInputRef.current?.click()}>
                 <PlusIcon size={16} />
               </AIInputButton>
               <input
@@ -322,6 +343,7 @@ function TransformersJSChat({
                 className="hidden"
               />
               <AIInputModelSelect
+                disabled={!useClientSideInference}
                 onValueChange={(modelId) => {
                   const selectedModel = MODELS.find(m => m.id === modelId);
                   if (selectedModel) setModelConfig(selectedModel);
@@ -412,16 +434,16 @@ function TransformersJSChat({
 }
 
 export default function TransformersJSChatPage() {
-  const [browserSupportsTransformers, setbrowserSupportsTransformers] = useState<
+  const [useClientSideInference, setUseClientSideInference] = useState<
     boolean | null
   >(null);
   const [modelConfig, setModelConfig] = useState<ModelConfig>(MODELS[0]);
 
   useEffect(() => {
-    setbrowserSupportsTransformers(doesBrowserSupportTransformersJS());
+    setUseClientSideInference(doesBrowserSupportTransformersJS());
   }, []);
 
-  if (browserSupportsTransformers === null) {
+  if (useClientSideInference === null) {
     return (
       <div className="flex flex-col h-[calc(100dvh)] items-center justify-center max-w-4xl mx-auto">
         <Spinner className="size-4" />
@@ -431,10 +453,10 @@ export default function TransformersJSChatPage() {
 
   return (
     <TransformersJSChat
-      browserSupportsTransformers={browserSupportsTransformers}
+      useClientSideInference={useClientSideInference}
+      setUseClientSideInference={setUseClientSideInference}
       modelConfig={modelConfig}
       setModelConfig={setModelConfig}
-      key={modelConfig.id}
     />
   );
 }

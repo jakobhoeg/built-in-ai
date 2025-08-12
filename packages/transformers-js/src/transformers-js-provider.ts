@@ -2,7 +2,7 @@ import {
   TransformersJSLanguageModel,
   TransformersJSModelId,
   TransformersJSModelSettings
-} from "./transformers-js-language-model";
+} from "./chat/transformers-js-language-model";
 import {
   TransformersJSEmbeddingModel,
   TransformersJSEmbeddingModelId,
@@ -38,45 +38,43 @@ export interface TransformersJSProvider {
 }
 
 /**
- * Create a new TransformersJS language model.
+ * Create a new TransformersJS language model (default behavior).
  * @param modelId - The model identifier (e.g., 'Xenova/gpt2')
- * @param settings - Configuration options for the language model
+ * @param settings - Configuration options for the language model (without type field)
  * @returns TransformersJS language model instance
  */
 export function transformersJS(
   modelId: TransformersJSModelId,
-  settings?: TransformersJSModelSettings,
+  settings?: Omit<TransformersJSModelSettings, 'type'>,
 ): TransformersJSLanguageModel;
 
 /**
  * Create a new TransformersJS embedding model.
  * @param modelId - The model identifier for embeddings
- * @param settings - Configuration options for the embedding model
- * @param type - Explicitly specify 'embedding' to create an embedding model
+ * @param settings - Configuration options with type: 'embedding'
+ * @returns TransformersJS embedding model instance
  */
 export function transformersJS(
   modelId: TransformersJSEmbeddingModelId,
   settings: TransformersJSEmbeddingSettings & { type: 'embedding' },
 ): TransformersJSEmbeddingModel;
 
+// Implementation with proper function overload resolution
 export function transformersJS(
-  modelIdOrOptions?: TransformersJSModelId | TransformersJSEmbeddingModelId | { baseUrl?: string },
-  settings?: TransformersJSModelSettings | (TransformersJSEmbeddingSettings & { type: 'embedding' })
-): TransformersJSLanguageModel | TransformersJSEmbeddingModel | TransformersJSProvider {
-
-  const modelId = modelIdOrOptions as string;
-
+  modelId: string,
+  settings?: any
+): TransformersJSLanguageModel | TransformersJSEmbeddingModel {
   // Check if it's an embedding model
-  if (settings && typeof settings === 'object' && 'type' in settings && settings.type === 'embedding') {
+  if (settings?.type === 'embedding') {
     const { type, ...embeddingSettings } = settings;
     return getCachedModel(modelId, embeddingSettings, () =>
-      new TransformersJSEmbeddingModel(modelId, embeddingSettings as TransformersJSEmbeddingSettings)
+      new TransformersJSEmbeddingModel(modelId, embeddingSettings)
     );
   }
 
-  // Default to language model
+  // Default to language model (even if settings has other properties)
   return getCachedModel(modelId, settings, () =>
-    new TransformersJSLanguageModel(modelId, settings as TransformersJSModelSettings)
+    new TransformersJSLanguageModel(modelId, settings)
   );
 }
 

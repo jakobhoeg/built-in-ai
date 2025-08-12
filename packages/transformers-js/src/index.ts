@@ -3,7 +3,9 @@ export {
   type TransformersJSModelId,
   type TransformersJSModelSettings,
   doesBrowserSupportTransformersJS,
-} from "./transformers-js-language-model";
+  isBrowserEnvironment,
+  isServerEnvironment,
+} from "./chat/transformers-js-language-model";
 
 export {
   TransformersJSEmbeddingModel,
@@ -17,7 +19,7 @@ export {
   type TransformersJSProvider,
 } from "./transformers-js-provider";
 
-export type { TransformersUIMessage } from "./ui-message-types";
+export type { TransformersUIMessage } from "./chat/ui-message-types";
 
 export type {
   ProgressInfo,
@@ -27,6 +29,6 @@ export type {
   ModelInstance,
   WorkerLoadOptions,
   GenerationOptions,
-} from "./transformers-js-worker-types";
+} from "./chat/transformers-js-worker-types";
 
-export { TransformersJSWorkerHandler } from "./transformers-js-worker-handler";
+export { TransformersJSWorkerHandler } from "./chat/transformers-js-worker-handler";

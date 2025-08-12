@@ -49,13 +49,40 @@ export interface TransformersJSModelSettings extends Pick<PretrainedModelOptions
 }
 
 /**
- * Check if the browser supports TransformersJS
+ * Check if we're running in a browser environment
+ */
+export function isBrowserEnvironment(): boolean {
+  return typeof window !== "undefined";
+}
+
+/**
+ * Check if we're running in a server environment (Node.js)
+ */
+export function isServerEnvironment(): boolean {
+  return typeof window === "undefined" && typeof process !== "undefined";
+}
+
+/**
+ * Check if the browser supports TransformersJS with optimal performance
+ * Returns true if the browser has WebGPU or WebAssembly support
+ * @returns true if the browser supports TransformersJS, false otherwise
  */
 export function doesBrowserSupportTransformersJS(): boolean {
-  if (typeof window === "undefined") {
+  if (!isBrowserEnvironment()) {
     return false;
   }
-  return true;
+
+  // Check for WebGPU support for better performance
+  if (typeof navigator !== "undefined" && navigator.gpu) {
+    return true;
+  }
+
+  // Check for WebAssembly support as fallback
+  if (typeof WebAssembly !== "undefined") {
+    return true;
+  }
+
+  return false;
 }
 
 // Simplified config - just extend the settings with modelId
@@ -152,22 +179,20 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     onInitProgress?: (progress: { progress: number }) => void,
   ): Promise<void> {
     try {
-      if (!doesBrowserSupportTransformersJS()) {
-        throw new LoadSettingError({
-          message: "TransformersJS is not supported in this environment",
-        });
-      }
-
       const { isVisionModel, device, dtype } = this.config;
       const progress_callback = this.createProgressTracker(onInitProgress);
+
+      // Set device based on environment
+      const resolvedDevice = this.resolveDevice(device as string);
+      const resolvedDtype = this.resolveDtype(dtype as string);
 
       // Create model instance based on type
       if (isVisionModel) {
         const [processor, model] = await Promise.all([
           AutoProcessor.from_pretrained(this.modelId, { progress_callback }),
           AutoModelForVision2Seq.from_pretrained(this.modelId, {
-            dtype: dtype || "auto",
-            device: device || "auto",
+            dtype: resolvedDtype,
+            device: resolvedDevice,
             progress_callback,
           })
         ]);
@@ -176,16 +201,18 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         const [tokenizer, model] = await Promise.all([
           AutoTokenizer.from_pretrained(this.modelId, { legacy: true, progress_callback }),
           AutoModelForCausalLM.from_pretrained(this.modelId, {
-            dtype: dtype || "auto",
-            device: device || "auto",
+            dtype: resolvedDtype,
+            device: resolvedDevice,
             progress_callback,
           })
         ]);
         this.modelInstance = [tokenizer, model];
 
-        // Warm up text models
-        const dummyInputs = tokenizer("Hello");
-        await model.generate({ ...dummyInputs, max_new_tokens: 1 });
+        // Warm up text models (skip in server environment to reduce initialization time)
+        if (isBrowserEnvironment()) {
+          const dummyInputs = tokenizer("Hello");
+          await model.generate({ ...dummyInputs, max_new_tokens: 1 });
+        }
       }
 
       onInitProgress?.({ progress: 1.0 });
@@ -199,6 +226,32 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         message: `Failed to initialize TransformersJS model: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     }
+  }
+
+  private resolveDevice(device?: string): any {
+    if (device && device !== "auto") {
+      return device;
+    }
+
+    if (isServerEnvironment()) {
+      // In server environment, prefer CPU unless explicitly set
+      return "cpu";
+    }
+
+    // In browser environment, auto-detect WebGPU support
+    if (isBrowserEnvironment() && typeof navigator !== "undefined" && navigator.gpu) {
+      return "webgpu";
+    }
+
+    return "cpu";
+  }
+
+  private resolveDtype(dtype?: string): any {
+    if (dtype && dtype !== "auto") {
+      return dtype;
+    }
+
+    return "auto";
   }
 
   private createProgressTracker(onInitProgress?: (progress: { progress: number }) => void) {
@@ -322,13 +375,14 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
    * Check the availability of the TransformersJS model
    */
   public async availability(): Promise<"unavailable" | "downloadable" | "available"> {
-    if (!doesBrowserSupportTransformersJS()) {
-      return "unavailable";
+    // If using a worker (browser only), reflect worker readiness instead of main-thread state
+    if (this.config.worker && isBrowserEnvironment()) {
+      return this.workerReady ? "available" : "downloadable";
     }
 
-    // If using a worker, reflect worker readiness instead of main-thread state
-    if (this.config.worker) {
-      return this.workerReady ? "available" : "downloadable";
+    // In server environment, workers are not used
+    if (isServerEnvironment() && this.config.worker) {
+      // Ignore worker config on server and use main thread
     }
 
     if (this.isInitialized) {
@@ -344,13 +398,15 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   public async createSessionWithProgress(
     onDownloadProgress?: (progress: { progress: number }) => void,
   ): Promise<TransformersJSLanguageModel> {
-    // If a worker is provided, initialize the worker (and forward progress) instead of
-    // initializing the model on the main thread to avoid double-initialization/downloads.
-    if (this.config.worker) {
+    // If a worker is provided and we're in browser environment, initialize the worker
+    // (and forward progress) instead of initializing the model on the main thread 
+    // to avoid double-initialization/downloads.
+    if (this.config.worker && isBrowserEnvironment()) {
       await this.initializeWorker(onDownloadProgress);
       return this;
     }
 
+    // In server environment or when no worker is provided, use main thread
     await this._initializeModel(onDownloadProgress);
     return this;
   }
@@ -361,12 +417,12 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   public async doGenerate(options: LanguageModelV2CallOptions) {
     const { messages, warnings, generationOptions } = this.getArgs(options);
 
-    // Use worker if available
-    if (this.config.worker) {
+    // Use worker if available and in browser environment
+    if (this.config.worker && isBrowserEnvironment()) {
       return this.doGenerateWithWorker(messages, warnings, generationOptions, options);
     }
 
-    // Main thread generation
+    // Main thread generation (browser without worker or server environment)
     const [processor, model] = await this.getSession(this.config.initProgressCallback);
 
     try {
@@ -523,7 +579,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   public async doStream(options: LanguageModelV2CallOptions) {
     const { messages, warnings, generationOptions } = this.getArgs(options);
 
-    if (this.config.worker) {
+    // Use worker if available and in browser environment
+    if (this.config.worker && isBrowserEnvironment()) {
       return this.doStreamWithWorker(messages, warnings, generationOptions, options);
     }
 
