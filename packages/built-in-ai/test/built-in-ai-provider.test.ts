@@ -37,7 +37,9 @@ describe("BuiltInAI Provider", () => {
       expect(() => {
         // @ts-expect-error - intentionally testing invalid usage
         new provider("text");
-      }).toThrow("The BuiltInAI model function cannot be called with the new keyword.");
+      }).toThrow(
+        "The BuiltInAI model function cannot be called with the new keyword.",
+      );
     });
   });
 
@@ -46,35 +48,46 @@ describe("BuiltInAI Provider", () => {
       const provider = createBuiltInAI();
       provider("text", { temperature: 0.5 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", { temperature: 0.5 });
+      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+        temperature: 0.5,
+      });
     });
 
     it("should create language model via direct call with default model ID", () => {
       const provider = createBuiltInAI();
       provider(undefined, { temperature: 0.5 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", { temperature: 0.5 });
+      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+        temperature: 0.5,
+      });
     });
 
     it("should create language model via direct call with no parameters", () => {
       const provider = createBuiltInAI();
       provider();
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", undefined);
+      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith(
+        "text",
+        undefined,
+      );
     });
 
     it("should create language model via languageModel method", () => {
       const provider = createBuiltInAI();
       provider.languageModel("text", { temperature: 0.7 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", { temperature: 0.7 });
+      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+        temperature: 0.7,
+      });
     });
 
     it("should create language model via chat method", () => {
       const provider = createBuiltInAI();
       provider.chat("text", { temperature: 0.9 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", { temperature: 0.9 });
+      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+        temperature: 0.9,
+      });
     });
   });
 
@@ -127,7 +140,9 @@ describe("BuiltInAI Provider", () => {
       // Test the new API pattern the user wanted
       builtInAI.textEmbedding("embedding", { l2Normalize: true });
 
-      expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith({ l2Normalize: true });
+      expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith({
+        l2Normalize: true,
+      });
     });
   });
 });

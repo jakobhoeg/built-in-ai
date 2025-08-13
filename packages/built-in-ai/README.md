@@ -48,8 +48,9 @@ For more information, check out [this guide](https://developer.chrome.com/docs/e
 import { streamText } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 
-const result = streamText({ // or generateText
-  model: builtInAI(), 
+const result = streamText({
+  // or generateText
+  model: builtInAI(),
   messages: [{ role: "user", content: "Hello, how are you?" }],
 });
 

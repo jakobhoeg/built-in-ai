@@ -12,7 +12,10 @@ export type { BuiltInAIEmbeddingModelSettings } from "./built-in-ai-embedding-mo
 
 // Provider
 export { builtInAI, createBuiltInAI } from "./built-in-ai-provider";
-export type { BuiltInAIProvider, BuiltInAIProviderSettings } from "./built-in-ai-provider";
+export type {
+  BuiltInAIProvider,
+  BuiltInAIProviderSettings,
+} from "./built-in-ai-provider";
 
 // UI types
 export type { BuiltInAIUIMessage } from "./ui-message-types";
