@@ -15,6 +15,9 @@ export {
 
 export {
   transformersJS,
+  createTransformersJS,
+  type TransformersJSProvider,
+  type TransformersJSProviderSettings,
 } from "./transformers-js-provider";
 
 export type { TransformersUIMessage } from "./chat/ui-message-types";
