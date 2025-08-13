@@ -1,4 +1,10 @@
 import {
+  EmbeddingModelV2,
+  LanguageModelV2,
+  NoSuchModelError,
+  ProviderV2,
+} from '@ai-sdk/provider';
+import {
   TransformersJSLanguageModel,
   TransformersJSModelId,
   TransformersJSModelSettings,
@@ -10,54 +16,96 @@ import {
   TransformersJSEmbeddingSettings
 } from "./transformers-js-embedding-model";
 
-/**
- * Create a TransformersJS language model
- * @param modelId - The model identifier
- * @param settings - Configuration options for the language model
- * @returns Language model instance
- */
-export function transformersJS(
-  modelId: TransformersJSModelId,
-  settings?: TransformersJSModelSettings
-): TransformersJSLanguageModel;
+export interface TransformersJSProvider extends ProviderV2 {
+  (modelId: TransformersJSModelId, settings?: TransformersJSModelSettings): TransformersJSLanguageModel;
 
-/**
- * Create a TransformersJS embedding model
- * @param modelId - The model identifier
- * @param settings - Configuration options with type: 'embedding'
- * @returns Embedding model instance
- */
-export function transformersJS(
-  modelId: TransformersJSEmbeddingModelId,
-  settings: TransformersJSEmbeddingSettings & { type: 'embedding' }
-): TransformersJSEmbeddingModel;
+  /**
+   * Creates a model for text generation.
+   */
+  languageModel(modelId: TransformersJSModelId, settings?: TransformersJSModelSettings): TransformersJSLanguageModel;
 
-export function transformersJS(
-  modelId: string,
-  settings?: TransformersJSModelSettings | (TransformersJSEmbeddingSettings & { type: 'embedding' })
-): TransformersJSLanguageModel | TransformersJSEmbeddingModel {
-  if (settings && 'type' in settings && settings.type === 'embedding') {
-    const { type, ...embeddingSettings } = settings;
-    return new TransformersJSEmbeddingModel(modelId, embeddingSettings);
-  }
+  /**
+   * Creates a model for text generation.
+   */
+  chat(modelId: TransformersJSModelId, settings?: TransformersJSModelSettings): TransformersJSLanguageModel;
 
-  // On the server, return a singleton per model + device + dtype + isVision configuration
-  // so initialization state persists across uses (e.g. within a warm process).
-  if (isServerEnvironment()) {
-    // Avoid carrying a worker field on the server (workers are not used)
-    const { worker: _ignoredWorker, ...serverSettings } = (settings || {}) as TransformersJSModelSettings & { worker?: unknown };
+  textEmbedding(modelId: TransformersJSEmbeddingModelId, settings?: TransformersJSEmbeddingSettings): EmbeddingModelV2<string>;
 
-    const key = getLanguageModelKey(modelId, serverSettings);
-    const cached = serverLanguageModelSingletons.get(key);
-    if (cached) return cached;
-
-    const instance = new TransformersJSLanguageModel(modelId, serverSettings);
-    serverLanguageModelSingletons.set(key, instance);
-    return instance;
-  }
-
-  return new TransformersJSLanguageModel(modelId, settings as TransformersJSModelSettings);
+  textEmbeddingModel: (
+    modelId: TransformersJSEmbeddingModelId,
+    settings?: TransformersJSEmbeddingSettings,
+  ) => EmbeddingModelV2<string>;
 }
+
+export interface TransformersJSProviderSettings {
+  // Currently empty - provider settings are minimal for TransformersJS
+  // Future provider-level settings can be added here
+}
+
+/**
+ * Create a TransformersJS provider instance.
+ */
+export function createTransformersJS(
+  options: TransformersJSProviderSettings = {},
+): TransformersJSProvider {
+  const createChatModel = (modelId: TransformersJSModelId, settings?: TransformersJSModelSettings) => {
+
+    // On the server, return a singleton per model + device + dtype + isVision configuration
+    // so initialization state persists across uses (e.g. within a warm process).
+    if (isServerEnvironment()) {
+      // Avoid carrying a worker field on the server (workers are not used)
+      const { worker: _ignoredWorker, ...serverSettings } = (settings || {}) as TransformersJSModelSettings & { worker?: unknown };
+
+      const key = getLanguageModelKey(modelId, serverSettings);
+      const cached = serverLanguageModelSingletons.get(key);
+      if (cached) return cached;
+
+      const instance = new TransformersJSLanguageModel(modelId, serverSettings);
+      serverLanguageModelSingletons.set(key, instance);
+      return instance;
+    }
+
+    return new TransformersJSLanguageModel(modelId, settings);
+  };
+
+  const createEmbeddingModel = (modelId: TransformersJSEmbeddingModelId, settings?: TransformersJSEmbeddingSettings) => {
+    return new TransformersJSEmbeddingModel(modelId, settings);
+  };
+
+  const provider = function (modelId: TransformersJSModelId, settings?: TransformersJSModelSettings) {
+    if (new.target) {
+      throw new Error(
+        'The TransformersJS model function cannot be called with the new keyword.',
+      );
+    }
+
+    return createChatModel(modelId, settings);
+  };
+
+  provider.languageModel = createChatModel;
+  provider.chat = createChatModel;
+  provider.textEmbedding = createEmbeddingModel;
+  provider.textEmbeddingModel = createEmbeddingModel;
+
+  provider.imageModel = (modelId: string) => {
+    throw new NoSuchModelError({ modelId, modelType: 'imageModel' });
+  };
+
+  provider.speechModel = (modelId: string) => {
+    throw new NoSuchModelError({ modelId, modelType: 'speechModel' });
+  };
+
+  provider.transcriptionModel = (modelId: string) => {
+    throw new NoSuchModelError({ modelId, modelType: 'transcriptionModel' });
+  };
+
+  return provider;
+}
+
+/**
+ * Default TransformersJS provider instance.
+ */
+export const transformersJS = createTransformersJS();
 
 // Server-side singleton cache for language model instances
 const serverLanguageModelSingletons = new Map<string, TransformersJSLanguageModel>();
