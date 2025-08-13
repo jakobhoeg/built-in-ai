@@ -397,7 +397,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     );
 
     const generationOptions: GenerationOptions = {
-      max_new_tokens: maxOutputTokens || 256,
+      max_new_tokens: maxOutputTokens || 32768,
       temperature: temperature || 0.7,
       top_p: topP,
       top_k: topK,
