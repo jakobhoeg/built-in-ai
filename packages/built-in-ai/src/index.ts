@@ -11,7 +11,8 @@ export { BuiltInAIEmbeddingModel } from "./built-in-ai-embedding-model";
 export type { BuiltInAIEmbeddingModelSettings } from "./built-in-ai-embedding-model";
 
 // Provider
-export { builtInAI } from "./built-in-ai-provider";
+export { builtInAI, createBuiltInAI } from "./built-in-ai-provider";
+export type { BuiltInAIProvider, BuiltInAIProviderSettings } from "./built-in-ai-provider";
 
 // UI types
 export type { BuiltInAIUIMessage } from "./ui-message-types";
