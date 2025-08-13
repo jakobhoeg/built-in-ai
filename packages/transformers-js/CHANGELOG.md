@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 0.1.1
+
+### Patch Changes
+
+- d09a1c0: fix: use higher maxOutputTokens by default
+
 ## 0.1.0
 
 ### Minor Changes
