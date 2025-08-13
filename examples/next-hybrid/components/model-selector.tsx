@@ -22,6 +22,10 @@ const demos = [
     href: "/web-llm",
     label: "@built-in-ai/web-llm",
   },
+  {
+    href: "/transformers-js",
+    label: "@built-in-ai/transformers-js",
+  },
 ];
 
 export function ModelSelector() {
@@ -31,9 +35,14 @@ export function ModelSelector() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="text-lg font-semibold px-2">
-          {currentDemo?.label ?? "Select a demo"}
-          <ChevronDownIcon className="ml-2 h-4 w-4" />
+        <Button
+          variant="ghost"
+          className="text-lg font-semibold px-2 max-w-56 sm:max-w-full flex items-center justify-between"
+        >
+          <span className="truncate mr-2">
+            {currentDemo?.label ?? "Select a demo"}
+          </span>
+          <ChevronDownIcon className="h-4 w-4 flex-shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">

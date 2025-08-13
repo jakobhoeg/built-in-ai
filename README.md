@@ -15,8 +15,7 @@ TypeScript libraries that provide access to in-browser AI models with seamless f
 
 - [`@built-in-ai/core`](/packages/built-in-ai/README.md) package is the AI SDK model provider for your Chrome and Edge browser's [built-in AI models](https://developer.chrome.com/docs/ai/built-in).
 - [`@built-in-ai/web-llm`](/packages/web-llm/README.md) package is the AI SDK model provider for open-source models (using [WebLLM](https://github.com/mlc-ai/web-llm)) running directly in the browser.
-
-> We are also currently working on creating a model provider for [transformers.js](https://github.com/huggingface/transformers.js/)
+- [`@built-in-ai/transformers-js`](/packages/transformers-js/README.md) package is the AI SDK model provider for [Transformers.js](https://github.com/xenova/transformers.js) that runs both in the browser and on the server.
 
 ## Quick start
 
@@ -26,6 +25,9 @@ npm i @built-in-ai/core
 
 # For open-source models via WebLLM
 npm i @built-in-ai/web-llm
+
+# For 🤗 Transformers.js models (browser and server)
+npm i @built-in-ai/transformers-js
 ```
 
 ### Basic Usage with Chrome/Edge AI
@@ -81,5 +83,3 @@ This library bridges this gap by providing a unified solution that lets you:
 - Seamlessly fall back to server-side models when needed
 - Use the same Vercel AI SDK eco system you already know
 - Avoid building complex integration layers from scratch
-
-While there was an [existing package](https://github.com/jeasonstudio/chrome-ai) that attempted to provide similar functionality for Chrome, it has been inactive for the past year with no maintenance or updates. We're grateful for their initial exploration and the foundation they provided for the community.
