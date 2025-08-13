@@ -1,7 +1,11 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { Message, MessageAvatar, MessageContent } from '@/components/ai-elements/message';
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+} from "@/components/ai-elements/message";
 import {
   PromptInput,
   PromptInputButton,
@@ -14,15 +18,19 @@ import {
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputTools,
-} from '@/components/ai-elements/prompt-input';
+} from "@/components/ai-elements/prompt-input";
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-} from '@/components/ai-elements/conversation';
-import { Response } from '@/components/ai-elements/response';
+} from "@/components/ai-elements/conversation";
+import { Response } from "@/components/ai-elements/response";
 import { Loader } from "@/components/ai-elements/loader";
-import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, RefreshCcw, Copy, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -237,7 +245,9 @@ function TransformersJSChat({
                     <Reasoning
                       key={`${m.id}-${partIndex}`}
                       className="w-full"
-                      isStreaming={status === "streaming" && index === messages.length - 1}
+                      isStreaming={
+                        status === "streaming" && index === messages.length - 1
+                      }
                     >
                       <ReasoningTrigger />
                       <ReasoningContent>{part.text}</ReasoningContent>
@@ -277,10 +287,7 @@ function TransformersJSChat({
                     </div>
                   )}
               </MessageContent>
-              <MessageAvatar
-                name={m.role}
-                src={m.role === "user" ? "" : ""}
-              />
+              <MessageAvatar name={m.role} src={m.role === "user" ? "" : ""} />
             </Message>
           ))}
 

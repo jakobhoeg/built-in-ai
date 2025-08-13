@@ -50,7 +50,7 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
         model: wrapLanguageModel({
           model,
           middleware: extractReasoningMiddleware({
-            tagName: 'think',
+            tagName: "think",
           }),
         }),
         messages: prompt,
@@ -119,7 +119,7 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
             model: wrapLanguageModel({
               model,
               middleware: extractReasoningMiddleware({
-                tagName: 'think',
+                tagName: "think",
               }),
             }),
             messages: prompt,

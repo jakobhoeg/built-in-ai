@@ -2,7 +2,11 @@
 
 import { useChat } from "@ai-sdk/react";
 import { ClientSideChatTransport } from "@/app/(core)/util/client-side-chat-transport";
-import { Message, MessageAvatar, MessageContent } from '@/components/ai-elements/message';
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+} from "@/components/ai-elements/message";
 import {
   PromptInput,
   PromptInputButton,
@@ -10,13 +14,13 @@ import {
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputTools,
-} from '@/components/ai-elements/prompt-input';
+} from "@/components/ai-elements/prompt-input";
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-} from '@/components/ai-elements/conversation';
-import { Response } from '@/components/ai-elements/response';
+} from "@/components/ai-elements/conversation";
+import { Response } from "@/components/ai-elements/response";
 import { Loader } from "@/components/ai-elements/loader";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,8 +69,8 @@ export default function Chat() {
       transport: doesBrowserSupportModel
         ? new ClientSideChatTransport()
         : new DefaultChatTransport<UIMessage>({
-          api: "/api/chat",
-        }),
+            api: "/api/chat",
+          }),
       onError(error) {
         toast.error(error.message);
       },
@@ -83,7 +87,7 @@ export default function Chat() {
           }
         }
       },
-      experimental_throttle: 150
+      experimental_throttle: 150,
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -281,10 +285,7 @@ export default function Chat() {
                     </div>
                   )}
               </MessageContent>
-              <MessageAvatar
-                name={m.role}
-                src={m.role === "user" ? "" : ""}
-              />
+              <MessageAvatar name={m.role} src={m.role === "user" ? "" : ""} />
             </Message>
           ))}
 

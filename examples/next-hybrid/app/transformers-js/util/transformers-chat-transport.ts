@@ -20,7 +20,8 @@ import {
  * @implements {ChatTransport<TransformersUIMessage>}
  */
 export class TransformersChatTransport
-  implements ChatTransport<TransformersUIMessage> {
+  implements ChatTransport<TransformersUIMessage>
+{
   private readonly model: TransformersJSLanguageModel;
 
   constructor(model: TransformersJSLanguageModel) {
@@ -50,7 +51,7 @@ export class TransformersChatTransport
         model: wrapLanguageModel({
           model,
           middleware: extractReasoningMiddleware({
-            tagName: 'think',
+            tagName: "think",
           }),
         }),
         messages: prompt,
@@ -121,7 +122,7 @@ export class TransformersChatTransport
             model: wrapLanguageModel({
               model,
               middleware: extractReasoningMiddleware({
-                tagName: 'think',
+                tagName: "think",
               }),
             }),
             messages: prompt,
