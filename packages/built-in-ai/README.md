@@ -7,7 +7,7 @@
 <div align="center">
 
 [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
-[![NPM Downloads](https://img.shields.io/npm/dw/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
+[![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
 
 </div>
 
@@ -22,7 +22,7 @@ A TypeScript library that provides access to browser-based AI capabilities with 
 npm i @built-in-ai/core
 ```
 
-The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge browser's built-in AI models.
+The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge browser's built-in AI models. It provides seamless access to both language models and text embeddings through browser-native APIs.
 
 ## Browser Requirements
 
@@ -40,9 +40,9 @@ The `@built-in-ai/core` package is the AI SDK provider for your Chrome and Edge 
 
 For more information, check out [this guide](https://developer.chrome.com/docs/extensions/ai/prompt-api)
 
-## Basic Usage
+## Usage
 
-### Simple Chat
+### Basic Usage (chat)
 
 ```typescript
 import { streamText } from "ai";
@@ -59,18 +59,41 @@ for await (const chunk of result.textStream) {
 }
 ```
 
+### Language Models
+
+```typescript
+import { generateText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+const model = builtInAI();
+
+const result = await generateText({
+  model,
+  messages: [{ role: "user", content: "Write a short poem about AI" }],
+});
+```
+
 ### Text Embeddings
 
 ```typescript
-import { embed } from "ai";
+import { embed, embedMany } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 
+// Single embedding
 const result = await embed({
-  model: builtInAI("embedding"),
+  model: builtInAI.textEmbedding("embedding"),
   value: "Hello, world!",
 });
 
 console.log(result.embedding); // [0.1, 0.2, 0.3, ...]
+
+// Multiple embeddings
+const results = await embedMany({
+  model: builtInAI.textEmbedding("embedding"),
+  values: ["Hello", "World", "AI"],
+});
+
+console.log(results.embeddings); // [[...], [...], [...]]
 ```
 
 ## Download Progress Tracking

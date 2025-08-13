@@ -7,7 +7,7 @@
 <div align="center">
 
 [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)
-[![NPM Downloads](https://img.shields.io/npm/dw/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)
+[![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)
 
 > [!NOTE]
 > This library is still in a very early state where updates might come quite frequently.

@@ -1,4 +1,9 @@
 import {
+  EmbeddingModelV2,
+  NoSuchModelError,
+  ProviderV2,
+} from "@ai-sdk/provider";
+import {
   BuiltInAIChatLanguageModel,
   BuiltInAIChatModelId,
   BuiltInAIChatSettings,
@@ -8,35 +13,103 @@ import {
   BuiltInAIEmbeddingModelSettings,
 } from "./built-in-ai-embedding-model";
 
-/**
- * Create a new BuiltInAIChatLanguageModel.
- * @param modelId 'text'
- * @param settings Options for the model
- */
-export function builtInAI(
-  modelId?: BuiltInAIChatModelId,
-  settings?: BuiltInAIChatSettings,
-): BuiltInAIChatLanguageModel;
+export interface BuiltInAIProvider extends ProviderV2 {
+  (
+    modelId?: BuiltInAIChatModelId,
+    settings?: BuiltInAIChatSettings,
+  ): BuiltInAIChatLanguageModel;
 
-/**
- * Create a new BuiltInAIEmbeddingModel.
- * @param modelId 'embedding'
- * @param settings Options for the embedding model
- */
-export function builtInAI(
-  modelId: "embedding",
-  settings?: BuiltInAIEmbeddingModelSettings,
-): BuiltInAIEmbeddingModel;
+  /**
+   * Creates a model for text generation.
+   */
+  languageModel(
+    modelId: BuiltInAIChatModelId,
+    settings?: BuiltInAIChatSettings,
+  ): BuiltInAIChatLanguageModel;
 
-export function builtInAI(modelId: unknown = "text", settings: unknown = {}) {
-  if (modelId === "embedding") {
-    return new BuiltInAIEmbeddingModel(
-      settings as BuiltInAIEmbeddingModelSettings,
-    );
-  }
+  /**
+   * Creates a model for text generation.
+   */
+  chat(
+    modelId: BuiltInAIChatModelId,
+    settings?: BuiltInAIChatSettings,
+  ): BuiltInAIChatLanguageModel;
 
-  return new BuiltInAIChatLanguageModel(
-    modelId as BuiltInAIChatModelId,
-    settings as BuiltInAIChatSettings,
-  );
+  textEmbedding(
+    modelId: "embedding",
+    settings?: BuiltInAIEmbeddingModelSettings,
+  ): EmbeddingModelV2<string>;
+
+  textEmbeddingModel: (
+    modelId: "embedding",
+    settings?: BuiltInAIEmbeddingModelSettings,
+  ) => EmbeddingModelV2<string>;
+
+  // Not implemented
+  imageModel(modelId: string): never;
+  speechModel(modelId: string): never;
+  transcriptionModel(modelId: string): never;
 }
+
+export interface BuiltInAIProviderSettings {
+  // Currently empty - provider settings are minimal for BuiltInAI
+  // Future provider-level settings can be added here
+}
+
+/**
+ * Create a BuiltInAI provider instance.
+ */
+export function createBuiltInAI(
+  options: BuiltInAIProviderSettings = {},
+): BuiltInAIProvider {
+  const createChatModel = (
+    modelId: BuiltInAIChatModelId,
+    settings?: BuiltInAIChatSettings,
+  ) => {
+    return new BuiltInAIChatLanguageModel(modelId, settings);
+  };
+
+  const createEmbeddingModel = (
+    modelId: "embedding",
+    settings?: BuiltInAIEmbeddingModelSettings,
+  ) => {
+    return new BuiltInAIEmbeddingModel(settings);
+  };
+
+  const provider = function (
+    modelId: BuiltInAIChatModelId = "text",
+    settings?: BuiltInAIChatSettings,
+  ) {
+    if (new.target) {
+      throw new Error(
+        "The BuiltInAI model function cannot be called with the new keyword.",
+      );
+    }
+
+    return createChatModel(modelId, settings);
+  };
+
+  provider.languageModel = createChatModel;
+  provider.chat = createChatModel;
+  provider.textEmbedding = createEmbeddingModel;
+  provider.textEmbeddingModel = createEmbeddingModel;
+
+  provider.imageModel = (modelId: string) => {
+    throw new NoSuchModelError({ modelId, modelType: "imageModel" });
+  };
+
+  provider.speechModel = (modelId: string) => {
+    throw new NoSuchModelError({ modelId, modelType: "speechModel" });
+  };
+
+  provider.transcriptionModel = (modelId: string) => {
+    throw new NoSuchModelError({ modelId, modelType: "transcriptionModel" });
+  };
+
+  return provider;
+}
+
+/**
+ * Default BuiltInAI provider instance.
+ */
+export const builtInAI = createBuiltInAI();
