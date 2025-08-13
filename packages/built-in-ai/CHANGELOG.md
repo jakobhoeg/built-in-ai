@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 2.0.0
+
+### Major Changes
+
+- 6a0bb56: BREAKING CHANGE: adhere to ProviderV2
+
 ## 1.7.0
 
 ### Minor Changes
