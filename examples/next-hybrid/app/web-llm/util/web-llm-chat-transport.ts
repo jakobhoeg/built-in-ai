@@ -5,6 +5,8 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
   createUIMessageStream,
+  wrapLanguageModel,
+  extractReasoningMiddleware,
 } from "ai";
 import {
   WebLLMProgress,
@@ -45,7 +47,12 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
     const availability = await model.availability();
     if (availability === "available") {
       const result = streamText({
-        model,
+        model: wrapLanguageModel({
+          model,
+          middleware: extractReasoningMiddleware({
+            tagName: "think",
+          }),
+        }),
         messages: prompt,
         abortSignal: abortSignal,
       });
@@ -109,7 +116,12 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
 
           // Stream the actual text response
           const result = streamText({
-            model,
+            model: wrapLanguageModel({
+              model,
+              middleware: extractReasoningMiddleware({
+                tagName: "think",
+              }),
+            }),
             messages: prompt,
             abortSignal: abortSignal,
             onChunk(event) {

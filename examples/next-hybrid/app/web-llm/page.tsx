@@ -2,29 +2,35 @@
 
 import { useChat } from "@ai-sdk/react";
 import {
-  AIMessage,
-  AIMessageAvatar,
-  AIMessageContent,
-} from "@/components/ai/message";
-import { AIResponse } from "@/components/ai/response";
+  Message,
+  MessageAvatar,
+  MessageContent,
+} from "@/components/ai-elements/message";
 import {
-  AIConversation,
-  AIConversationContent,
-  AIConversationScrollButton,
-} from "@/components/ai/conversation";
+  PromptInput,
+  PromptInputButton,
+  PromptInputModelSelect,
+  PromptInputModelSelectContent,
+  PromptInputModelSelectItem,
+  PromptInputModelSelectTrigger,
+  PromptInputModelSelectValue,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
+} from "@/components/ai-elements/prompt-input";
 import {
-  AIInput,
-  AIInputTextarea,
-  AIInputSubmit,
-  AIInputTools,
-  AIInputToolbar,
-  AIInputButton,
-  AIInputModelSelect,
-  AIInputModelSelectTrigger,
-  AIInputModelSelectValue,
-  AIInputModelSelectContent,
-  AIInputModelSelectItem,
-} from "@/components/ai/input";
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import { Response } from "@/components/ai-elements/response";
+import { Loader } from "@/components/ai-elements/loader";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
 import { Button } from "@/components/ui/button";
 import { PlusIcon, RefreshCcw, Copy, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -37,7 +43,6 @@ import {
 import { DefaultChatTransport, UIMessage } from "ai";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 import { WebLLMChatTransport } from "@/app/web-llm/util/web-llm-chat-transport";
@@ -85,6 +90,7 @@ function WebLLMChat({
       onError(error) {
         toast.error(error.message);
       },
+      experimental_throttle: 50,
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -162,14 +168,14 @@ function WebLLMChat({
           )}
         </div>
       )}
-      <AIConversation className="flex-1">
-        <AIConversationContent>
+      <Conversation className="flex-1">
+        <ConversationContent>
           {messages.map((m, index) => (
-            <AIMessage
+            <Message
               from={m.role === "system" ? "assistant" : m.role}
               key={m.id}
             >
-              <AIMessageContent>
+              <MessageContent>
                 {/* Handle download progress parts first */}
                 {m.parts
                   .filter((part) => part.type === "data-modelDownloadProgress")
@@ -184,7 +190,7 @@ function WebLLMChat({
                       <div key={partIndex}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="flex items-center gap-1">
-                            <Spinner className="size-4 " />
+                            <Loader className="size-4 " />
                             {part.data.message}
                           </span>
                         </div>
@@ -228,11 +234,27 @@ function WebLLMChat({
                     return null;
                   })}
 
+                {/* Handle reasoning */}
+                {m.parts
+                  .filter((part) => part.type === "reasoning")
+                  .map((part, partIndex) => (
+                    <Reasoning
+                      key={`${m.id}-${partIndex}`}
+                      className="w-full"
+                      isStreaming={
+                        status === "streaming" && index === messages.length - 1
+                      }
+                    >
+                      <ReasoningTrigger />
+                      <ReasoningContent>{part.text}</ReasoningContent>
+                    </Reasoning>
+                  ))}
+
                 {/* Handle text parts */}
                 {m.parts
                   .filter((part) => part.type === "text")
                   .map((part, partIndex) => (
-                    <AIResponse key={partIndex}>{part.text}</AIResponse>
+                    <Response key={partIndex}>{part.text}</Response>
                   ))}
 
                 {/* Action buttons for assistant messages */}
@@ -260,25 +282,22 @@ function WebLLMChat({
                       </Button>
                     </div>
                   )}
-              </AIMessageContent>
-              <AIMessageAvatar
-                name={m.role}
-                src={m.role === "user" ? "" : ""}
-              />
-            </AIMessage>
+              </MessageContent>
+              <MessageAvatar name={m.role} src={m.role === "user" ? "" : ""} />
+            </Message>
           ))}
 
           {/* Loading state */}
           {status === "submitted" && (
-            <AIMessage from="assistant">
-              <AIMessageContent>
+            <Message from="assistant">
+              <MessageContent>
                 <div className="flex gap-1 items-center text-gray-500">
-                  <Spinner className="size-4" />
+                  <Loader className="size-4" />
                   Thinking...
                 </div>
-              </AIMessageContent>
-              <AIMessageAvatar name="assistant" src="" />
-            </AIMessage>
+              </MessageContent>
+              <MessageAvatar name="assistant" src="" />
+            </Message>
           )}
 
           {/* Error state */}
@@ -295,16 +314,16 @@ function WebLLMChat({
               </Button>
             </div>
           )}
-        </AIConversationContent>
-        <AIConversationScrollButton />
-      </AIConversation>
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
 
       <div className="p-4">
-        <AIInput
+        <PromptInput
           onSubmit={handleSubmit}
           className="bg-accent dark:bg-card rounded-lg"
         >
-          <AIInputTextarea
+          <PromptInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="What would you like to know? (Powered by WebLLM Worker)"
@@ -312,11 +331,11 @@ function WebLLMChat({
             maxHeight={164}
             className="bg-accent dark:bg-card"
           />
-          <AIInputToolbar>
-            <AIInputTools>
-              <AIInputButton onClick={() => fileInputRef.current?.click()}>
+          <PromptInputToolbar>
+            <PromptInputTools>
+              <PromptInputButton onClick={() => fileInputRef.current?.click()}>
                 <PlusIcon size={16} />
-              </AIInputButton>
+              </PromptInputButton>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -325,20 +344,23 @@ function WebLLMChat({
                 accept="image/*,text/*,audio/*"
                 className="hidden"
               />
-              <AIInputModelSelect onValueChange={setModelId} value={modelId}>
-                <AIInputModelSelectTrigger>
-                  <AIInputModelSelectValue />
-                </AIInputModelSelectTrigger>
-                <AIInputModelSelectContent>
+              <PromptInputModelSelect
+                onValueChange={setModelId}
+                value={modelId}
+              >
+                <PromptInputModelSelectTrigger>
+                  <PromptInputModelSelectValue />
+                </PromptInputModelSelectTrigger>
+                <PromptInputModelSelectContent>
                   {MODELS.map((model) => (
-                    <AIInputModelSelectItem key={model} value={model}>
+                    <PromptInputModelSelectItem key={model} value={model}>
                       {model}
-                    </AIInputModelSelectItem>
+                    </PromptInputModelSelectItem>
                   ))}
-                </AIInputModelSelectContent>
-              </AIInputModelSelect>
-            </AIInputTools>
-            <AIInputSubmit
+                </PromptInputModelSelectContent>
+              </PromptInputModelSelect>
+            </PromptInputTools>
+            <PromptInputSubmit
               disabled={
                 status === "ready" &&
                 !input.trim() &&
@@ -356,7 +378,7 @@ function WebLLMChat({
                   : "submit"
               }
             />
-          </AIInputToolbar>
+          </PromptInputToolbar>
 
           {/* File preview area - moved inside the form */}
           {files && files.length > 0 && (
@@ -403,7 +425,7 @@ function WebLLMChat({
               ))}
             </div>
           )}
-        </AIInput>
+        </PromptInput>
       </div>
     </div>
   );
@@ -422,7 +444,7 @@ export default function WebLLMChatPage() {
   if (browserSupportsWebLLM === null) {
     return (
       <div className="flex flex-col h-[calc(100dvh)] items-center justify-center max-w-4xl mx-auto">
-        <Spinner className="size-4" />
+        <Loader className="size-4" />
       </div>
     );
   }

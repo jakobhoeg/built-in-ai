@@ -3,24 +3,25 @@
 import { useChat } from "@ai-sdk/react";
 import { ClientSideChatTransport } from "@/app/(core)/util/client-side-chat-transport";
 import {
-  AIMessage,
-  AIMessageAvatar,
-  AIMessageContent,
-} from "@/components/ai/message";
-import { AIResponse } from "@/components/ai/response";
+  Message,
+  MessageAvatar,
+  MessageContent,
+} from "@/components/ai-elements/message";
 import {
-  AIConversation,
-  AIConversationContent,
-  AIConversationScrollButton,
-} from "@/components/ai/conversation";
+  PromptInput,
+  PromptInputButton,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
+} from "@/components/ai-elements/prompt-input";
 import {
-  AIInput,
-  AIInputTextarea,
-  AIInputSubmit,
-  AIInputTools,
-  AIInputToolbar,
-  AIInputButton,
-} from "@/components/ai/input";
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import { Response } from "@/components/ai-elements/response";
+import { Loader } from "@/components/ai-elements/loader";
 import { Button } from "@/components/ui/button";
 import {
   PlusIcon,
@@ -38,7 +39,6 @@ import { DefaultChatTransport, UIMessage } from "ai";
 import { toast } from "sonner";
 import { BuiltInAIUIMessage } from "@built-in-ai/core";
 import Image from "next/image";
-import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 import { Kbd, KbdKey } from "@/components/ui/kbd";
@@ -87,6 +87,7 @@ export default function Chat() {
           }
         }
       },
+      experimental_throttle: 150,
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -140,7 +141,7 @@ export default function Chat() {
   if (!isClient) {
     return (
       <div className="flex flex-col h-[calc(100dvh)] items-center justify-center max-w-4xl mx-auto">
-        <Spinner className="size-4" />
+        <Loader className="size-4" />
       </div>
     );
   }
@@ -185,14 +186,14 @@ export default function Chat() {
           )}
         </div>
       )}
-      <AIConversation className="flex-1">
-        <AIConversationContent>
+      <Conversation className="flex-1">
+        <ConversationContent>
           {messages.map((m, index) => (
-            <AIMessage
+            <Message
               from={m.role === "system" ? "assistant" : m.role}
               key={m.id}
             >
-              <AIMessageContent>
+              <MessageContent>
                 {/* Handle download progress parts first */}
                 {m.parts
                   .filter((part) => part.type === "data-modelDownloadProgress")
@@ -207,7 +208,7 @@ export default function Chat() {
                       <div key={partIndex}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="flex items-center gap-1">
-                            <Spinner className="size-4 " />
+                            <Loader className="size-4 " />
                             {part.data.message}
                           </span>
                         </div>
@@ -255,7 +256,7 @@ export default function Chat() {
                 {m.parts
                   .filter((part) => part.type === "text")
                   .map((part, partIndex) => (
-                    <AIResponse key={partIndex}>{part.text}</AIResponse>
+                    <Response key={partIndex}>{part.text}</Response>
                   ))}
 
                 {/* Action buttons for assistant messages */}
@@ -283,25 +284,22 @@ export default function Chat() {
                       </Button>
                     </div>
                   )}
-              </AIMessageContent>
-              <AIMessageAvatar
-                name={m.role}
-                src={m.role === "user" ? "" : ""}
-              />
-            </AIMessage>
+              </MessageContent>
+              <MessageAvatar name={m.role} src={m.role === "user" ? "" : ""} />
+            </Message>
           ))}
 
           {/* Loading state */}
           {status === "submitted" && (
-            <AIMessage from="assistant">
-              <AIMessageContent>
+            <Message from="assistant">
+              <MessageContent>
                 <div className="flex gap-1 items-center text-gray-500">
-                  <Spinner className="size-4" />
+                  <Loader className="size-4" />
                   Thinking...
                 </div>
-              </AIMessageContent>
-              <AIMessageAvatar name="assistant" src="" />
-            </AIMessage>
+              </MessageContent>
+              <MessageAvatar name="assistant" src="" />
+            </Message>
           )}
 
           {/* Error state */}
@@ -318,16 +316,16 @@ export default function Chat() {
               </Button>
             </div>
           )}
-        </AIConversationContent>
-        <AIConversationScrollButton />
-      </AIConversation>
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
 
       <div className="p-4">
-        <AIInput
+        <PromptInput
           onSubmit={handleSubmit}
           className="bg-accent dark:bg-card rounded-lg"
         >
-          <AIInputTextarea
+          <PromptInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="What would you like to know?"
@@ -335,11 +333,11 @@ export default function Chat() {
             maxHeight={164}
             className="bg-accent dark:bg-card"
           />
-          <AIInputToolbar>
-            <AIInputTools>
-              <AIInputButton onClick={() => fileInputRef.current?.click()}>
+          <PromptInputToolbar>
+            <PromptInputTools>
+              <PromptInputButton onClick={() => fileInputRef.current?.click()}>
                 <PlusIcon size={16} />
-              </AIInputButton>
+              </PromptInputButton>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -348,20 +346,20 @@ export default function Chat() {
                 accept="image/*,text/*,audio/*"
                 className="hidden"
               />
-              <AIInputButton>
+              <PromptInputButton>
                 <MicIcon size={16} />
-              </AIInputButton>
-              <AIInputButton>
+              </PromptInputButton>
+              <PromptInputButton>
                 <GlobeIcon size={16} />
                 <span>Search</span>
-              </AIInputButton>
-            </AIInputTools>
+              </PromptInputButton>
+            </PromptInputTools>
             <div className="flex items-center gap-2">
               <Kbd>
                 <KbdKey aria-label="Control">Ctrl</KbdKey>
                 <KbdKey>Enter</KbdKey>
               </Kbd>
-              <AIInputSubmit
+              <PromptInputSubmit
                 disabled={
                   status === "ready" &&
                   !input.trim() &&
@@ -380,7 +378,7 @@ export default function Chat() {
                 }
               />
             </div>
-          </AIInputToolbar>
+          </PromptInputToolbar>
 
           {/* File preview area - moved inside the form */}
           {files && files.length > 0 && (
@@ -427,7 +425,7 @@ export default function Chat() {
               ))}
             </div>
           )}
-        </AIInput>
+        </PromptInput>
       </div>
     </div>
   );

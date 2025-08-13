@@ -1,10 +1,13 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { ComponentProps, HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-export type AIMessageProps = HTMLAttributes<HTMLDivElement> & {
-  from: "user" | "assistant";
+import type { UIMessage } from "ai";
+
+export type MessageProps = HTMLAttributes<HTMLDivElement> & {
+  from: UIMessage["role"];
 };
-export const AIMessage = ({ className, from, ...props }: AIMessageProps) => (
+
+export const Message = ({ className, from, ...props }: MessageProps) => (
   <div
     className={cn(
       "group flex w-full items-end justify-end gap-2 py-4",
@@ -15,17 +18,19 @@ export const AIMessage = ({ className, from, ...props }: AIMessageProps) => (
     {...props}
   />
 );
-export type AIMessageContentProps = HTMLAttributes<HTMLDivElement>;
-export const AIMessageContent = ({
+
+export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
+
+export const MessageContent = ({
   children,
   className,
   ...props
-}: AIMessageContentProps) => (
+}: MessageContentProps) => (
   <div
     className={cn(
-      "flex flex-col gap-2 rounded-lg px-4 py-3 text-sm",
-      "bg-muted text-foreground",
+      "flex flex-col gap-2 rounded-lg text-sm text-foreground px-4 py-3 overflow-hidden",
       "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground",
+      "group-[.is-assistant]:bg-secondary group-[.is-assistant]:text-foreground",
       className,
     )}
     {...props}
@@ -33,17 +38,19 @@ export const AIMessageContent = ({
     <div className="is-user:dark">{children}</div>
   </div>
 );
-export type AIMessageAvatarProps = ComponentProps<typeof Avatar> & {
+
+export type MessageAvatarProps = ComponentProps<typeof Avatar> & {
   src: string;
   name?: string;
 };
-export const AIMessageAvatar = ({
+
+export const MessageAvatar = ({
   src,
   name,
   className,
   ...props
-}: AIMessageAvatarProps) => (
-  <Avatar className={cn("size-8", className)} {...props}>
+}: MessageAvatarProps) => (
+  <Avatar className={cn("size-8 ring-1 ring-border", className)} {...props}>
     <AvatarImage alt="" className="mt-0 mb-0" src={src} />
     <AvatarFallback>{name?.slice(0, 2) || "ME"}</AvatarFallback>
   </Avatar>
