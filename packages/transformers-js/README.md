@@ -10,7 +10,7 @@
 
 </div>
 
-[Transformers.js](https://github.com/xenova/transformers.js) provider for the [Vercel AI SDK](https://ai-sdk.dev/). Run popular open-source 🤗 Transformers models directly in the browser with optional WebGPU acceleration, OR even on the server.
+[Transformers.js](https://github.com/xenova/transformers.js) provider for the [Vercel AI SDK](https://ai-sdk.dev/). Run popular open-source 🤗 Transformers models directly in the browser OR even server-side.
 
 ## Installation
 
