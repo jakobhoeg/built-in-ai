@@ -5,6 +5,8 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
   createUIMessageStream,
+  wrapLanguageModel,
+  extractReasoningMiddleware,
 } from "ai";
 import {
   TransformersJSLanguageModel,
@@ -18,8 +20,7 @@ import {
  * @implements {ChatTransport<TransformersUIMessage>}
  */
 export class TransformersChatTransport
-  implements ChatTransport<TransformersUIMessage>
-{
+  implements ChatTransport<TransformersUIMessage> {
   private readonly model: TransformersJSLanguageModel;
 
   constructor(model: TransformersJSLanguageModel) {
@@ -46,7 +47,12 @@ export class TransformersChatTransport
     const availability = await model.availability();
     if (availability === "available") {
       const result = streamText({
-        model,
+        model: wrapLanguageModel({
+          model,
+          middleware: extractReasoningMiddleware({
+            tagName: 'think',
+          }),
+        }),
         messages: prompt,
         abortSignal: abortSignal,
       });
@@ -112,7 +118,12 @@ export class TransformersChatTransport
 
           // Stream the actual text response
           const result = streamText({
-            model,
+            model: wrapLanguageModel({
+              model,
+              middleware: extractReasoningMiddleware({
+                tagName: 'think',
+              }),
+            }),
             messages: prompt,
             abortSignal: abortSignal,
             onChunk(event) {

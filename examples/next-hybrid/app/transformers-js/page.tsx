@@ -1,39 +1,35 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { Message, MessageAvatar, MessageContent } from '@/components/ai-elements/message';
 import {
-  AIMessage,
-  AIMessageAvatar,
-  AIMessageContent,
-} from "@/components/ai/message";
-import { AIResponse } from "@/components/ai/response";
+  PromptInput,
+  PromptInputButton,
+  PromptInputModelSelect,
+  PromptInputModelSelectContent,
+  PromptInputModelSelectItem,
+  PromptInputModelSelectTrigger,
+  PromptInputModelSelectValue,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
+} from '@/components/ai-elements/prompt-input';
 import {
-  AIConversation,
-  AIConversationContent,
-  AIConversationScrollButton,
-} from "@/components/ai/conversation";
-import {
-  AIInput,
-  AIInputTextarea,
-  AIInputSubmit,
-  AIInputTools,
-  AIInputToolbar,
-  AIInputButton,
-  AIInputModelSelect,
-  AIInputModelSelectTrigger,
-  AIInputModelSelectValue,
-  AIInputModelSelectContent,
-  AIInputModelSelectItem,
-} from "@/components/ai/input";
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from '@/components/ai-elements/conversation';
+import { Response } from '@/components/ai-elements/response';
+import { Loader } from "@/components/ai-elements/loader";
+import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { PlusIcon, RefreshCcw, Copy, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { DefaultChatTransport, UIMessage } from "ai";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 import { ModelSelector } from "@/components/model-selector";
@@ -84,6 +80,7 @@ function TransformersJSChat({
       onError(error) {
         toast.error(error.message);
       },
+      experimental_throttle: 50,
       id: `chat-${useClientSideInference ? "client" : "server"}-${useClientSideInference ? modelConfig.id : "default"}`, // Forces state refresh (not necessary but fine for this minimal example app)
     });
 
@@ -167,14 +164,14 @@ function TransformersJSChat({
           )}
         </div>
       )}
-      <AIConversation className="flex-1">
-        <AIConversationContent>
+      <Conversation className="flex-1">
+        <ConversationContent>
           {messages.map((m, index) => (
-            <AIMessage
+            <Message
               from={m.role === "system" ? "assistant" : m.role}
               key={m.id}
             >
-              <AIMessageContent>
+              <MessageContent>
                 {/* Handle download progress parts first */}
                 {m.parts
                   .filter((part) => part.type === "data-modelDownloadProgress")
@@ -189,7 +186,7 @@ function TransformersJSChat({
                       <div key={partIndex}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="flex items-center gap-1">
-                            <Spinner className="size-4 " />
+                            <Loader className="size-4 " />
                             {part.data.message}
                           </span>
                         </div>
@@ -233,11 +230,25 @@ function TransformersJSChat({
                     return null;
                   })}
 
+                {/* Handle reasoning */}
+                {m.parts
+                  .filter((part) => part.type === "reasoning")
+                  .map((part, partIndex) => (
+                    <Reasoning
+                      key={`${m.id}-${partIndex}`}
+                      className="w-full"
+                      isStreaming={status === "streaming" && index === messages.length - 1}
+                    >
+                      <ReasoningTrigger />
+                      <ReasoningContent>{part.text}</ReasoningContent>
+                    </Reasoning>
+                  ))}
+
                 {/* Handle text parts */}
                 {m.parts
                   .filter((part) => part.type === "text")
                   .map((part, partIndex) => (
-                    <AIResponse key={partIndex}>{part.text}</AIResponse>
+                    <Response key={partIndex}>{part.text}</Response>
                   ))}
 
                 {/* Action buttons for assistant messages */}
@@ -265,25 +276,25 @@ function TransformersJSChat({
                       </Button>
                     </div>
                   )}
-              </AIMessageContent>
-              <AIMessageAvatar
+              </MessageContent>
+              <MessageAvatar
                 name={m.role}
                 src={m.role === "user" ? "" : ""}
               />
-            </AIMessage>
+            </Message>
           ))}
 
           {/* Loading state */}
           {status === "submitted" && (
-            <AIMessage from="assistant">
-              <AIMessageContent>
+            <Message from="assistant">
+              <MessageContent>
                 <div className="flex gap-1 items-center text-gray-500">
-                  <Spinner className="size-4" />
+                  <Loader className="size-4" />
                   Thinking...
                 </div>
-              </AIMessageContent>
-              <AIMessageAvatar name="assistant" src="" />
-            </AIMessage>
+              </MessageContent>
+              <MessageAvatar name="assistant" src="" />
+            </Message>
           )}
 
           {/* Error state */}
@@ -300,16 +311,16 @@ function TransformersJSChat({
               </Button>
             </div>
           )}
-        </AIConversationContent>
-        <AIConversationScrollButton />
-      </AIConversation>
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
 
       <div className="p-4">
-        <AIInput
+        <PromptInput
           onSubmit={handleSubmit}
           className="bg-accent dark:bg-card rounded-lg"
         >
-          <AIInputTextarea
+          <PromptInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
@@ -321,11 +332,11 @@ function TransformersJSChat({
             maxHeight={164}
             className="bg-accent dark:bg-card"
           />
-          <AIInputToolbar>
-            <AIInputTools>
-              <AIInputButton onClick={() => fileInputRef.current?.click()}>
+          <PromptInputToolbar>
+            <PromptInputTools>
+              <PromptInputButton onClick={() => fileInputRef.current?.click()}>
                 <PlusIcon size={16} />
-              </AIInputButton>
+              </PromptInputButton>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -334,7 +345,7 @@ function TransformersJSChat({
                 accept="image/*,text/*,audio/*"
                 className="hidden"
               />
-              <AIInputModelSelect
+              <PromptInputModelSelect
                 disabled={!useClientSideInference}
                 onValueChange={(modelId) => {
                   const selectedModel = MODELS.find((m) => m.id === modelId);
@@ -342,19 +353,19 @@ function TransformersJSChat({
                 }}
                 value={modelConfig.id}
               >
-                <AIInputModelSelectTrigger>
-                  <AIInputModelSelectValue />
-                </AIInputModelSelectTrigger>
-                <AIInputModelSelectContent>
+                <PromptInputModelSelectTrigger>
+                  <PromptInputModelSelectValue />
+                </PromptInputModelSelectTrigger>
+                <PromptInputModelSelectContent>
                   {MODELS.map((model) => (
-                    <AIInputModelSelectItem key={model.id} value={model.id}>
+                    <PromptInputModelSelectItem key={model.id} value={model.id}>
                       {model.name}
-                    </AIInputModelSelectItem>
+                    </PromptInputModelSelectItem>
                   ))}
-                </AIInputModelSelectContent>
-              </AIInputModelSelect>
-            </AIInputTools>
-            <AIInputSubmit
+                </PromptInputModelSelectContent>
+              </PromptInputModelSelect>
+            </PromptInputTools>
+            <PromptInputSubmit
               disabled={
                 status === "ready" &&
                 !input.trim() &&
@@ -372,7 +383,7 @@ function TransformersJSChat({
                   : "submit"
               }
             />
-          </AIInputToolbar>
+          </PromptInputToolbar>
 
           {/* File preview area - moved inside the form */}
           {files && files.length > 0 && (
@@ -419,7 +430,7 @@ function TransformersJSChat({
               ))}
             </div>
           )}
-        </AIInput>
+        </PromptInput>
       </div>
     </div>
   );
@@ -438,7 +449,7 @@ export default function TransformersJSChatPage() {
   if (useClientSideInference === null) {
     return (
       <div className="flex flex-col h-[calc(100dvh)] items-center justify-center max-w-4xl mx-auto">
-        <Spinner className="size-4" />
+        <Loader className="size-4" />
       </div>
     );
   }
