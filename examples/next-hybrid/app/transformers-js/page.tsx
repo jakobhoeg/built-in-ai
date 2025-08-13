@@ -84,7 +84,7 @@ function TransformersJSChat({
       onError(error) {
         toast.error(error.message);
       },
-      id: `chat-${useClientSideInference ? 'client' : 'server'}-${useClientSideInference ? modelConfig.id : 'default'}`, // Forces state refresh (not necessary)
+      id: `chat-${useClientSideInference ? 'client' : 'server'}-${useClientSideInference ? modelConfig.id : 'default'}`, // Forces state refresh (not necessary but fine for this minimal example app)
     });
 
   const handleSubmit = (e: React.FormEvent) => {
