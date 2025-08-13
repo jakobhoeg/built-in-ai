@@ -186,22 +186,70 @@ const result = streamText({
 
 ## Embeddings
 
-This package also supports in-browser embeddings via Transformers.js.
+This package supports text embeddings using Transformers.js with full type safety and proper tensor handling.
 
-```ts
-import { embed } from "ai";
+### Basic Embedding Usage
+
+```typescript
+import { embed, embedMany } from "ai";
 import { transformersJS } from "@built-in-ai/transformers-js";
 
-const embeddingModel = transformersJS(
-  "Xenova/all-MiniLM-L6-v2", { 
-    type: "embedding", 
-    device: "webgpu" 
-  }
-);
+// Single embedding
+const { embedding } = await embed({
+  model: transformersJS.textEmbedding('Supabase/gte-small'),
+  value: 'sunny day at the beach',
+});
 
-const { embeddings } = await embed({
+console.log(`Dimensions: ${embedding.length}`); // 384 for gte-small
+
+// Multiple embeddings with automatic chunking
+const { embeddings } = await embedMany({
+  model: transformersJS.textEmbedding('Supabase/gte-small'),
+  values: [
+    'sunny day at the beach',
+    'rainy afternoon in the city',
+    'snowy night in the mountains',
+  ],
+});
+
+console.log(`Generated ${embeddings.length} embeddings`);
+```
+
+### Advanced Embedding Configuration
+
+```typescript
+const embeddingModel = transformersJS.textEmbedding('Supabase/gte-small', {
+  device: 'webgpu',           // Use WebGPU for acceleration
+  dtype: 'q8',                // Quantization level
+  normalize: true,            // Normalize embeddings (default: true)
+  pooling: 'mean',           // Pooling strategy: 'mean', 'cls', or 'max'
+  maxTokens: 512,            // Maximum input tokens
+});
+
+const { embedding } = await embed({
   model: embeddingModel,
-  values: ["first", "second"],
+  value: 'your text here',
+});
+```
+
+### Embedding Progress Tracking
+
+```typescript
+const embeddingModel = transformersJS.textEmbedding('Supabase/gte-small');
+
+// Check if model needs downloading
+const availability = await embeddingModel.availability();
+
+if (availability === "downloadable") {
+  await embeddingModel.createSessionWithProgress(({ progress }) => {
+    console.log(`Embedding model download: ${Math.round(progress * 100)}%`);
+  });
+}
+
+// Now ready to use
+const { embedding } = await embed({
+  model: embeddingModel,
+  value: 'your text here',
 });
 ```
 
@@ -209,47 +257,9 @@ const { embeddings } = await embed({
 
 When using this library with the `useChat` hook, you can create hybrid applications that seamlessly switch between client-side and server-side inference.
 
-### Client-side Integration
-
-Create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) to support client-side AI and download progress:
-
-```typescript
-import { ChatTransport, createUIMessageStream } from "ai";
-import { transformersJS, TransformersUIMessage } from "@built-in-ai/transformers-js";
-
-export class TransformersChatTransport implements ChatTransport<TransformersUIMessage> {
-  private readonly model: TransformersJSLanguageModel;
-
-  constructor(model: TransformersJSLanguageModel) {
-    this.model = model;
-  }
-
-  async sendMessages(options) {
-    // Handle download progress and streaming
-    // See full example below
-  }
-}
-```
-
-### Server-side Integration
-
-For server-side inference, use standard API routes:
-
-```typescript
-// app/api/chat/route.ts
-export async function POST(req: Request) {
-  const model = transformersJS("HuggingFaceTB/SmolLM2-135M-Instruct");
-  const result = streamText({ model, messages });
-  return result.toUIMessageStreamResponse();
-}
-```
-
-### Complete Hybrid Example
-
 See the complete working example in `examples/next-hybrid/` which includes:
 
 - **Automatic fallback**: Client-side when supported, server-side otherwise
-- **User control**: Toggle switch to choose inference location
 - **Download progress**: Real-time progress tracking for model downloads
 - **Error handling**: Graceful error handling and notifications
 - **Full integration**: Complete integration with `useChat` hook
@@ -266,28 +276,58 @@ Creates a Transformers.js language model instance.
 
 Parameters:
 
-- `modelId`: A Hugging Face model ID (e.g. `"HuggingFaceTB/SmolLM2-360M-Instruct"`, `"onnx-community/Llama-3.2-1B-Instruct-q4f16"`).
+- `modelId`: A Hugging Face model ID (e.g. `"HuggingFaceTB/SmolLM2-360M-Instruct"`, `"onnx-community/Llama-3.2-1B-Instruct-q4f16"`)
 - `settings` (optional):
-  - `device?: "auto" | "cpu" | "webgpu" | "gpu"` – Inference device
-  - `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4" | "q4f16"` – Data type for model weights
+  - `device?: "auto" | "cpu" | "webgpu" | "gpu"` – Inference device (default: "auto")
+  - `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4" | "q4f16"` – Data type for model weights (default: "auto")
   - `isVisionModel?: boolean` – Whether this is a vision model that can process images (default: false)
   - `worker?: Worker` – Optional Web Worker to run the model off the main thread (browser only)
+  - `initProgressCallback?: (progress: { progress: number }) => void` – Progress callback for model initialization
+  - `rawInitProgressCallback?: (progress: ProgressInfo) => void` – Raw progress callback from Transformers.js
 
 Returns: `TransformersJSLanguageModel`
 
-### `transformersJS(modelId, { type: 'embedding', ...settings })`
+### `transformersJS.languageModel(modelId, settings?)`
 
-Creates a Transformers.js embedding model instance.
+Alias for `transformersJS(modelId, settings?)`. Creates a language model instance.
 
-Embedding settings:
+### `transformersJS.textEmbedding(modelId, settings?)`
 
-- `device?: "auto" | "cpu" | "webgpu"` – Inference device (same as language models)
-- `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4" | "q4f16"` – Data type for model weights
-- `normalize?: boolean` (default: true) – Whether to normalize embeddings
-- `pooling?: "mean" | "cls" | "max"` (default: "mean") – Pooling strategy
-- `maxTokens?: number` (default: 512) – Maximum input tokens
+Creates a Transformers.js embedding model instance with proper type safety.
+
+Parameters:
+
+- `modelId`: A Hugging Face embedding model ID (e.g. `"Supabase/gte-small"`, `"Xenova/all-MiniLM-L6-v2"`)
+- `settings` (optional):
+  - `device?: "auto" | "cpu" | "webgpu"` – Inference device (default: "auto")
+  - `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4" | "q4f16"` – Data type for model weights (default: "auto")
+  - `normalize?: boolean` (default: true) – Whether to normalize embeddings
+  - `pooling?: "mean" | "cls" | "max"` (default: "mean") – Pooling strategy for token embeddings
+  - `maxTokens?: number` (default: 512) – Maximum input tokens
+  - `initProgressCallback?: (progress: { progress: number }) => void` – Progress callback for model initialization
+  - `rawInitProgressCallback?: (progress: ProgressInfo) => void` – Raw progress callback from Transformers.js
 
 Returns: `TransformersJSEmbeddingModel`
+
+### `transformersJS.textEmbeddingModel(modelId, settings?)`
+
+Alias for `transformersJS.textEmbedding(modelId, settings?)`. Creates an embedding model instance.
+
+### `TransformersJSEmbeddingModel.availability()`
+
+Checks current availability status for the embedding model.
+
+Returns: `Promise<"unavailable" | "downloadable" | "available">`
+
+### `TransformersJSEmbeddingModel.createSessionWithProgress(onProgress?)`
+
+Creates/initializes an embedding model session with optional progress monitoring.
+
+Parameters:
+
+- `onProgress?: (p: { progress: number }) => void`
+
+Returns: `Promise<TransformersJSEmbeddingModel>`
 
 ### `doesBrowserSupportTransformersJS(): boolean`
 
