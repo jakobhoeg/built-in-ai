@@ -1,7 +1,7 @@
 {
   "name": "@built-in-ai/transformers-js",
   "version": "0.1.0",
-  "description": "Transformers.js provider for AI SDK v5 - Run 🤗 Transformers directly in the browser with WebGPU support",
+  "description": "Transformers.js provider for Vercel AI SDK - Run 🤗 Transformers directly in the browser with WebGPU support",
   "author": {
     "name": "Jakob Hoeg Mørk",
     "url": "https://jakobhoeg.dev"
@@ -51,7 +51,7 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@huggingface/transformers": "^3.6.3"
+    "@huggingface/transformers": "^3.7.1"
   },
   "peerDependencies": {
     "ai": ">=5.0.0"
