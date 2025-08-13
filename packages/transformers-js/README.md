@@ -3,7 +3,7 @@
 <div align="center">
 
 [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Ftransformers-js)](https://www.npmjs.com/package/@built-in-ai/transformers-js)
-[![NPM Downloads](https://img.shields.io/npm/dw/%40built-in-ai%2Ftransformers-js)](https://www.npmjs.com/package/@built-in-ai/transformers-js)
+[![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Ftransformers-js)](https://www.npmjs.com/package/@built-in-ai/transformers-js)
 
 > [!NOTE]
 > This library is in active development. Expect frequent updates.
