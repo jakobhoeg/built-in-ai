@@ -6,7 +6,10 @@ import {
   ChatRequestOptions,
   createUIMessageStream,
 } from "ai";
-import { TransformersJSLanguageModel, TransformersUIMessage } from "@built-in-ai/transformers-js";
+import {
+  TransformersJSLanguageModel,
+  TransformersUIMessage,
+} from "@built-in-ai/transformers-js";
 
 /**
  * Client-side chat transport AI SDK implementation that handles AI model communication
@@ -14,7 +17,9 @@ import { TransformersJSLanguageModel, TransformersUIMessage } from "@built-in-ai
  *
  * @implements {ChatTransport<TransformersUIMessage>}
  */
-export class TransformersChatTransport implements ChatTransport<TransformersUIMessage> {
+export class TransformersChatTransport
+  implements ChatTransport<TransformersUIMessage>
+{
   private readonly model: TransformersJSLanguageModel;
 
   constructor(model: TransformersJSLanguageModel) {
@@ -55,53 +60,55 @@ export class TransformersChatTransport implements ChatTransport<TransformersUIMe
           let downloadProgressId: string | undefined;
 
           // Download/prepare model with progress monitoring
-          await model.createSessionWithProgress((progress: { progress: number }) => {
-            const percent = Math.round(progress.progress * 100);
+          await model.createSessionWithProgress(
+            (progress: { progress: number }) => {
+              const percent = Math.round(progress.progress * 100);
 
-            if (progress.progress >= 1) {
-              // Download complete
-              if (downloadProgressId) {
+              if (progress.progress >= 1) {
+                // Download complete
+                if (downloadProgressId) {
+                  writer.write({
+                    type: "data-modelDownloadProgress",
+                    id: downloadProgressId,
+                    data: {
+                      status: "complete",
+                      progress: 100,
+                      message:
+                        "Model finished downloading! Getting ready for inference...",
+                    },
+                  });
+                }
+                return;
+              }
+
+              // First progress update
+              if (!downloadProgressId) {
+                downloadProgressId = `download-${Date.now()}`;
                 writer.write({
                   type: "data-modelDownloadProgress",
                   id: downloadProgressId,
                   data: {
-                    status: "complete",
-                    progress: 100,
-                    message:
-                      "Model finished downloading! Getting ready for inference...",
+                    status: "downloading",
+                    progress: percent,
+                    message: "Downloading browser AI model...",
                   },
+                  transient: true,
                 });
+                return;
               }
-              return;
-            }
 
-            // First progress update
-            if (!downloadProgressId) {
-              downloadProgressId = `download-${Date.now()}`;
+              // Ongoing progress updates
               writer.write({
                 type: "data-modelDownloadProgress",
                 id: downloadProgressId,
                 data: {
                   status: "downloading",
                   progress: percent,
-                  message: "Downloading browser AI model...",
+                  message: `Downloading browser AI model... ${percent}%`,
                 },
-                transient: true,
               });
-              return;
-            }
-
-            // Ongoing progress updates
-            writer.write({
-              type: "data-modelDownloadProgress",
-              id: downloadProgressId,
-              data: {
-                status: "downloading",
-                progress: percent,
-                message: `Downloading browser AI model... ${percent}%`,
-              },
-            });
-          });
+            },
+          );
 
           // Stream the actual text response
           const result = streamText({

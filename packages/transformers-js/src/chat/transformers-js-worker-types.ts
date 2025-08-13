@@ -23,7 +23,7 @@ export type { ProgressInfo } from "@huggingface/transformers";
  * Message types for worker communication
  */
 export type WorkerMessage = {
-  type: 'load' | 'generate' | 'interrupt' | 'reset';
+  type: "load" | "generate" | "interrupt" | "reset";
   data?: any;
   generationOptions?: {
     max_new_tokens?: number;
@@ -38,13 +38,15 @@ export type WorkerMessage = {
 /**
  * Worker response types
  */
-export type WorkerResponse = {
-  status: 'loading' | 'ready' | 'start' | 'update' | 'complete' | 'error';
-  output?: string | string[];
-  data?: string;
-  tps?: number;
-  numTokens?: number;
-} | ProgressInfo;
+export type WorkerResponse =
+  | {
+      status: "loading" | "ready" | "start" | "update" | "complete" | "error";
+      output?: string | string[];
+      data?: string;
+      tps?: number;
+      numTokens?: number;
+    }
+  | ProgressInfo;
 
 /**
  * Type for worker global scope
@@ -57,12 +59,15 @@ export interface WorkerGlobalScope {
 /**
  * Model instance types
  */
-export type ModelInstance = [PreTrainedTokenizer, PreTrainedModel] | [Processor, PreTrainedModel];
+export type ModelInstance =
+  | [PreTrainedTokenizer, PreTrainedModel]
+  | [Processor, PreTrainedModel];
 
 /**
  * Configuration options for worker model loading
  */
-export interface WorkerLoadOptions extends Pick<PretrainedModelOptions, 'dtype' | 'device'> {
+export interface WorkerLoadOptions
+  extends Pick<PretrainedModelOptions, "dtype" | "device"> {
   modelId?: string;
   use_external_data_format?: boolean;
   isVisionModel?: boolean;

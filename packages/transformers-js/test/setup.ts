@@ -9,5 +9,3 @@ beforeAll(() => {
     (global as any).navigator.gpu = {} as any;
   }
 });
-
-

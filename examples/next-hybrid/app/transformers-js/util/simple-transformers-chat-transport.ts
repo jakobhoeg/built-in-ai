@@ -5,9 +5,14 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
 } from "ai";
-import { TransformersJSLanguageModel, TransformersUIMessage } from "@built-in-ai/transformers-js";
+import {
+  TransformersJSLanguageModel,
+  TransformersUIMessage,
+} from "@built-in-ai/transformers-js";
 
-export class SimpleTransformersChatTransport implements ChatTransport<TransformersUIMessage> {
+export class SimpleTransformersChatTransport
+  implements ChatTransport<TransformersUIMessage>
+{
   private readonly model: TransformersJSLanguageModel;
 
   constructor(model: TransformersJSLanguageModel) {

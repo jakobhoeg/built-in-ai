@@ -12,11 +12,19 @@ vi.mock("@huggingface/transformers", () => {
     generate: vi.fn().mockResolvedValue([1, 2, 3]),
   };
   class TextStreamer {
-    constructor(_tokenizer: any, _options?: any) { }
-    on_finalized_text(_text: string): void { }
+    constructor(_tokenizer: any, _options?: any) {}
+    on_finalized_text(_text: string): void {}
   }
-  class StoppingCriteria { _call() { return [false]; } }
-  class StoppingCriteriaList { extend(_arr: any[]) { /* no-op */ } }
+  class StoppingCriteria {
+    _call() {
+      return [false];
+    }
+  }
+  class StoppingCriteriaList {
+    extend(_arr: any[]) {
+      /* no-op */
+    }
+  }
   return {
     AutoTokenizer: { from_pretrained: vi.fn().mockResolvedValue(tokenizer) },
     AutoModelForCausalLM: { from_pretrained: vi.fn().mockResolvedValue(model) },
@@ -42,16 +50,22 @@ describe("TransformersJSLanguageModel", () => {
   });
 
   it("instantiates and reports downloadable before init", async () => {
-    const model = new TransformersJSLanguageModel("HuggingFaceTB/SmolLM2-360M-Instruct");
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
     const availability = await model.availability();
     expect(availability).toBe("downloadable");
   });
 
   it("generate returns text and usage", async () => {
-    const model = new TransformersJSLanguageModel("HuggingFaceTB/SmolLM2-360M-Instruct");
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
 
     // tokenizer returns tensors/arrays the class expects
-    tokenizerMock.apply_chat_template.mockReturnValue({ input_ids: { data: new Array(5).fill(1) } });
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(5).fill(1) },
+    });
 
     // mock model.generate to return a sequence longer than input_ids so decode sees new tokens
     const outputIds = new Array(5).fill(1).concat([101, 102, 103]);
@@ -64,19 +78,29 @@ describe("TransformersJSLanguageModel", () => {
     });
 
     expect(text).toBe("Hello");
-    expect(usage).toEqual({ inputTokens: 5, outputTokens: 5 /* length-based */, totalTokens: 10 });
+    expect(usage).toEqual({
+      inputTokens: 5,
+      outputTokens: 5 /* length-based */,
+      totalTokens: 10,
+    });
   });
 
   it("reports correct availability", async () => {
-    const model = new TransformersJSLanguageModel("HuggingFaceTB/SmolLM2-360M-Instruct");
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
     const availability = await model.availability();
     expect(availability).toBe("downloadable");
   });
 
   it("should handle system messages", async () => {
-    const model = new TransformersJSLanguageModel("HuggingFaceTB/SmolLM2-360M-Instruct");
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
 
-    tokenizerMock.apply_chat_template.mockReturnValue({ input_ids: { data: new Array(3).fill(1) } });
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(3).fill(1) },
+    });
     const outputIds = new Array(3).fill(1).concat([101, 102]);
     (modelMock.generate as any).mockResolvedValue({ sequences: [outputIds] });
     tokenizerMock.decode.mockReturnValue("I am a helpful assistant.");
@@ -99,9 +123,13 @@ describe("TransformersJSLanguageModel", () => {
   });
 
   it("should handle conversation history", async () => {
-    const model = new TransformersJSLanguageModel("HuggingFaceTB/SmolLM2-360M-Instruct");
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
 
-    tokenizerMock.apply_chat_template.mockReturnValue({ input_ids: { data: new Array(4).fill(1) } });
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(4).fill(1) },
+    });
     const outputIds = new Array(4).fill(1).concat([201, 202]);
     (modelMock.generate as any).mockResolvedValue({ sequences: [outputIds] });
     tokenizerMock.decode.mockReturnValue("I can help you with coding!");
@@ -126,9 +154,13 @@ describe("TransformersJSLanguageModel", () => {
   });
 
   it("should stream text successfully", async () => {
-    const model = new TransformersJSLanguageModel("HuggingFaceTB/SmolLM2-360M-Instruct");
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
 
-    tokenizerMock.apply_chat_template.mockReturnValue({ input_ids: { data: new Array(2).fill(1) } });
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(2).fill(1) },
+    });
 
     // Mock the generate method to simulate streaming by calling the streamer callback
     (modelMock.generate as any).mockImplementation(async (args: any) => {
@@ -158,9 +190,13 @@ describe("TransformersJSLanguageModel", () => {
   });
 
   it("should handle empty content arrays", async () => {
-    const model = new TransformersJSLanguageModel("HuggingFaceTB/SmolLM2-360M-Instruct");
+    const model = new TransformersJSLanguageModel(
+      "HuggingFaceTB/SmolLM2-360M-Instruct",
+    );
 
-    tokenizerMock.apply_chat_template.mockReturnValue({ input_ids: { data: new Array(1).fill(1) } });
+    tokenizerMock.apply_chat_template.mockReturnValue({
+      input_ids: { data: new Array(1).fill(1) },
+    });
     const outputIds = new Array(1).fill(1).concat([301]);
     (modelMock.generate as any).mockResolvedValue({ sequences: [outputIds] });
     tokenizerMock.decode.mockReturnValue("Response");
@@ -178,10 +214,6 @@ describe("TransformersJSLanguageModel", () => {
     expect(text).toBe("Response");
     // Should pass empty content to chat template
     const applyChatCall = tokenizerMock.apply_chat_template.mock.calls[0];
-    expect(applyChatCall[0]).toEqual([
-      { role: "user", content: "" },
-    ]);
+    expect(applyChatCall[0]).toEqual([{ role: "user", content: "" }]);
   });
 });
-
-

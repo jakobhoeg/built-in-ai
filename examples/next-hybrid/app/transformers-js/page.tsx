@@ -84,7 +84,7 @@ function TransformersJSChat({
       onError(error) {
         toast.error(error.message);
       },
-      id: `chat-${useClientSideInference ? 'client' : 'server'}-${useClientSideInference ? modelConfig.id : 'default'}`, // Forces state refresh (not necessary but fine for this minimal example app)
+      id: `chat-${useClientSideInference ? "client" : "server"}-${useClientSideInference ? modelConfig.id : "default"}`, // Forces state refresh (not necessary but fine for this minimal example app)
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -150,12 +150,16 @@ function TransformersJSChat({
               <h1 className="text-lg font-medium">
                 Using Transformers.js client-side
               </h1>
-              <p className="text-sm max-w-xs">Switch model at the bottom of this page</p>
+              <p className="text-sm max-w-xs">
+                Switch model at the bottom of this page
+              </p>
             </>
           ) : (
             <>
               <p className="text-xs">@built-in-ai/transformers-js demo</p>
-              <h1 className="text-lg font-medium">Using server-side TransformersJS</h1>
+              <h1 className="text-lg font-medium">
+                Using server-side TransformersJS
+              </h1>
               <p className="text-sm max-w-xs">
                 Your device doesn&apos;t support client side inference
               </p>
@@ -308,9 +312,10 @@ function TransformersJSChat({
           <AIInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={useClientSideInference
-              ? "What would you like to know? (Powered by TransformersJS)"
-              : "What would you like to know? (Powered by Server-side TransformersJS)"
+            placeholder={
+              useClientSideInference
+                ? "What would you like to know? (Powered by TransformersJS)"
+                : "What would you like to know? (Powered by Server-side TransformersJS)"
             }
             minHeight={48}
             maxHeight={164}
@@ -318,8 +323,7 @@ function TransformersJSChat({
           />
           <AIInputToolbar>
             <AIInputTools>
-              <AIInputButton
-                onClick={() => fileInputRef.current?.click()}>
+              <AIInputButton onClick={() => fileInputRef.current?.click()}>
                 <PlusIcon size={16} />
               </AIInputButton>
               <input
@@ -333,7 +337,7 @@ function TransformersJSChat({
               <AIInputModelSelect
                 disabled={!useClientSideInference}
                 onValueChange={(modelId) => {
-                  const selectedModel = MODELS.find(m => m.id === modelId);
+                  const selectedModel = MODELS.find((m) => m.id === modelId);
                   if (selectedModel) setModelConfig(selectedModel);
                 }}
                 value={modelConfig.id}

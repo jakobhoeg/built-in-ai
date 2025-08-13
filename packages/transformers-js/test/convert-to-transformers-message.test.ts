@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { convertToTransformersMessages } from "../src/chat/convert-to-transformers-message";
-import { UnsupportedFunctionalityError, type LanguageModelV2Prompt } from "@ai-sdk/provider";
+import {
+  UnsupportedFunctionalityError,
+  type LanguageModelV2Prompt,
+} from "@ai-sdk/provider";
 
 describe("convertToTransformersMessages", () => {
   it("converts simple text user message", () => {
@@ -86,7 +89,9 @@ describe("convertToTransformersMessages", () => {
     const prompt: LanguageModelV2Prompt = [
       {
         role: "assistant",
-        content: [{ type: "tool-call", toolCallId: "x", name: "t", args: {} } as any],
+        content: [
+          { type: "tool-call", toolCallId: "x", name: "t", args: {} } as any,
+        ],
       },
     ];
     expect(() => convertToTransformersMessages(prompt)).toThrow(
@@ -94,5 +99,3 @@ describe("convertToTransformersMessages", () => {
     );
   });
 });
-
-

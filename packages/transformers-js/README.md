@@ -23,10 +23,12 @@ The `@built-in-ai/transformers-js` package is the AI SDK provider for Transforme
 ## Requirements
 
 ### Browser (Client-side)
+
 - A modern browser with WebAssembly/WebGPU support
 - WebGPU is strongly recommended for optimal performance
 
 ### Server (Node.js)
+
 - Node.js 18+ recommended
 - Automatic CPU inference
 - GPU acceleration available with appropriate hardware setup
@@ -39,7 +41,8 @@ The `@built-in-ai/transformers-js` package is the AI SDK provider for Transforme
 import { streamText } from "ai";
 import { transformersJS } from "@built-in-ai/transformers-js";
 
-const result = streamText({ // or generateText
+const result = streamText({
+  // or generateText
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
   messages: [{ role: "user", content: "Hello, how are you?" }],
 });
@@ -80,7 +83,10 @@ export async function POST(req: Request) {
 You can create applications that automatically choose between client-side and server-side inference:
 
 ```typescript
-import { transformersJS, doesBrowserSupportTransformersJS } from "@built-in-ai/transformers-js";
+import {
+  transformersJS,
+  doesBrowserSupportTransformersJS,
+} from "@built-in-ai/transformers-js";
 
 const useClientSide = doesBrowserSupportTransformersJS();
 
@@ -88,7 +94,9 @@ if (useClientSide) {
   // Browser: Use WebGPU for fast client-side inference
   const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
     device: "webgpu",
-    worker: new Worker(new URL("./worker.ts", import.meta.url), { type: "module" })
+    worker: new Worker(new URL("./worker.ts", import.meta.url), {
+      type: "module",
+    }),
   });
 } else {
   // Fallback: Use server-side API route
@@ -111,22 +119,24 @@ const model = transformersJS("HuggingFaceTB/SmolVLM-256M-Instruct", {
 
 const result = streamText({
   model,
-  messages: [{
-    role: "user",
-    content: [
-      { type: "text", text: "Describe this image" },
-      { type: "image", image: someImageBlobOrUrl },
-    ],
-  }],
+  messages: [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "Describe this image" },
+        { type: "image", image: someImageBlobOrUrl },
+      ],
+    },
+  ],
 });
 ```
 
 ### Advanced Usage (Web Worker)
 
-Heavy model execution should preferably run off the main thread using Web Workers. 
+Heavy model execution should preferably run off the main thread using Web Workers.
 This package ships a ready-to-use handler, which removes complexity and allows you to just build your app.
 
-1) Create `worker.ts`:
+1. Create `worker.ts`:
 
 ```ts
 import { TransformersJSWorkerHandler } from "@built-in-ai/transformers-js";
@@ -137,14 +147,16 @@ self.onmessage = (msg: MessageEvent) => {
 };
 ```
 
-2) Provide the worker when creating the model:
+2. Provide the worker when creating the model:
 
 ```ts
 import { streamText } from "ai";
 import { transformersJS } from "@built-in-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
-  worker: new Worker(new URL("./worker.ts", import.meta.url), { type: "module" }),
+  worker: new Worker(new URL("./worker.ts", import.meta.url), {
+    type: "module",
+  }),
   device: "webgpu",
 });
 
@@ -196,19 +208,19 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 
 // Single embedding
 const { embedding } = await embed({
-  model: transformersJS.textEmbedding('Supabase/gte-small'),
-  value: 'sunny day at the beach',
+  model: transformersJS.textEmbedding("Supabase/gte-small"),
+  value: "sunny day at the beach",
 });
 
 console.log(`Dimensions: ${embedding.length}`); // 384 for gte-small
 
 // Multiple embeddings with automatic chunking
 const { embeddings } = await embedMany({
-  model: transformersJS.textEmbedding('Supabase/gte-small'),
+  model: transformersJS.textEmbedding("Supabase/gte-small"),
   values: [
-    'sunny day at the beach',
-    'rainy afternoon in the city',
-    'snowy night in the mountains',
+    "sunny day at the beach",
+    "rainy afternoon in the city",
+    "snowy night in the mountains",
   ],
 });
 
@@ -218,24 +230,24 @@ console.log(`Generated ${embeddings.length} embeddings`);
 ### Advanced Embedding Configuration
 
 ```typescript
-const embeddingModel = transformersJS.textEmbedding('Supabase/gte-small', {
-  device: 'webgpu',           // Use WebGPU for acceleration
-  dtype: 'q8',                // Quantization level
-  normalize: true,            // Normalize embeddings (default: true)
-  pooling: 'mean',           // Pooling strategy: 'mean', 'cls', or 'max'
-  maxTokens: 512,            // Maximum input tokens
+const embeddingModel = transformersJS.textEmbedding("Supabase/gte-small", {
+  device: "webgpu", // Use WebGPU for acceleration
+  dtype: "q8", // Quantization level
+  normalize: true, // Normalize embeddings (default: true)
+  pooling: "mean", // Pooling strategy: 'mean', 'cls', or 'max'
+  maxTokens: 512, // Maximum input tokens
 });
 
 const { embedding } = await embed({
   model: embeddingModel,
-  value: 'your text here',
+  value: "your text here",
 });
 ```
 
 ### Embedding Progress Tracking
 
 ```typescript
-const embeddingModel = transformersJS.textEmbedding('Supabase/gte-small');
+const embeddingModel = transformersJS.textEmbedding("Supabase/gte-small");
 
 // Check if model needs downloading
 const availability = await embeddingModel.availability();
@@ -249,7 +261,7 @@ if (availability === "downloadable") {
 // Now ready to use
 const { embedding } = await embed({
   model: embeddingModel,
-  value: 'your text here',
+  value: "your text here",
 });
 ```
 
@@ -265,6 +277,7 @@ See the complete working example in `examples/next-hybrid/` which includes:
 - **Full integration**: Complete integration with `useChat` hook
 
 Files to check:
+
 - `examples/next-hybrid/app/transformers-js/page.tsx` – Main component with hybrid logic
 - `examples/next-hybrid/app/transformers-js/util/transformers-chat-transport.ts` – Client-side transport
 
@@ -390,5 +403,3 @@ self.onmessage = (msg: MessageEvent) => handler.onmessage(msg);
 ## Credits
 
 The Hugging Face, Transformers.js, and Vercel AI SDK teams
-
-

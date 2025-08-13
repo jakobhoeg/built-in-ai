@@ -1,4 +1,3 @@
-
 import {
   LanguageModelV2Prompt,
   UnsupportedFunctionalityError,
@@ -9,7 +8,14 @@ function uint8ArrayToBase64(uint8array: Uint8Array): string {
 }
 
 function convertDataToURL(
-  data: string | Buffer | URL | Uint8Array | ArrayBuffer | ReadableStream | undefined,
+  data:
+    | string
+    | Buffer
+    | URL
+    | Uint8Array
+    | ArrayBuffer
+    | ReadableStream
+    | undefined,
   mediaType: string,
 ): string {
   if (data instanceof URL) return data.toString();
@@ -35,8 +41,12 @@ function convertDataToURL(
   });
 }
 
-function processVisionContent(content: any[]): Array<{ type: "text"; text: string } | { type: "image"; image: string }> {
-  const contentParts: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [];
+function processVisionContent(
+  content: any[],
+): Array<{ type: "text"; text: string } | { type: "image"; image: string }> {
+  const contentParts: Array<
+    { type: "text"; text: string } | { type: "image"; image: string }
+  > = [];
   let textParts: string[] = [];
 
   for (const part of content) {
@@ -47,9 +57,14 @@ function processVisionContent(content: any[]): Array<{ type: "text"; text: strin
         contentParts.push({ type: "text", text: textParts.join("\n") });
         textParts = [];
       }
-      contentParts.push({ type: "image", image: convertDataToURL(part.data, part.mediaType!) });
+      contentParts.push({
+        type: "image",
+        image: convertDataToURL(part.data, part.mediaType!),
+      });
     } else if (part.type === "file") {
-      throw new UnsupportedFunctionalityError({ functionality: "non-image file input" });
+      throw new UnsupportedFunctionalityError({
+        functionality: "non-image file input",
+      });
     }
   }
 
@@ -60,21 +75,30 @@ function processVisionContent(content: any[]): Array<{ type: "text"; text: strin
   return contentParts;
 }
 
-export function convertToTransformersMessages(prompt: LanguageModelV2Prompt, isVisionModel: boolean = false): Array<{ role: string; content: any }> {
-  return prompt.map(message => {
+export function convertToTransformersMessages(
+  prompt: LanguageModelV2Prompt,
+  isVisionModel: boolean = false,
+): Array<{ role: string; content: any }> {
+  return prompt.map((message) => {
     switch (message.role) {
       case "system":
         return { role: "system", content: message.content };
 
       case "user":
         if (isVisionModel) {
-          return { role: "user", content: processVisionContent(message.content) };
+          return {
+            role: "user",
+            content: processVisionContent(message.content),
+          };
         }
 
         const textContent = message.content
-          .map(part => {
+          .map((part) => {
             if (part.type === "text") return part.text;
-            if (part.type === "file") throw new UnsupportedFunctionalityError({ functionality: "file input" });
+            if (part.type === "file")
+              throw new UnsupportedFunctionalityError({
+                functionality: "file input",
+              });
             return "";
           })
           .join("\n");
@@ -82,16 +106,21 @@ export function convertToTransformersMessages(prompt: LanguageModelV2Prompt, isV
 
       case "assistant":
         const assistantContent = message.content
-          .map(part => {
+          .map((part) => {
             if (part.type === "text") return part.text;
-            if (part.type === "tool-call") throw new UnsupportedFunctionalityError({ functionality: "tool calling" });
+            if (part.type === "tool-call")
+              throw new UnsupportedFunctionalityError({
+                functionality: "tool calling",
+              });
             return "";
           })
           .join("");
         return { role: "assistant", content: assistantContent };
 
       case "tool":
-        throw new UnsupportedFunctionalityError({ functionality: "tool results" });
+        throw new UnsupportedFunctionalityError({
+          functionality: "tool results",
+        });
 
       default:
         throw new Error(`Unsupported message role: ${(message as any).role}`);

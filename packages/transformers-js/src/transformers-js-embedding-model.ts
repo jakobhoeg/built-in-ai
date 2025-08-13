@@ -29,7 +29,8 @@ export function isServerEnvironment(): boolean {
   return typeof window === "undefined" && typeof process !== "undefined";
 }
 
-export interface TransformersJSEmbeddingSettings extends Pick<PretrainedModelOptions, 'device' | 'dtype'> {
+export interface TransformersJSEmbeddingSettings
+  extends Pick<PretrainedModelOptions, "device" | "dtype"> {
   /**
    * Progress callback for model initialization
    */
@@ -62,7 +63,9 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
   readonly maxEmbeddingsPerCall = 100; // Reasonable limit for browser
   readonly supportsParallelCalls = false;
 
-  private readonly config: TransformersJSEmbeddingSettings & { modelId: TransformersJSEmbeddingModelId };
+  private readonly config: TransformersJSEmbeddingSettings & {
+    modelId: TransformersJSEmbeddingModelId;
+  };
   private pipeline: FeatureExtractionPipeline | null = null;
   private tokenizer: PreTrainedTokenizer | null = null;
   private isInitialized = false;
@@ -70,7 +73,7 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
 
   constructor(
     modelId: TransformersJSEmbeddingModelId,
-    options: TransformersJSEmbeddingSettings = {}
+    options: TransformersJSEmbeddingSettings = {},
   ) {
     this.modelId = modelId;
     this.config = {
@@ -118,17 +121,24 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
       const progress_callback = this.createProgressTracker(onInitProgress);
 
       // Set device based on environment
-      const resolvedDevice = this.resolveDevice(device as string) as PretrainedModelOptions['device'];
-      const resolvedDtype = this.resolveDtype(dtype as string) as PretrainedModelOptions['dtype'];
+      const resolvedDevice = this.resolveDevice(
+        device as string,
+      ) as PretrainedModelOptions["device"];
+      const resolvedDtype = this.resolveDtype(
+        dtype as string,
+      ) as PretrainedModelOptions["dtype"];
 
       // Create tokenizer and pipeline
       const [tokenizer, embeddingPipeline] = await Promise.all([
-        AutoTokenizer.from_pretrained(this.modelId, { legacy: true, progress_callback }),
+        AutoTokenizer.from_pretrained(this.modelId, {
+          legacy: true,
+          progress_callback,
+        }),
         pipeline("feature-extraction", this.modelId, {
           device: resolvedDevice,
           dtype: resolvedDtype,
           progress_callback,
-        })
+        }),
       ]);
 
       this.tokenizer = tokenizer;
@@ -159,7 +169,11 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
     }
 
     // In browser environment, auto-detect WebGPU support
-    if (isBrowserEnvironment() && typeof navigator !== "undefined" && (navigator as any).gpu) {
+    if (
+      isBrowserEnvironment() &&
+      typeof navigator !== "undefined" &&
+      (navigator as any).gpu
+    ) {
       return "webgpu";
     }
 
@@ -174,7 +188,9 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
     return "q8";
   }
 
-  private createProgressTracker(onInitProgress?: (progress: { progress: number }) => void) {
+  private createProgressTracker(
+    onInitProgress?: (progress: { progress: number }) => void,
+  ) {
     const fileProgress = new Map<string, { loaded: number; total: number }>();
 
     return (p: ProgressInfo) => {
@@ -184,13 +200,20 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
       if (!onInitProgress) return;
 
       // Type guard to check if p has file property
-      const progressWithFile = p as ProgressInfo & { file?: string; loaded?: number; total?: number };
+      const progressWithFile = p as ProgressInfo & {
+        file?: string;
+        loaded?: number;
+        total?: number;
+      };
       const file = progressWithFile.file;
 
       if (!file) return;
 
       if (p.status === "progress" && file) {
-        fileProgress.set(file, { loaded: progressWithFile.loaded || 0, total: progressWithFile.total || 0 });
+        fileProgress.set(file, {
+          loaded: progressWithFile.loaded || 0,
+          total: progressWithFile.total || 0,
+        });
       } else if (p.status === "done" && file) {
         const prev = fileProgress.get(file);
         if (prev?.total) {
@@ -213,8 +236,6 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
       }
     };
   }
-
-
 
   private applyPooling(embeddings: number[][], pooling: string): number[] {
     if (pooling === "cls") {
@@ -240,18 +261,20 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
         result[j] += embedding[j];
       }
     }
-    return result.map(val => val / embeddings.length);
+    return result.map((val) => val / embeddings.length);
   }
 
   private normalizeVector(vector: number[]): number[] {
     const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
-    return norm > 0 ? vector.map(val => val / norm) : vector;
+    return norm > 0 ? vector.map((val) => val / norm) : vector;
   }
 
   /**
    * Check the availability of the TransformersJS embedding model
    */
-  public async availability(): Promise<"unavailable" | "downloadable" | "available"> {
+  public async availability(): Promise<
+    "unavailable" | "downloadable" | "available"
+  > {
     if (this.isInitialized) {
       return "available";
     }
@@ -287,7 +310,9 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
       });
     }
 
-    const [tokenizer, model] = await this.getSession(this.config.initProgressCallback);
+    const [tokenizer, model] = await this.getSession(
+      this.config.initProgressCallback,
+    );
 
     const embeddings = await Promise.all(
       values.map(async (text) => {
@@ -309,7 +334,12 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
           let embedding: number[];
 
           // Handle Tensor result from transformers.js
-          if (result && typeof result === 'object' && 'data' in result && 'dims' in result) {
+          if (
+            result &&
+            typeof result === "object" &&
+            "data" in result &&
+            "dims" in result
+          ) {
             // Result is a Tensor from transformers.js
             const tensor = result as Tensor;
             const data = Array.from(tensor.data) as number[];
@@ -329,7 +359,10 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
                 sequences.push(sequence);
               }
 
-              embedding = this.applyPooling(sequences, this.config.pooling || "mean");
+              embedding = this.applyPooling(
+                sequences,
+                this.config.pooling || "mean",
+              );
             } else if (dims.length === 2) {
               // [sequence_length, hidden_size] - needs pooling
               const [seqLength, hiddenSize] = dims;
@@ -343,16 +376,26 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
                 sequences.push(sequence);
               }
 
-              embedding = this.applyPooling(sequences, this.config.pooling || "mean");
+              embedding = this.applyPooling(
+                sequences,
+                this.config.pooling || "mean",
+              );
             } else if (dims.length === 1) {
               // Already pooled [hidden_size]
               embedding = data;
             } else {
               throw new Error(`Unsupported tensor dimensions: ${dims}`);
             }
-          } else if (Array.isArray(result) && Array.isArray(result[0]) && Array.isArray(result[0][0])) {
+          } else if (
+            Array.isArray(result) &&
+            Array.isArray(result[0]) &&
+            Array.isArray(result[0][0])
+          ) {
             // Result is [batch_size, sequence_length, hidden_size]
-            embedding = this.applyPooling(result[0] as number[][], this.config.pooling || "mean");
+            embedding = this.applyPooling(
+              result[0] as number[][],
+              this.config.pooling || "mean",
+            );
           } else if (Array.isArray(result) && typeof result[0] === "number") {
             // Result is already pooled
             embedding = result as number[];
@@ -366,14 +409,22 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
             embedding = this.normalizeVector(embedding);
           }
 
-          return { embedding, tokenCount: Array.isArray(tokens.input_ids) ? tokens.input_ids.length : 0 };
+          return {
+            embedding,
+            tokenCount: Array.isArray(tokens.input_ids)
+              ? tokens.input_ids.length
+              : 0,
+          };
         } catch (error) {
           throw new Error(`Failed to generate embedding for text: ${error}`);
         }
-      })
+      }),
     );
 
-    const totalTokens = embeddings.reduce((sum, { tokenCount }) => sum + tokenCount, 0);
+    const totalTokens = embeddings.reduce(
+      (sum, { tokenCount }) => sum + tokenCount,
+      0,
+    );
 
     return {
       embeddings: embeddings.map(({ embedding }) => embedding),

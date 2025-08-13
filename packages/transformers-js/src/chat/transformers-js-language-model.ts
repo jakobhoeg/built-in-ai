@@ -23,7 +23,10 @@ import {
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
 import { decodeSingleSequence } from "./decode-utils";
-import type { ModelInstance, GenerationOptions } from "./transformers-js-worker-types";
+import type {
+  ModelInstance,
+  GenerationOptions,
+} from "./transformers-js-worker-types";
 
 declare global {
   interface Navigator {
@@ -33,7 +36,8 @@ declare global {
 
 export type TransformersJSModelId = string;
 
-export interface TransformersJSModelSettings extends Pick<PretrainedModelOptions, 'device' | 'dtype'> {
+export interface TransformersJSModelSettings
+  extends Pick<PretrainedModelOptions, "device" | "dtype"> {
   /**
    * Progress callback for model initialization
    */
@@ -139,7 +143,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   private stoppingCriteria = new InterruptableStoppingCriteria();
   private workerReady = false;
 
-  constructor(modelId: TransformersJSModelId, options: TransformersJSModelSettings = {}) {
+  constructor(
+    modelId: TransformersJSModelId,
+    options: TransformersJSModelSettings = {},
+  ) {
     this.modelId = modelId;
     this.config = {
       modelId,
@@ -188,8 +195,12 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       const progress_callback = this.createProgressTracker(onInitProgress);
 
       // Set device based on environment
-      const resolvedDevice = this.resolveDevice(device as string) as PretrainedModelOptions['device'];
-      const resolvedDtype = this.resolveDtype(dtype as string) as PretrainedModelOptions['dtype'];
+      const resolvedDevice = this.resolveDevice(
+        device as string,
+      ) as PretrainedModelOptions["device"];
+      const resolvedDtype = this.resolveDtype(
+        dtype as string,
+      ) as PretrainedModelOptions["dtype"];
 
       // Create model instance based on type
       if (isVisionModel) {
@@ -199,17 +210,20 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             dtype: resolvedDtype,
             device: resolvedDevice,
             progress_callback,
-          })
+          }),
         ]);
         this.modelInstance = [processor, model];
       } else {
         const [tokenizer, model] = await Promise.all([
-          AutoTokenizer.from_pretrained(this.modelId, { legacy: true, progress_callback }),
+          AutoTokenizer.from_pretrained(this.modelId, {
+            legacy: true,
+            progress_callback,
+          }),
           AutoModelForCausalLM.from_pretrained(this.modelId, {
             dtype: resolvedDtype,
             device: resolvedDevice,
             progress_callback,
-          })
+          }),
         ]);
         this.modelInstance = [tokenizer, model];
 
@@ -244,7 +258,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
 
     // In browser environment, auto-detect WebGPU support
-    if (isBrowserEnvironment() && typeof navigator !== "undefined" && navigator.gpu) {
+    if (
+      isBrowserEnvironment() &&
+      typeof navigator !== "undefined" &&
+      navigator.gpu
+    ) {
       return "webgpu";
     }
 
@@ -259,7 +277,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     return "auto";
   }
 
-  private createProgressTracker(onInitProgress?: (progress: { progress: number }) => void) {
+  private createProgressTracker(
+    onInitProgress?: (progress: { progress: number }) => void,
+  ) {
     const fileProgress = new Map<string, { loaded: number; total: number }>();
 
     return (p: ProgressInfo) => {
@@ -269,13 +289,20 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       if (!onInitProgress) return;
 
       // Type guard to check if p has file property
-      const progressWithFile = p as ProgressInfo & { file?: string; loaded?: number; total?: number };
+      const progressWithFile = p as ProgressInfo & {
+        file?: string;
+        loaded?: number;
+        total?: number;
+      };
       const file = progressWithFile.file;
 
       if (!file) return;
 
       if (p.status === "progress" && file) {
-        fileProgress.set(file, { loaded: progressWithFile.loaded || 0, total: progressWithFile.total || 0 });
+        fileProgress.set(file, {
+          loaded: progressWithFile.loaded || 0,
+          total: progressWithFile.total || 0,
+        });
       } else if (p.status === "done" && file) {
         const prev = fileProgress.get(file);
         if (prev?.total) {
@@ -364,7 +391,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
 
     // Convert messages to TransformersJS format
-    const messages = convertToTransformersMessages(prompt, this.config.isVisionModel);
+    const messages = convertToTransformersMessages(
+      prompt,
+      this.config.isVisionModel,
+    );
 
     const generationOptions: GenerationOptions = {
       max_new_tokens: maxOutputTokens || 256,
@@ -384,7 +414,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   /**
    * Check the availability of the TransformersJS model
    */
-  public async availability(): Promise<"unavailable" | "downloadable" | "available"> {
+  public async availability(): Promise<
+    "unavailable" | "downloadable" | "available"
+  > {
     // If using a worker (browser only), reflect worker readiness instead of main-thread state
     if (this.config.worker && isBrowserEnvironment()) {
       return this.workerReady ? "available" : "downloadable";
@@ -409,7 +441,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     onDownloadProgress?: (progress: { progress: number }) => void,
   ): Promise<TransformersJSLanguageModel> {
     // If a worker is provided and we're in browser environment, initialize the worker
-    // (and forward progress) instead of initializing the model on the main thread 
+    // (and forward progress) instead of initializing the model on the main thread
     // to avoid double-initialization/downloads.
     if (this.config.worker && isBrowserEnvironment()) {
       await this.initializeWorker(onDownloadProgress);
@@ -429,40 +461,70 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
     // Use worker if provided and in browser environment
     if (this.config.worker && isBrowserEnvironment()) {
-      return this.doGenerateWithWorker(messages, warnings, generationOptions, options);
+      return this.doGenerateWithWorker(
+        messages,
+        warnings,
+        generationOptions,
+        options,
+      );
     }
 
     // Main thread generation (browser without worker or server environment)
-    const [processor, model] = await this.getSession(this.config.initProgressCallback);
+    const [processor, model] = await this.getSession(
+      this.config.initProgressCallback,
+    );
 
     try {
       const isVision = this.config.isVisionModel;
-      let inputs: { input_ids: Tensor; attention_mask?: Tensor; pixel_values?: Tensor };
+      let inputs: {
+        input_ids: Tensor;
+        attention_mask?: Tensor;
+        pixel_values?: Tensor;
+      };
       let generatedText: string;
       let inputLength: number = 0;
       let newTokens: any[] = [];
 
       if (isVision) {
-        const text = processor.apply_chat_template(messages, { add_generation_prompt: true });
+        const text = processor.apply_chat_template(messages, {
+          add_generation_prompt: true,
+        });
         const images = messages
-          .flatMap(msg => Array.isArray(msg.content) ? msg.content : [])
-          .filter(part => part.type === 'image')
-          .map(part => part.image);
+          .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
+          .filter((part) => part.type === "image")
+          .map((part) => part.image);
 
         inputs = await processor(text, images.length > 0 ? images : undefined);
-        const outputs = await model.generate({ ...inputs, ...generationOptions } as any);
-        generatedText = processor.batch_decode(outputs as Tensor, { skip_special_tokens: true })[0];
+        const outputs = await model.generate({
+          ...inputs,
+          ...generationOptions,
+        } as any);
+        generatedText = processor.batch_decode(outputs as Tensor, {
+          skip_special_tokens: true,
+        })[0];
       } else {
-        inputs = processor.apply_chat_template(messages, { add_generation_prompt: true, return_dict: true }) as { input_ids: Tensor; attention_mask?: Tensor };
-        const outputs = await model.generate({ ...inputs, ...generationOptions } as any);
+        inputs = processor.apply_chat_template(messages, {
+          add_generation_prompt: true,
+          return_dict: true,
+        }) as { input_ids: Tensor; attention_mask?: Tensor };
+        const outputs = await model.generate({
+          ...inputs,
+          ...generationOptions,
+        } as any);
         inputLength = inputs.input_ids.data.length;
 
         // Extract first sequence from outputs
         const sequences = (outputs as any).sequences || outputs;
-        const firstSequence = Array.isArray(sequences) ? sequences[0] : sequences;
+        const firstSequence = Array.isArray(sequences)
+          ? sequences[0]
+          : sequences;
 
-        generatedText = decodeSingleSequence(processor as PreTrainedTokenizer, firstSequence, inputLength);
-        newTokens = generatedText.split('');
+        generatedText = decodeSingleSequence(
+          processor as PreTrainedTokenizer,
+          firstSequence,
+          inputLength,
+        );
+        newTokens = generatedText.split("");
       }
 
       const content: LanguageModelV2Content[] = [
@@ -476,25 +538,33 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         content,
         finishReason: "stop" as LanguageModelV2FinishReason,
         usage: isVision
-          ? { inputTokens: undefined, outputTokens: undefined, totalTokens: undefined }
+          ? {
+              inputTokens: undefined,
+              outputTokens: undefined,
+              totalTokens: undefined,
+            }
           : {
-            inputTokens: inputLength,
-            outputTokens: generatedText.length,
-            totalTokens: inputLength + generatedText.length,
-          },
+              inputTokens: inputLength,
+              outputTokens: generatedText.length,
+              totalTokens: inputLength + generatedText.length,
+            },
         request: { body: { messages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
   }
 
   private async doGenerateWithWorker(
-    messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image?: string }> }>,
+    messages: Array<{
+      role: string;
+      content: string | Array<{ type: string; text?: string; image?: string }>;
+    }>,
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
@@ -516,7 +586,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         }
       };
       worker.addEventListener("message", onMessage);
-      worker.postMessage({ type: "generate", data: messages, generationOptions });
+      worker.postMessage({
+        type: "generate",
+        data: messages,
+        generationOptions,
+      });
 
       if (options.abortSignal) {
         const onAbort = () => {
@@ -531,7 +605,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     return {
       content,
       finishReason: "stop" as LanguageModelV2FinishReason,
-      usage: { inputTokens: undefined, outputTokens: undefined, totalTokens: undefined },
+      usage: {
+        inputTokens: undefined,
+        outputTokens: undefined,
+        totalTokens: undefined,
+      },
       request: { body: { messages, ...generationOptions } },
       warnings,
     };
@@ -568,7 +646,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           }
           if (msg.status === "error") {
             worker.removeEventListener("message", onMessage);
-            reject(new Error(String(msg.data || "Worker initialization failed")));
+            reject(
+              new Error(String(msg.data || "Worker initialization failed")),
+            );
             return;
           }
 
@@ -599,7 +679,12 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
     // Use worker if available and in browser environment
     if (this.config.worker && isBrowserEnvironment()) {
-      return this.doStreamWithWorker(messages, warnings, generationOptions, options);
+      return this.doStreamWithWorker(
+        messages,
+        warnings,
+        generationOptions,
+        options,
+      );
     }
 
     const self = this;
@@ -615,7 +700,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         });
 
         try {
-          const [tokenizer, model] = await self.getSession(self.config.initProgressCallback);
+          const [tokenizer, model] = await self.getSession(
+            self.config.initProgressCallback,
+          );
 
           const inputs = tokenizer.apply_chat_template(messages, {
             add_generation_prompt: true,
@@ -639,7 +726,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             });
           };
 
-          const streamer = new CallbackTextStreamer(tokenizer as PreTrainedTokenizer, streamCallback);
+          const streamer = new CallbackTextStreamer(
+            tokenizer as PreTrainedTokenizer,
+            streamCallback,
+          );
           self.stoppingCriteria.reset();
 
           if (options.abortSignal) {
@@ -687,7 +777,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   }
 
   private async doStreamWithWorker(
-    messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image?: string }> }>,
+    messages: Array<{
+      role: string;
+      content: string | Array<{ type: string; text?: string; image?: string }>;
+    }>,
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
@@ -707,18 +800,29 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           if (!msg) return;
           if (msg.status === "start") {
             // no-op
-          } else if (msg.status === "update" && typeof msg.output === "string") {
+          } else if (
+            msg.status === "update" &&
+            typeof msg.output === "string"
+          ) {
             if (isFirst) {
               controller.enqueue({ type: "text-start", id: textId });
               isFirst = false;
             }
-            controller.enqueue({ type: "text-delta", id: textId, delta: msg.output });
+            controller.enqueue({
+              type: "text-delta",
+              id: textId,
+              delta: msg.output,
+            });
           } else if (msg.status === "complete") {
             if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
             controller.enqueue({
               type: "finish",
               finishReason: "stop",
-              usage: { inputTokens: undefined, outputTokens: msg.numTokens, totalTokens: undefined },
+              usage: {
+                inputTokens: undefined,
+                outputTokens: msg.numTokens,
+                totalTokens: undefined,
+              },
             });
             worker.removeEventListener("message", onMessage);
             controller.close();
@@ -737,7 +841,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           options.abortSignal.addEventListener("abort", onAbort);
         }
 
-        worker.postMessage({ type: "generate", data: messages, generationOptions });
+        worker.postMessage({
+          type: "generate",
+          data: messages,
+          generationOptions,
+        });
       },
     });
 

@@ -7,18 +7,28 @@ const mockTokenizer: any = { call: vi.fn() };
 
 vi.mock("@huggingface/transformers", () => {
   return {
-    pipeline: vi.fn().mockImplementation((task: string, modelId: string, _opts: any) => {
-      mockPipelineFn(task, modelId);
-      // Return a function that simulates feature-extraction pipeline
-      return vi.fn().mockImplementation(async (_text: string, _opts: any) => {
-        // [batch, seqLen, hidden] shape
-        return [[[1, 2, 3, 4], [2, 3, 4, 5], [0, 0, 0, 1]]];
-      });
-    }),
+    pipeline: vi
+      .fn()
+      .mockImplementation((task: string, modelId: string, _opts: any) => {
+        mockPipelineFn(task, modelId);
+        // Return a function that simulates feature-extraction pipeline
+        return vi.fn().mockImplementation(async (_text: string, _opts: any) => {
+          // [batch, seqLen, hidden] shape
+          return [
+            [
+              [1, 2, 3, 4],
+              [2, 3, 4, 5],
+              [0, 0, 0, 1],
+            ],
+          ];
+        });
+      }),
     AutoTokenizer: {
       from_pretrained: vi.fn().mockResolvedValue(
         // Minimal tokenizer that returns token ids length
-        (input: string) => ({ input_ids: new Array(Math.max(1, input.length % 5)).fill(1) }),
+        (input: string) => ({
+          input_ids: new Array(Math.max(1, input.length % 5)).fill(1),
+        }),
       ),
     },
   };
@@ -39,7 +49,10 @@ describe("TransformersJSEmbeddingModel", () => {
     const norm = Math.sqrt(embeddings[0].reduce((s, v) => s + v * v, 0));
     expect(norm).toBeCloseTo(1, 5);
     expect(usage?.tokens).toBeGreaterThan(0);
-    expect(mockPipelineFn).toHaveBeenCalledWith("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+    expect(mockPipelineFn).toHaveBeenCalledWith(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2",
+    );
   });
 
   it("throws when exceeding maxEmbeddingsPerCall", async () => {
@@ -48,5 +61,3 @@ describe("TransformersJSEmbeddingModel", () => {
     await expect(model.doEmbed({ values: inputs })).rejects.toThrow();
   });
 });
-
-

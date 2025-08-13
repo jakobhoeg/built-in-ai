@@ -30,7 +30,10 @@ class ModelManager {
     this.configs.set(key, options);
   }
 
-  static async getInstance(key: string, progressCallback?: (progress: ProgressInfo) => void): Promise<ModelInstance> {
+  static async getInstance(
+    key: string,
+    progressCallback?: (progress: ProgressInfo) => void,
+  ): Promise<ModelInstance> {
     const cached = this.instances.get(key);
     if (cached) return cached;
 
@@ -39,17 +42,36 @@ class ModelManager {
       throw new Error(`No configuration found for key: ${key}`);
     }
 
-    const { modelId, dtype = "auto", device = "auto", use_external_data_format = false, isVisionModel = false } = config;
+    const {
+      modelId,
+      dtype = "auto",
+      device = "auto",
+      use_external_data_format = false,
+      isVisionModel = false,
+    } = config;
 
     const instancePromise = isVisionModel
-      ? this.createVisionModel(modelId, { dtype, device, use_external_data_format, progressCallback })
-      : this.createTextModel(modelId, { dtype, device, use_external_data_format, progressCallback });
+      ? this.createVisionModel(modelId, {
+          dtype,
+          device,
+          use_external_data_format,
+          progressCallback,
+        })
+      : this.createTextModel(modelId, {
+          dtype,
+          device,
+          use_external_data_format,
+          progressCallback,
+        });
 
     this.instances.set(key, instancePromise);
     return instancePromise;
   }
 
-  private static async createTextModel(modelId: string, options: any): Promise<ModelInstance> {
+  private static async createTextModel(
+    modelId: string,
+    options: any,
+  ): Promise<ModelInstance> {
     const [tokenizer, model] = await Promise.all([
       AutoTokenizer.from_pretrained(modelId, {
         progress_callback: options.progressCallback,
@@ -60,12 +82,15 @@ class ModelManager {
         device: options.device,
         use_external_data_format: options.use_external_data_format,
         progress_callback: options.progressCallback,
-      })
+      }),
     ]);
     return [tokenizer, model];
   }
 
-  private static async createVisionModel(modelId: string, options: any): Promise<ModelInstance> {
+  private static async createVisionModel(
+    modelId: string,
+    options: any,
+  ): Promise<ModelInstance> {
     const [processor, model] = await Promise.all([
       AutoProcessor.from_pretrained(modelId, {
         progress_callback: options.progressCallback,
@@ -75,7 +100,7 @@ class ModelManager {
         device: options.device || "webgpu",
         use_external_data_format: options.use_external_data_format,
         progress_callback: options.progressCallback,
-      })
+      }),
     ]);
     return [processor, model];
   }
@@ -90,16 +115,25 @@ export class TransformersJSWorkerHandler {
   private isVisionModel = false;
   private currentModelKey = "default";
 
-  async generate(messages: Array<{ role: string; content: any }>, generationOptions?: GenerationOptions) {
+  async generate(
+    messages: Array<{ role: string; content: any }>,
+    generationOptions?: GenerationOptions,
+  ) {
     try {
-      const modelInstance = await ModelManager.getInstance(this.currentModelKey);
+      const modelInstance = await ModelManager.getInstance(
+        this.currentModelKey,
+      );
       await this.runGeneration(modelInstance, messages, generationOptions);
     } catch (error) {
       this.sendError(error instanceof Error ? error.message : String(error));
     }
   }
 
-  private async runGeneration(modelInstance: ModelInstance, messages: Array<{ role: string; content: any }>, userGenerationOptions?: GenerationOptions) {
+  private async runGeneration(
+    modelInstance: ModelInstance,
+    messages: Array<{ role: string; content: any }>,
+    userGenerationOptions?: GenerationOptions,
+  ) {
     const [processor, model] = modelInstance;
     const isVision = this.isVisionModel;
 
@@ -113,9 +147,11 @@ export class TransformersJSWorkerHandler {
           .map((x) => x.content)
           .flat(Infinity)
           .filter((msg) => msg.image !== undefined)
-          .map((msg) => load_image(msg.image))
+          .map((msg) => load_image(msg.image)),
       );
-      const text = processor.apply_chat_template(lastMessages, { add_generation_prompt: true });
+      const text = processor.apply_chat_template(lastMessages, {
+        add_generation_prompt: true,
+      });
       inputs = await processor(text, images);
     } else {
       inputs = processor.apply_chat_template(messages, {
@@ -132,7 +168,9 @@ export class TransformersJSWorkerHandler {
       numTokens++;
     };
     const output_callback = (output: string) => {
-      const tps = startTime ? (numTokens / (performance.now() - startTime)) * 1000 : undefined;
+      const tps = startTime
+        ? (numTokens / (performance.now() - startTime)) * 1000
+        : undefined;
       this.sendUpdate(output, tps, numTokens);
     };
 
@@ -143,23 +181,25 @@ export class TransformersJSWorkerHandler {
         skip_special_tokens: true,
         callback_function: output_callback,
         token_callback_function: token_callback,
-      }
+      },
     );
 
     const stoppingCriteriaList = new StoppingCriteriaList();
     stoppingCriteriaList.push(this.stopping_criteria);
 
     // Merge user generation options with defaults based on model type
-    const defaultOptions = isVision ? {
-      do_sample: false,
-      repetition_penalty: 1.1,
-      max_new_tokens: 1024,
-    } : {
-      do_sample: true,
-      top_k: 3,
-      temperature: 0.7,
-      max_new_tokens: 512,
-    };
+    const defaultOptions = isVision
+      ? {
+          do_sample: false,
+          repetition_penalty: 1.1,
+          max_new_tokens: 1024,
+        }
+      : {
+          do_sample: true,
+          top_k: 3,
+          temperature: 0.7,
+          max_new_tokens: 512,
+        };
 
     const generationOptions = {
       ...defaultOptions,
@@ -175,7 +215,12 @@ export class TransformersJSWorkerHandler {
     const generationOutput = await model.generate(allOptions);
     const sequences = (generationOutput as any).sequences || generationOutput;
 
-    const decoded = decodeGeneratedText(processor, sequences, isVision, isVision ? 0 : inputs.input_ids.data.length);
+    const decoded = decodeGeneratedText(
+      processor,
+      sequences,
+      isVision,
+      isVision ? 0 : inputs.input_ids.data.length,
+    );
 
     self.postMessage({ status: "complete", output: decoded });
   }
@@ -187,9 +232,11 @@ export class TransformersJSWorkerHandler {
       this.isVisionModel = options?.isVisionModel || false;
 
       // Set default model if none provided
-      const modelId = options?.modelId || (this.isVisionModel
-        ? "HuggingFaceTB/SmolVLM-256M-Instruct"
-        : "HuggingFaceTB/SmolLM2-360M-Instruct");
+      const modelId =
+        options?.modelId ||
+        (this.isVisionModel
+          ? "HuggingFaceTB/SmolVLM-256M-Instruct"
+          : "HuggingFaceTB/SmolLM2-360M-Instruct");
 
       ModelManager.configure(this.currentModelKey, {
         ...options,
@@ -200,16 +247,25 @@ export class TransformersJSWorkerHandler {
 
       const throttledProgress = this.createThrottledProgressCallback();
 
-      const modelInstance = await ModelManager.getInstance(this.currentModelKey, throttledProgress);
+      const modelInstance = await ModelManager.getInstance(
+        this.currentModelKey,
+        throttledProgress,
+      );
 
       // Warm up model (text models only)
       if (!this.isVisionModel) {
-        this.sendMessage({ status: "loading", data: "Compiling shaders and warming up model..." });
+        this.sendMessage({
+          status: "loading",
+          data: "Compiling shaders and warming up model...",
+        });
         const [tokenizer, model] = modelInstance;
         const inputs = tokenizer("a");
         await model.generate({ ...inputs, max_new_tokens: 1 });
       } else {
-        this.sendMessage({ status: "loading", data: "Model loaded and ready..." });
+        this.sendMessage({
+          status: "loading",
+          data: "Model loaded and ready...",
+        });
       }
 
       this.sendMessage({ status: "ready" });
@@ -228,7 +284,10 @@ export class TransformersJSWorkerHandler {
     ModelManager.clearCache();
   }
 
-  private sendMessage(message: { status: 'loading' | 'ready' | 'start' | 'complete'; data?: string }) {
+  private sendMessage(message: {
+    status: "loading" | "ready" | "start" | "complete";
+    data?: string;
+  }) {
     self.postMessage(message);
   }
 
@@ -256,7 +315,7 @@ export class TransformersJSWorkerHandler {
 
   onmessage(e: MessageEvent<WorkerMessage>) {
     try {
-      const { type, data } = e.data || {} as WorkerMessage;
+      const { type, data } = e.data || ({} as WorkerMessage);
       switch (type) {
         case "load":
           this.load(data);
