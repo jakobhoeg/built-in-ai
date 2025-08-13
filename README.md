@@ -6,8 +6,11 @@
 
 <div align="center">
 
-[![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
-[![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)
+| Package                                                                                    | Version                                                                                                                                     | Downloads                                                                                                                                      |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [@built-in-ai/core](https://www.npmjs.com/package/@built-in-ai/core)                       | [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)                       | [![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Fcore)](https://www.npmjs.com/package/@built-in-ai/core)                       |
+| [@built-in-ai/web-llm](https://www.npmjs.com/package/@built-in-ai/web-llm)                 | [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)                 | [![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Fweb-llm)](https://www.npmjs.com/package/@built-in-ai/web-llm)                 |
+| [@built-in-ai/transformers-js](https://www.npmjs.com/package/@built-in-ai/transformers-js) | [![NPM Version](https://img.shields.io/npm/v/%40built-in-ai%2Ftransformers-js)](https://www.npmjs.com/package/@built-in-ai/transformers-js) | [![NPM Downloads](https://img.shields.io/npm/dm/%40built-in-ai%2Ftransformers-js)](https://www.npmjs.com/package/@built-in-ai/transformers-js) |
 
 </div>
 
