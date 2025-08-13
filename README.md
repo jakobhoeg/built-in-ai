@@ -62,12 +62,29 @@ for await (const chunk of result.textStream) {
 }
 ```
 
+### Basic Usage with Transformers.js
+
+```typescript
+import { streamText } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+const result = streamText({
+  model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
+  messages: [{ role: "user", content: "Hello, how are you?" }],
+});
+
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
+```
+
 ## Documentation
 
 For detailed documentation, browser requirements and advanced usage:
 
 - [@built-in-ai/core](https://www.npmjs.com/package/@built-in-ai/core) documentation
 - [@built-in-ai/web-llm](https://www.npmjs.com/package/@built-in-ai/web-llm) documentation
+- [@built-in-ai/transformers-js](https://www.npmjs.com/package/@built-in-ai/transformers-js) documentation
 
 ## Contributing
 
