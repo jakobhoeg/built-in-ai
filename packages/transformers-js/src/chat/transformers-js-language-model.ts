@@ -397,7 +397,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     );
 
     const generationOptions: GenerationOptions = {
-      max_new_tokens: maxOutputTokens || 256,
+      max_new_tokens: maxOutputTokens || 32768,
       temperature: temperature || 0.7,
       top_p: topP,
       top_k: topK,
@@ -539,22 +539,21 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         finishReason: "stop" as LanguageModelV2FinishReason,
         usage: isVision
           ? {
-              inputTokens: undefined,
-              outputTokens: undefined,
-              totalTokens: undefined,
-            }
+            inputTokens: undefined,
+            outputTokens: undefined,
+            totalTokens: undefined,
+          }
           : {
-              inputTokens: inputLength,
-              outputTokens: generatedText.length,
-              totalTokens: inputLength + generatedText.length,
-            },
+            inputTokens: inputLength,
+            outputTokens: generatedText.length,
+            totalTokens: inputLength + generatedText.length,
+          },
         request: { body: { messages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
