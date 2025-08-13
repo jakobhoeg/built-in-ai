@@ -137,7 +137,6 @@ describe("BuiltInAI Provider", () => {
     });
 
     it("should work with the new API pattern", () => {
-      // Test the new API pattern the user wanted
       builtInAI.textEmbedding("embedding", { l2Normalize: true });
 
       expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith({
