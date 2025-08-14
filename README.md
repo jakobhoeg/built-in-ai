@@ -95,7 +95,7 @@ Contributions are more than welcome! However, please make sure to check out the 
 
 ## Why?
 
-If you've ever built apps with local language models, you're likely familiar with the challenges: creating custom hooks and UI components, while also building complex integration layers to fall back to server-side models when compatibility is an issue.
+If you've ever built apps with local language models, you're likely familiar with the challenges: creating custom hooks, UI components and state management (lots of it), while also building complex integration layers to fall back to server-side models when compatibility is an issue.
 
 This library bridges this gap by providing a unified solution that lets you:
 
