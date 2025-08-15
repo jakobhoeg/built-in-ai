@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 0.1.2
+
+### Patch Changes
+
+- 225fcd0: docs: add hero to readme
+
 ## 0.1.1
 
 ### Patch Changes
