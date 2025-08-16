@@ -30,7 +30,7 @@
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@shikijs/transformers": "^3.8.0",
     "@vercel/blob": "^0.26.0",
-    "ai": "^5.0.12",
+    "ai": "^5.0.15",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
