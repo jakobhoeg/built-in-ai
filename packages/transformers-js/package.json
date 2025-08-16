@@ -51,7 +51,7 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@huggingface/transformers": "^3.7.1"
+    "@huggingface/transformers": "^3.7.2"
   },
   "peerDependencies": {
     "ai": ">=5.0.0"
