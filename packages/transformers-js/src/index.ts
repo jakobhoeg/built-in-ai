@@ -14,6 +14,12 @@ export {
 } from "./transformers-js-embedding-model";
 
 export {
+  TransformersJSTranscriptionModel,
+  type TransformersJSTranscriptionModelId,
+  type TransformersJSTranscriptionSettings,
+} from "./transcription/transformers-js-transcription-model";
+
+export {
   transformersJS,
   createTransformersJS,
   type TransformersJSProvider,
@@ -28,3 +34,5 @@ export type {
 } from "./chat/transformers-js-worker-types";
 
 export { TransformersJSWorkerHandler } from "./chat/transformers-js-worker-handler";
+
+export { TransformersJSTranscriptionWorkerHandler } from "./transcription/transformers-js-transcription-worker-handler";

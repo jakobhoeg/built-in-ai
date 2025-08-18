@@ -269,6 +269,133 @@ const { embedding } = await embed({
 });
 ```
 
+## Transcription
+
+This package supports audio transcription using Transformers.js Whisper models with full type safety and proper audio handling.
+
+### Basic Transcription Usage
+
+```typescript
+import { experimental_transcribe as transcribe } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+import { readFile } from "fs/promises";
+
+// Basic transcription
+const transcript = await transcribe({
+  model: transformersJS.transcription("openai/whisper-base"),
+  audio: await readFile("audio.mp3"),
+});
+
+console.log(transcript.text); // "Hello, world!"
+console.log(transcript.segments); // Array of segments with timestamps (if available)
+console.log(transcript.language); // Detected language (if available)
+console.log(transcript.durationInSeconds); // Audio duration (if available)
+```
+
+### Advanced Transcription Configuration
+
+```typescript
+const transcriptionModel = transformersJS.transcription("openai/whisper-base", {
+  device: "webgpu", // Use WebGPU for acceleration
+  dtype: "fp16", // Data type for model weights
+  maxNewTokens: 448, // Maximum tokens to generate
+  language: "en", // Language hint for better accuracy
+  returnTimestamps: true, // Return segment timestamps
+});
+
+const transcript = await transcribe({
+  model: transcriptionModel,
+  audio: audioBuffer,
+  providerOptions: {
+    "transformers-js": {
+      language: "fr", // Override language per request
+      returnTimestamps: true, // Enable timestamps
+      maxNewTokens: 512, // Override max tokens
+    },
+  },
+});
+```
+
+### Transcription with Web Worker (Browser)
+
+For better performance and to avoid blocking the main thread, you can run transcription in a Web Worker:
+
+**1. Create a worker file (`public/whisper-worker.js`):**
+
+```javascript
+import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
+
+const handler = new TransformersJSTranscriptionWorkerHandler();
+
+self.addEventListener("message", (e) => {
+  handler.onmessage(e);
+});
+```
+
+**2. Use the worker in your application:**
+
+```typescript
+// Create a Web Worker for off-main-thread processing
+const worker = new Worker("/whisper-worker.js", { type: "module" });
+
+const transcriptionModel = transformersJS.transcription("onnx-community/whisper-base", {
+  worker: worker, // Run transcription in worker
+  device: "webgpu",
+});
+
+const transcript = await transcribe({
+  model: transcriptionModel,
+  audio: audioFile,
+});
+
+console.log(transcript.text);
+```
+
+That's it! The worker handler takes care of all the complex model loading, audio processing, and communication with the main thread.
+
+### Transcription Progress Tracking
+
+```typescript
+const transcriptionModel = transformersJS.transcription("openai/whisper-base");
+
+// Check if model needs downloading
+const availability = await transcriptionModel.availability();
+
+if (availability === "downloadable") {
+  await transcriptionModel.createSessionWithProgress(({ progress }) => {
+    console.log(`Transcription model download: ${Math.round(progress * 100)}%`);
+  });
+}
+
+// Now ready to transcribe
+const transcript = await transcribe({
+  model: transcriptionModel,
+  audio: audioData,
+});
+```
+
+### Supported Audio Formats
+
+The transcription model accepts audio in multiple formats:
+
+```typescript
+// Uint8Array (raw audio bytes)
+const audioBytes = new Uint8Array(audioBuffer);
+await transcribe({ model, audio: audioBytes });
+
+// ArrayBuffer
+const audioBuffer = await audioFile.arrayBuffer();
+await transcribe({ model, audio: audioBuffer });
+
+// Base64 encoded string
+const audioBase64 = btoa(audioString);
+await transcribe({ model, audio: audioBase64 });
+
+// File from disk (Node.js)
+const audioFile = await readFile("recording.wav");
+await transcribe({ model, audio: audioFile });
+```
+
 ## Integration with useChat Hook
 
 When using this library with the `useChat` hook, you can create hybrid applications that seamlessly switch between client-side and server-side inference.
@@ -345,6 +472,68 @@ Parameters:
 - `onProgress?: (p: { progress: number }) => void`
 
 Returns: `Promise<TransformersJSEmbeddingModel>`
+
+### `transformersJS.transcription(modelId, settings?)`
+
+Creates a Transformers.js transcription model instance with proper type safety.
+
+Parameters:
+
+- `modelId`: A Hugging Face Whisper model ID (e.g. `"openai/whisper-base"`, `"openai/whisper-small"`, `"openai/whisper-large-v3"`)
+- `settings` (optional):
+  - `device?: "auto" | "cpu" | "webgpu"` – Inference device (default: "auto")
+  - `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4"` – Data type for model weights (default: "auto")
+  - `maxNewTokens?: number` (default: 448) – Maximum number of tokens to generate
+  - `language?: string` – Language hint for better transcription accuracy
+  - `returnTimestamps?: boolean` (default: false) – Return timestamps for segments
+  - `worker?: Worker` – Optional Web Worker to run the model off the main thread (browser only)
+  - `initProgressCallback?: (progress: { progress: number }) => void` – Progress callback for model initialization
+  - `rawInitProgressCallback?: (progress: ProgressInfo) => void` – Raw progress callback from Transformers.js
+
+Returns: `TransformersJSTranscriptionModel`
+
+### `transformersJS.transcriptionModel(modelId, settings?)`
+
+Alias for `transformersJS.transcription(modelId, settings?)`. Creates a transcription model instance.
+
+### `TransformersJSTranscriptionModel.availability()`
+
+Checks current availability status for the transcription model.
+
+Returns: `Promise<"unavailable" | "downloadable" | "available">`
+
+### `TransformersJSTranscriptionModel.createSessionWithProgress(onProgress?)`
+
+Creates/initializes a transcription model session with optional progress monitoring.
+
+Parameters:
+
+- `onProgress?: (p: { progress: number }) => void`
+
+Returns: `Promise<TransformersJSTranscriptionModel>`
+
+### `TransformersJSTranscriptionWorkerHandler`
+
+A worker handler class that simplifies running transcription models in Web Workers.
+
+**Usage in worker file:**
+
+```javascript
+import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
+
+const handler = new TransformersJSTranscriptionWorkerHandler();
+
+self.addEventListener("message", (e) => {
+  handler.onmessage(e);
+});
+```
+
+**Methods:**
+- `onmessage(e: MessageEvent)` - Handles messages from the main thread
+- `load(options?)` - Loads and initializes the transcription model
+- `generate(data)` - Generates transcription for audio data
+- `interrupt()` - Interrupts ongoing transcription
+- `reset()` - Resets the worker state and clears model cache
 
 ### `doesBrowserSupportTransformersJS(): boolean`
 

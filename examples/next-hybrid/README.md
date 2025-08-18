@@ -9,6 +9,7 @@ This example demonstrates how to create a hybrid AI chat application that intell
 - ✅ **Hybrid AI Architecture** - Automatic fallback from browser AI to server-side AI
 - ✅ **Download Progress Streaming** - Real-time progress bars during model downloads
 - ✅ **Multimodal Support** - Image and audio file upload and processing
+- ✅ **Audio Transcription** - Client-side and server-side speech-to-text with Whisper models
 - ✅ **Type-Safe Streaming** - Custom data parts with TypeScript support
 - ✅ **Modern UI** - Beautiful, responsive interface with dark/light mode
 - ✅ **Error Handling** - Graceful error states and retry mechanisms
@@ -35,6 +36,17 @@ yarn create next-app --example https://github.com/jakobhoeg/built-in-ai/tree/mai
 ```bash
 pnpm create next-app --example https://github.com/jakobhoeg/built-in-ai/tree/main/examples/next-hybrid next-built-in-ai-hybrid
 ```
+
+## Testing Transcription
+
+This example includes a dedicated transcription demo:
+
+1. Navigate to `/transcription` or click "Transcription Demo" in the chat header
+2. Upload an audio file (MP3, WAV, etc.)
+3. Choose between client-side (WebGPU) or server-side processing
+4. View transcribed text with timestamps and segments
+
+See [TRANSCRIPTION_TEST.md](./TRANSCRIPTION_TEST.md) for detailed testing instructions.
 
 ## Learn More
 
