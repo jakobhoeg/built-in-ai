@@ -168,13 +168,16 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
       this.initializationPromise = undefined;
 
       throw new LoadSettingError({
-        message: `Failed to initialize TransformersJS transcription model: ${error instanceof Error ? error.message : "Unknown error"
-          }`,
+        message: `Failed to initialize TransformersJS transcription model: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       });
     }
   }
 
-  private resolveDevice(device?: PretrainedModelOptions["device"]): PretrainedModelOptions["device"] {
+  private resolveDevice(
+    device?: PretrainedModelOptions["device"],
+  ): PretrainedModelOptions["device"] {
     if (device && device !== "auto") {
       return device as PretrainedModelOptions["device"];
     }
@@ -186,7 +189,9 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
     return "auto";
   }
 
-  private resolveDtype(dtype?: string | object): PretrainedModelOptions["dtype"] {
+  private resolveDtype(
+    dtype?: string | object,
+  ): PretrainedModelOptions["dtype"] {
     if (dtype && dtype !== "auto") {
       return dtype as PretrainedModelOptions["dtype"];
     }
@@ -245,7 +250,9 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
     };
   }
 
-  private convertAudioToFloat32Array(audio: string | Uint8Array | ArrayBuffer): Promise<Float32Array> {
+  private convertAudioToFloat32Array(
+    audio: string | Uint8Array | ArrayBuffer,
+  ): Promise<Float32Array> {
     return new Promise((resolve, reject) => {
       try {
         let audioData: Uint8Array;
@@ -267,11 +274,21 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
 
         // Create an AudioContext to decode the audio
         // TODO: Make this work for server environment too.
-        if (typeof AudioContext !== "undefined" || typeof (window as any)?.webkitAudioContext !== "undefined") {
-          const AudioContextClass = AudioContext || (window as any).webkitAudioContext;
+        if (
+          typeof AudioContext !== "undefined" ||
+          typeof (window as any)?.webkitAudioContext !== "undefined"
+        ) {
+          const AudioContextClass =
+            AudioContext || (window as any).webkitAudioContext;
           const audioContext = new AudioContextClass({ sampleRate: 16000 });
 
-          audioContext.decodeAudioData(audioData.buffer.slice(audioData.byteOffset, audioData.byteOffset + audioData.byteLength))
+          audioContext
+            .decodeAudioData(
+              audioData.buffer.slice(
+                audioData.byteOffset,
+                audioData.byteOffset + audioData.byteLength,
+              ),
+            )
             .then((audioBuffer) => {
               const channelData = audioBuffer.getChannelData(0);
               resolve(new Float32Array(channelData));
@@ -291,23 +308,23 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
     });
   }
 
-  private getArgs({
-    audio,
-    providerOptions,
-  }: TranscriptionModelV2CallOptions) {
+  private getArgs({ audio, providerOptions }: TranscriptionModelV2CallOptions) {
     const warnings: TranscriptionModelV2CallWarning[] = [];
 
     const transformersJSOptions = providerOptions?.["transformers-js"];
 
-    const language = typeof transformersJSOptions?.language === "string"
-      ? transformersJSOptions.language
-      : this.config.language;
-    const returnTimestamps = typeof transformersJSOptions?.returnTimestamps === "boolean"
-      ? transformersJSOptions.returnTimestamps
-      : this.config.returnTimestamps;
-    const maxNewTokens = typeof transformersJSOptions?.maxNewTokens === "number"
-      ? transformersJSOptions.maxNewTokens
-      : this.config.maxNewTokens;
+    const language =
+      typeof transformersJSOptions?.language === "string"
+        ? transformersJSOptions.language
+        : this.config.language;
+    const returnTimestamps =
+      typeof transformersJSOptions?.returnTimestamps === "boolean"
+        ? transformersJSOptions.returnTimestamps
+        : this.config.returnTimestamps;
+    const maxNewTokens =
+      typeof transformersJSOptions?.maxNewTokens === "number"
+        ? transformersJSOptions.maxNewTokens
+        : this.config.maxNewTokens;
 
     return {
       audio,
@@ -366,7 +383,8 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
     options: TranscriptionModelV2CallOptions,
   ): Promise<Awaited<ReturnType<TranscriptionModelV2["doGenerate"]>>> {
     const currentDate = new Date();
-    const { audio, language, returnTimestamps, maxNewTokens, warnings } = this.getArgs(options);
+    const { audio, language, returnTimestamps, maxNewTokens, warnings } =
+      this.getArgs(options);
 
     // Use worker if provided and in browser environment
     if (this.config.worker && isBrowserEnvironment()) {
@@ -419,7 +437,8 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS transcription failed: ${error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS transcription failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }

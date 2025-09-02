@@ -348,10 +348,13 @@ self.onmessage = (msg: MessageEvent) => {
 // Create a Web Worker for off-main-thread processing
 const worker = new Worker("/whisper-worker.js", { type: "module" });
 
-const transcriptionModel = transformersJS.transcription("onnx-community/whisper-base", {
-  worker: worker,
-  device: "webgpu",
-});
+const transcriptionModel = transformersJS.transcription(
+  "onnx-community/whisper-base",
+  {
+    worker: worker,
+    device: "webgpu",
+  },
+);
 
 const transcript = await transcribe({
   model: transcriptionModel,

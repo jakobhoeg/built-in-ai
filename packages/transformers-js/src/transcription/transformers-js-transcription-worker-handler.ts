@@ -44,7 +44,10 @@ type TranscriptionModelInstance = [
 
 class TranscriptionModelManager {
   private static configs = new Map<string, TranscriptionWorkerLoadOptions>();
-  private static instances = new Map<string, Promise<TranscriptionModelInstance>>();
+  private static instances = new Map<
+    string,
+    Promise<TranscriptionModelInstance>
+  >();
 
   static configure(key: string, options: TranscriptionWorkerLoadOptions) {
     this.configs.set(key, options);
@@ -62,11 +65,7 @@ class TranscriptionModelManager {
       throw new Error(`No configuration found for key: ${key}`);
     }
 
-    const {
-      modelId,
-      dtype = "auto",
-      device = "auto",
-    } = config;
+    const { modelId, dtype = "auto", device = "auto" } = config;
 
     const instancePromise = this.createTranscriptionModel(modelId, {
       dtype,
@@ -108,16 +107,16 @@ class TranscriptionModelManager {
 
 /**
  * Worker handler for TransformersJS transcription models that runs in a Web Worker context.
- * 
+ *
  * This class manages the lifecycle of transcription models in a worker thread, providing
  * audio transcription capabilities without blocking the main UI thread. It handles model
  * loading, initialization, transcription generation, and communication with the main thread.
- * 
+ *
  * @example
  * ```typescript
  * // worker.ts
  * import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
- * 
+ *
  * const handler = new TransformersJSTranscriptionWorkerHandler();
  * self.onmessage = (msg: MessageEvent) => {
  * handler.onmessage(msg);
@@ -128,7 +127,15 @@ export class TransformersJSTranscriptionWorkerHandler {
   private processing = false;
   private currentModelKey = "default";
 
-  async generate({ audio, language, maxNewTokens }: { audio: any; language?: string; maxNewTokens?: number }) {
+  async generate({
+    audio,
+    language,
+    maxNewTokens,
+  }: {
+    audio: any;
+    language?: string;
+    maxNewTokens?: number;
+  }) {
     if (this.processing) return;
     this.processing = true;
 
@@ -137,9 +144,8 @@ export class TransformersJSTranscriptionWorkerHandler {
       this.sendMessage({ status: "start" });
 
       // Retrieve the transcription model
-      const [tokenizer, processor, model] = await TranscriptionModelManager.getInstance(
-        this.currentModelKey,
-      );
+      const [tokenizer, processor, model] =
+        await TranscriptionModelManager.getInstance(this.currentModelKey);
 
       // Setup performance tracking
       let startTime: number | undefined;
@@ -218,10 +224,11 @@ export class TransformersJSTranscriptionWorkerHandler {
 
       const throttledProgress = this.createThrottledProgressCallback();
 
-      const [tokenizer, processor, model] = await TranscriptionModelManager.getInstance(
-        this.currentModelKey,
-        throttledProgress,
-      );
+      const [tokenizer, processor, model] =
+        await TranscriptionModelManager.getInstance(
+          this.currentModelKey,
+          throttledProgress,
+        );
 
       this.sendMessage({
         status: "loading",

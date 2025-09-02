@@ -12,11 +12,31 @@ vi.mock("@huggingface/transformers", () => {
     generate: vi.fn().mockResolvedValue([1, 2, 3]),
   };
 
+  class TextStreamer {
+    constructor(_tokenizer: any, _options?: any) { }
+    on_finalized_text(_text: string): void { }
+  }
+  class StoppingCriteria {
+    _call() {
+      return [false];
+    }
+  }
+  class StoppingCriteriaList {
+    extend(_arr: any[]) {
+      /* no-op */
+    }
+  }
+
   return {
     AutoTokenizer: { from_pretrained: vi.fn().mockResolvedValue(tokenizer) },
     AutoProcessor: { from_pretrained: vi.fn().mockResolvedValue(processor) },
-    WhisperForConditionalGeneration: { from_pretrained: vi.fn().mockResolvedValue(model) },
+    WhisperForConditionalGeneration: {
+      from_pretrained: vi.fn().mockResolvedValue(model),
+    },
     full: vi.fn().mockReturnValue([1, 2, 3]),
+    TextStreamer,
+    StoppingCriteria,
+    StoppingCriteriaList,
     __TEST_MOCK__: { tokenizer, processor, model },
   };
 });
@@ -51,7 +71,9 @@ describe("TransformersJSTranscriptionModel", () => {
       "onnx-community/whisper-base",
     );
 
-    tokenizerMock.batch_decode.mockReturnValue(["Hello from the Vercel AI SDK!"]);
+    tokenizerMock.batch_decode.mockReturnValue([
+      "Hello from the Vercel AI SDK!",
+    ]);
     processorMock.mockResolvedValue({ input_features: [[1, 2, 3]] });
     modelMock.generate.mockResolvedValue([101, 102, 103]);
 
@@ -84,7 +106,7 @@ describe("TransformersJSTranscriptionModel", () => {
     expect(result.text).toBe("Test transcription");
     expect(result.segments).toEqual([]);
     expect(result.language).toBeUndefined();
-    expect(result.durationInSeconds).toBeUndefined();
+    expect(result.durationInSeconds).toBe(0.0003125);
     expect(result.warnings).toEqual([]);
   });
 
@@ -156,7 +178,7 @@ describe("TransformersJSTranscriptionModel", () => {
     expect(modelMock.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         language: "fr",
-      })
+      }),
     );
   });
 
@@ -187,7 +209,7 @@ describe("TransformersJSTranscriptionModel", () => {
     expect(modelMock.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         return_timestamps: true,
-      })
+      }),
     );
   });
 
@@ -218,7 +240,7 @@ describe("TransformersJSTranscriptionModel", () => {
     expect(modelMock.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         max_new_tokens: 100,
-      })
+      }),
     );
   });
 
@@ -229,7 +251,7 @@ describe("TransformersJSTranscriptionModel", () => {
         maxNewTokens: 512,
         language: "en",
         returnTimestamps: false,
-      }
+      },
     );
 
     tokenizerMock.batch_decode.mockReturnValue(["Default settings"]);
@@ -251,7 +273,7 @@ describe("TransformersJSTranscriptionModel", () => {
         max_new_tokens: 512,
         language: "en",
         return_timestamps: false,
-      })
+      }),
     );
   });
 
@@ -287,9 +309,11 @@ describe("TransformersJSTranscriptionModel", () => {
 
     const audioData = new Uint8Array([1, 2, 3, 4, 5]);
 
-    await expect(transcribe({
-      model,
-      audio: audioData,
-    })).rejects.toThrow("TransformersJS transcription failed");
+    await expect(
+      transcribe({
+        model,
+        audio: audioData,
+      }),
+    ).rejects.toThrow("TransformersJS transcription failed");
   });
 });
