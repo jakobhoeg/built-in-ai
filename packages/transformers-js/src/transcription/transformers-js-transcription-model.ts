@@ -43,6 +43,10 @@ export interface TransformersJSTranscriptionSettings
    * @default false
    */
   returnTimestamps?: boolean;
+  /**
+   * Optional Web Worker to run the model off the main thread
+   */
+  worker?: Worker;
 }
 
 /**
@@ -78,6 +82,7 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
   private modelInstance?: TranscriptionModelInstance;
   private isInitialized = false;
   private initializationPromise?: Promise<void>;
+  private workerReady = false;
 
   constructor(
     modelId: TransformersJSTranscriptionModelId,
@@ -127,7 +132,6 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
       const { device, dtype } = this.config;
       const progress_callback = this.createProgressTracker(onInitProgress);
 
-      // Set device based on environment
       const resolvedDevice = this.resolveDevice(device);
       const resolvedDtype = this.resolveDtype(dtype);
 
@@ -176,11 +180,10 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
     }
 
     if (isServerEnvironment()) {
-      // In server environment, prefer CPU
       return "cpu";
     }
 
-    return "cpu";
+    return "auto";
   }
 
   private resolveDtype(dtype?: string | object): PretrainedModelOptions["dtype"] {
@@ -200,12 +203,11 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
     const fileProgress = new Map<string, { loaded: number; total: number }>();
 
     return (p: ProgressInfo) => {
-      // Pass through raw progress
       this.config.rawInitProgressCallback?.(p);
 
       if (!onInitProgress) return;
 
-      // Type guard to check if p has file property
+      // Type guard to check if p has model file property
       const progressWithFile = p as ProgressInfo & {
         file?: string;
         loaded?: number;
@@ -264,6 +266,7 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
         }
 
         // Create an AudioContext to decode the audio
+        // TODO: Make this work for server environment too.
         if (typeof AudioContext !== "undefined" || typeof (window as any)?.webkitAudioContext !== "undefined") {
           const AudioContextClass = AudioContext || (window as any).webkitAudioContext;
           const audioContext = new AudioContextClass({ sampleRate: 16000 });
@@ -275,7 +278,7 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
             })
             .catch(reject);
         } else {
-          // This is a simplified approach. TODO: proper audio decoding
+          // This is a simplified approach. TODO: proper audio decoding!!
           const float32Data = new Float32Array(audioData.length);
           for (let i = 0; i < audioData.length; i++) {
             float32Data[i] = (audioData[i] - 128) / 128.0;
@@ -296,9 +299,15 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
 
     const transformersJSOptions = providerOptions?.["transformers-js"];
 
-    const language = transformersJSOptions?.language || this.config.language;
-    const returnTimestamps = transformersJSOptions?.returnTimestamps ?? this.config.returnTimestamps;
-    const maxNewTokens = transformersJSOptions?.maxNewTokens ?? this.config.maxNewTokens;
+    const language = typeof transformersJSOptions?.language === "string"
+      ? transformersJSOptions.language
+      : this.config.language;
+    const returnTimestamps = typeof transformersJSOptions?.returnTimestamps === "boolean"
+      ? transformersJSOptions.returnTimestamps
+      : this.config.returnTimestamps;
+    const maxNewTokens = typeof transformersJSOptions?.maxNewTokens === "number"
+      ? transformersJSOptions.maxNewTokens
+      : this.config.maxNewTokens;
 
     return {
       audio,
@@ -315,6 +324,15 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
   public async availability(): Promise<
     "unavailable" | "downloadable" | "available"
   > {
+    // If using a worker (browser only), reflect worker readiness instead of main-thread state
+    if (this.config.worker && isBrowserEnvironment()) {
+      return this.workerReady ? "available" : "downloadable";
+    }
+
+    if (isServerEnvironment() && this.config.worker) {
+      // Ignore worker config on server and use main thread
+    }
+
     if (this.isInitialized) {
       return "available";
     }
@@ -328,6 +346,15 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
   public async createSessionWithProgress(
     onDownloadProgress?: (progress: { progress: number }) => void,
   ): Promise<TransformersJSTranscriptionModel> {
+    // If a worker is provided and we're in browser environment, initialize the worker
+    // (and forward progress) instead of initializing the model on the main thread
+    // to avoid double-initialization/downloads.
+    if (this.config.worker && isBrowserEnvironment()) {
+      await this.initializeWorker(onDownloadProgress);
+      return this;
+    }
+
+    // In server environment or when no worker is provided, use main thread
     if (!this.initializationPromise) {
       this.initializationPromise = this._initializeModel(onDownloadProgress);
     }
@@ -335,14 +362,26 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
     return this;
   }
 
-
-
   async doGenerate(
     options: TranscriptionModelV2CallOptions,
   ): Promise<Awaited<ReturnType<TranscriptionModelV2["doGenerate"]>>> {
     const currentDate = new Date();
     const { audio, language, returnTimestamps, maxNewTokens, warnings } = this.getArgs(options);
 
+    // Use worker if provided and in browser environment
+    if (this.config.worker && isBrowserEnvironment()) {
+      return this.doGenerateWithWorker(
+        audio,
+        language,
+        returnTimestamps,
+        maxNewTokens,
+        warnings,
+        currentDate,
+        options,
+      );
+    }
+
+    // Main thread generation (browser without worker or server environment)
     const [tokenizer, processor, model] = await this.getSession(
       this.config.initProgressCallback,
     );
@@ -384,5 +423,122 @@ export class TransformersJSTranscriptionModel implements TranscriptionModelV2 {
         }`,
       );
     }
+  }
+
+  private async doGenerateWithWorker(
+    audio: string | Uint8Array | ArrayBuffer,
+    language: string | undefined,
+    returnTimestamps: boolean | undefined,
+    maxNewTokens: number | undefined,
+    warnings: TranscriptionModelV2CallWarning[],
+    currentDate: Date,
+    options: TranscriptionModelV2CallOptions,
+  ): Promise<Awaited<ReturnType<TranscriptionModelV2["doGenerate"]>>> {
+    const worker = this.config.worker!;
+
+    await this.initializeWorker();
+
+    const audioFloat32 = await this.convertAudioToFloat32Array(audio);
+    const durationInSeconds = audioFloat32.length / 16000;
+
+    const result = await new Promise<string>((resolve, reject) => {
+      const onMessage = (e: MessageEvent) => {
+        const msg = e.data;
+        if (!msg) return;
+        if (msg.status === "complete" && Array.isArray(msg.output)) {
+          worker.removeEventListener("message", onMessage);
+          resolve(String(msg.output[0] ?? ""));
+        } else if (msg.status === "error") {
+          worker.removeEventListener("message", onMessage);
+          reject(new Error(String(msg.data || "Worker error")));
+        }
+      };
+      worker.addEventListener("message", onMessage);
+      worker.postMessage({
+        type: "generate",
+        data: {
+          audio: Array.from(audioFloat32), // Convert to array for worker transfer
+          language,
+          maxNewTokens,
+        },
+      });
+
+      if (options.abortSignal) {
+        const onAbort = () => {
+          worker.postMessage({ type: "interrupt" });
+          options.abortSignal?.removeEventListener("abort", onAbort);
+        };
+        options.abortSignal.addEventListener("abort", onAbort);
+      }
+    });
+
+    return {
+      text: result,
+      segments: [], // TODO: Parse segments from output if returnTimestamps is true
+      language: typeof language === "string" ? language : undefined,
+      durationInSeconds: durationInSeconds,
+      warnings,
+      response: {
+        timestamp: currentDate,
+        modelId: this.modelId,
+        headers: {},
+        body: JSON.stringify({ text: result }),
+      },
+    };
+  }
+
+  private async initializeWorker(
+    onInitProgress?: (progress: { progress: number }) => void,
+  ): Promise<void> {
+    if (!this.config.worker) return;
+
+    // If already ready, optionally emit completion progress
+    if (this.workerReady) {
+      if (onInitProgress) onInitProgress({ progress: 1 });
+      return;
+    }
+
+    const worker = this.config.worker;
+
+    await new Promise<void>((resolve, reject) => {
+      const trackProgress = this.createProgressTracker(onInitProgress);
+
+      const onMessage = (e: MessageEvent) => {
+        const msg = e.data;
+        if (!msg) return;
+
+        // Forward raw download progress events coming from @huggingface/transformers running in the worker
+        if (msg && typeof msg === "object" && "status" in msg) {
+          if (msg.status === "ready") {
+            worker.removeEventListener("message", onMessage);
+            this.workerReady = true;
+            if (onInitProgress) onInitProgress({ progress: 1 });
+            resolve();
+            return;
+          }
+          if (msg.status === "error") {
+            worker.removeEventListener("message", onMessage);
+            reject(
+              new Error(String(msg.data || "Worker initialization failed")),
+            );
+            return;
+          }
+        }
+        // Track progress for model file downloads
+        const msgWithFile = msg as ProgressInfo & { file?: string };
+        if (msgWithFile.file) trackProgress(msg as ProgressInfo);
+      };
+
+      worker.addEventListener("message", onMessage);
+      worker.postMessage({
+        type: "load",
+        data: {
+          modelId: this.modelId,
+          dtype: this.config.dtype,
+          device: this.config.device,
+          maxNewTokens: this.config.maxNewTokens,
+        },
+      });
+    });
   }
 }

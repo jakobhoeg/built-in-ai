@@ -90,11 +90,11 @@ class TranscriptionModelManager {
         progress_callback: options.progressCallback,
       }),
       WhisperForConditionalGeneration.from_pretrained(modelId, {
-        dtype: {
+        dtype: options.dtype || {
           encoder_model: "fp32",
-          decoder_model_merged: "q4", // Use q4 like the reference
+          decoder_model_merged: "q4",
         },
-        device: options.device,
+        device: options.device || "auto",
         progress_callback: options.progressCallback,
       }),
     ]);
@@ -106,11 +106,29 @@ class TranscriptionModelManager {
   }
 }
 
+/**
+ * Worker handler for TransformersJS transcription models that runs in a Web Worker context.
+ * 
+ * This class manages the lifecycle of transcription models in a worker thread, providing
+ * audio transcription capabilities without blocking the main UI thread. It handles model
+ * loading, initialization, transcription generation, and communication with the main thread.
+ * 
+ * @example
+ * ```typescript
+ * // worker.ts
+ * import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
+ * 
+ * const handler = new TransformersJSTranscriptionWorkerHandler();
+ * self.onmessage = (msg: MessageEvent) => {
+ * handler.onmessage(msg);
+ * };
+ * ```
+ */
 export class TransformersJSTranscriptionWorkerHandler {
   private processing = false;
   private currentModelKey = "default";
 
-  async generate({ audio, language }: { audio: any; language?: string }) {
+  async generate({ audio, language, maxNewTokens }: { audio: any; language?: string; maxNewTokens?: number }) {
     if (this.processing) return;
     this.processing = true;
 
@@ -163,13 +181,12 @@ export class TransformersJSTranscriptionWorkerHandler {
 
       // Generate transcription with proper error handling
       const outputs = await (model as any).generate({
-        ...inputs, // Spread the inputs (should include input_features)
-        max_new_tokens: 448,
+        ...inputs,
+        max_new_tokens: maxNewTokens || 448,
         language,
         streamer,
       });
 
-      // Decode the output
       const decoded = tokenizer.batch_decode(outputs, {
         skip_special_tokens: true,
       });
@@ -190,8 +207,7 @@ export class TransformersJSTranscriptionWorkerHandler {
     try {
       TranscriptionModelManager.clearCache();
 
-      // Set default model if none provided
-      const modelId = options?.modelId || "onnx-community/whisper-base";
+      const modelId = options?.modelId;
 
       TranscriptionModelManager.configure(this.currentModelKey, {
         ...options,

@@ -15,7 +15,7 @@ import {
   TransformersJSEmbeddingModel,
   TransformersJSEmbeddingModelId,
   TransformersJSEmbeddingSettings,
-} from "./transformers-js-embedding-model";
+} from "./embedding/transformers-js-embedding-model";
 import {
   TransformersJSTranscriptionModel,
   TransformersJSTranscriptionModelId,

@@ -11,7 +11,7 @@ export {
   TransformersJSEmbeddingModel,
   type TransformersJSEmbeddingModelId,
   type TransformersJSEmbeddingSettings,
-} from "./transformers-js-embedding-model";
+} from "./embedding/transformers-js-embedding-model";
 
 export {
   TransformersJSTranscriptionModel,

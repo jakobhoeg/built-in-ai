@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 // Import the embedding model directly to avoid pulling in chat LM and its extra mocks
-import { TransformersJSEmbeddingModel } from "../src/transformers-js-embedding-model";
+import { TransformersJSEmbeddingModel } from "../src/embedding/transformers-js-embedding-model";
 
 const mockPipelineFn = vi.fn();
 const mockTokenizer: any = { call: vi.fn() };
