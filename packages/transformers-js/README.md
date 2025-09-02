@@ -200,6 +200,17 @@ const result = streamText({
 });
 ```
 
+## Integration with useChat Hook
+
+When using this library with the `useChat` hook, you can create hybrid applications that seamlessly switch between client-side and server-side inference.
+
+See the complete working example in `examples/next-hybrid/` which includes:
+
+- **Automatic fallback**: Client-side when supported, server-side otherwise
+- **Download progress**: Real-time progress tracking for model downloads
+- **Error handling**: Graceful error handling and notifications
+- **Full integration**: Complete integration with `useChat` hook
+
 ## Embeddings
 
 This package supports text embeddings using Transformers.js with full type safety and proper tensor handling.
@@ -271,7 +282,7 @@ const { embedding } = await embed({
 
 ## Transcription
 
-This package supports audio transcription using Transformers.js Whisper models with full type safety and proper audio handling.
+This package supports audio transcription using Transformers.js models with type safety and proper audio handling.
 
 ### Basic Transcription Usage
 
@@ -282,11 +293,11 @@ import { readFile } from "fs/promises";
 
 // Basic transcription
 const transcript = await transcribe({
-  model: transformersJS.transcription("openai/whisper-base"),
-  audio: await readFile("audio.mp3"),
+  model: transformersJS.transcription("Xenova/whisper-base"),
+  audio: audioFile,
 });
 
-console.log(transcript.text); // "Hello, world!"
+console.log(transcript.text); // Transcripted text string
 console.log(transcript.segments); // Array of segments with timestamps (if available)
 console.log(transcript.language); // Detected language (if available)
 console.log(transcript.durationInSeconds); // Audio duration (if available)
@@ -295,7 +306,7 @@ console.log(transcript.durationInSeconds); // Audio duration (if available)
 ### Advanced Transcription Configuration
 
 ```typescript
-const transcriptionModel = transformersJS.transcription("openai/whisper-base", {
+const transcriptionModel = transformersJS.transcription("Xenova/whisper-base", {
   device: "webgpu", // Use WebGPU for acceleration
   dtype: "fp16", // Data type for model weights
   maxNewTokens: 448, // Maximum tokens to generate
@@ -320,16 +331,15 @@ const transcript = await transcribe({
 
 For better performance and to avoid blocking the main thread, you can run transcription in a Web Worker:
 
-**1. Create a worker file (`public/whisper-worker.js`):**
+**1. Create a worker file (`worker.ts`):**
 
-```javascript
+```typescript
 import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
 
 const handler = new TransformersJSTranscriptionWorkerHandler();
-
-self.addEventListener("message", (e) => {
-  handler.onmessage(e);
-});
+self.onmessage = (msg: MessageEvent) => {
+  handler.onmessage(msg);
+};
 ```
 
 **2. Use the worker in your application:**
@@ -339,7 +349,7 @@ self.addEventListener("message", (e) => {
 const worker = new Worker("/whisper-worker.js", { type: "module" });
 
 const transcriptionModel = transformersJS.transcription("onnx-community/whisper-base", {
-  worker: worker, // Run transcription in worker
+  worker: worker,
   device: "webgpu",
 });
 
@@ -355,8 +365,10 @@ That's it! The worker handler takes care of all the complex model loading, audio
 
 ### Transcription Progress Tracking
 
+To also keep track of model loading in your app, you can use the `createSessionWithProgress` as shown below:
+
 ```typescript
-const transcriptionModel = transformersJS.transcription("openai/whisper-base");
+const transcriptionModel = transformersJS.transcription("Xenova/whisper-base");
 
 // Check if model needs downloading
 const availability = await transcriptionModel.availability();
@@ -395,22 +407,6 @@ await transcribe({ model, audio: audioBase64 });
 const audioFile = await readFile("recording.wav");
 await transcribe({ model, audio: audioFile });
 ```
-
-## Integration with useChat Hook
-
-When using this library with the `useChat` hook, you can create hybrid applications that seamlessly switch between client-side and server-side inference.
-
-See the complete working example in `examples/next-hybrid/` which includes:
-
-- **Automatic fallback**: Client-side when supported, server-side otherwise
-- **Download progress**: Real-time progress tracking for model downloads
-- **Error handling**: Graceful error handling and notifications
-- **Full integration**: Complete integration with `useChat` hook
-
-Files to check:
-
-- `examples/next-hybrid/app/transformers-js/page.tsx` – Main component with hybrid logic
-- `examples/next-hybrid/app/transformers-js/util/transformers-chat-transport.ts` – Client-side transport
 
 ## API Reference
 
@@ -479,7 +475,7 @@ Creates a Transformers.js transcription model instance with proper type safety.
 
 Parameters:
 
-- `modelId`: A Hugging Face Whisper model ID (e.g. `"openai/whisper-base"`, `"openai/whisper-small"`, `"openai/whisper-large-v3"`)
+- `modelId`: A Hugging Face Whisper model ID (e.g. `"Xenova/whisper-base"`, `"openai/whisper-small"`, `"openai/whisper-large-v3"`)
 - `settings` (optional):
   - `device?: "auto" | "cpu" | "webgpu"` – Inference device (default: "auto")
   - `dtype?: "auto" | "fp32" | "fp16" | "q8" | "q4"` – Data type for model weights (default: "auto")
@@ -515,25 +511,6 @@ Returns: `Promise<TransformersJSTranscriptionModel>`
 ### `TransformersJSTranscriptionWorkerHandler`
 
 A worker handler class that simplifies running transcription models in Web Workers.
-
-**Usage in worker file:**
-
-```javascript
-import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
-
-const handler = new TransformersJSTranscriptionWorkerHandler();
-
-self.addEventListener("message", (e) => {
-  handler.onmessage(e);
-});
-```
-
-**Methods:**
-- `onmessage(e: MessageEvent)` - Handles messages from the main thread
-- `load(options?)` - Loads and initializes the transcription model
-- `generate(data)` - Generates transcription for audio data
-- `interrupt()` - Interrupts ongoing transcription
-- `reset()` - Resets the worker state and clears model cache
 
 ### `doesBrowserSupportTransformersJS(): boolean`
 
