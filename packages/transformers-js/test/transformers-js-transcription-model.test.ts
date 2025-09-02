@@ -13,8 +13,8 @@ vi.mock("@huggingface/transformers", () => {
   };
 
   class TextStreamer {
-    constructor(_tokenizer: any, _options?: any) { }
-    on_finalized_text(_text: string): void { }
+    constructor(_tokenizer: any, _options?: any) {}
+    on_finalized_text(_text: string): void {}
   }
   class StoppingCriteria {
     _call() {

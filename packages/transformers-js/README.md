@@ -289,7 +289,6 @@ This package supports audio transcription using Transformers.js models with type
 ```typescript
 import { experimental_transcribe as transcribe } from "ai";
 import { transformersJS } from "@built-in-ai/transformers-js";
-import { readFile } from "fs/promises";
 
 // Basic transcription
 const transcript = await transcribe({
