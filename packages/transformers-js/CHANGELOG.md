@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 0.2.0
+
+### Minor Changes
+
+- a6b4f9e: feat: transcription model
+
 ## 0.1.3
 
 ### Patch Changes
