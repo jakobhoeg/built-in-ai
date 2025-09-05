@@ -55,10 +55,7 @@ export interface WebLLMSettings {
  * @returns true if the browser supports WebLLM, false otherwise
  */
 export function doesBrowserSupportWebLLM(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return navigator.gpu !== undefined;
+  return globalThis?.navigator?.gpu !== undefined;
 }
 
 type WebLLMConfig = {
