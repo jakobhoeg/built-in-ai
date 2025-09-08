@@ -1,5 +1,11 @@
 # @built-in-ai/web-llm
 
+## 0.2.2
+
+### Patch Changes
+
+- d70c87c: Add support for Worker Environments
+
 ## 0.2.1
 
 ### Patch Changes
