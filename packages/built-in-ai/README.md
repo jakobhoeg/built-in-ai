@@ -238,38 +238,6 @@ const result = await generateText({
 });
 ```
 
-### Tool Calling Configuration
-
-You can configure tool calling behavior using provider options:
-
-```typescript
-const result = await generateText({
-  model: builtInAI({
-    providerOptions: {
-      toolCallFormat: "json",
-      includeThinkingInResponse: false, // Exclude <thinking> tags from final response
-    },
-  }),
-  messages: [{ role: "user", content: "Use the calculator tool" }],
-  tools: {
-    calculator: {
-      description: "Perform a calculation",
-      parameters: z.object({
-        expression: z.string(),
-      }),
-      execute: async ({ expression }) => {
-        return { result: eval(expression) };
-      },
-    },
-  },
-});
-```
-
-**Provider Options:**
-
-- `toolCallFormat`: Currently only `"json"` format is supported (uses ```tool_call code fence with JSON schema)
-- `includeThinkingInResponse`: When `false`, removes `<thinking>` tags from the final response text
-
 ## Generating Structured Data
 
 The `builtInAI` model also allows using the AI SDK `generateObject` and `streamObject`:
