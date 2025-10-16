@@ -46,9 +46,7 @@ describe("SessionManager", () => {
     });
 
     it("should return availability from LanguageModel API", async () => {
-      const mockAvailability = vi
-        .fn()
-        .mockResolvedValue("available");
+      const mockAvailability = vi.fn().mockResolvedValue("available");
       vi.stubGlobal("LanguageModel", {
         availability: mockAvailability,
         create: vi.fn(),

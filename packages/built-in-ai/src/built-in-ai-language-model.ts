@@ -161,7 +161,6 @@ function extractArgumentsContent(content: string): string {
   return result;
 }
 
-
 export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
   readonly specificationVersion = "v2";
   readonly modelId: BuiltInAIChatModelId;
@@ -247,7 +246,8 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     const functionTools = (tools ?? []).filter(isFunctionTool);
 
     const unsupportedTools = (tools ?? []).filter(
-      (tool): tool is LanguageModelV2ProviderDefinedTool => !isFunctionTool(tool),
+      (tool): tool is LanguageModelV2ProviderDefinedTool =>
+        !isFunctionTool(tool),
     );
 
     for (const tool of unsupportedTools) {
@@ -317,11 +317,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       debugToolCalls,
     } = converted;
 
-    const session = await this.getSession(
-      undefined,
-      expectedInputs,
-      undefined,
-    );
+    const session = await this.getSession(undefined, expectedInputs, undefined);
 
     const parallelToolExecutionOption = shouldExecuteToolsInParallel(
       options,
@@ -329,11 +325,18 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     );
 
     // Build system prompt with JSON tool calling
-    const systemPrompt = await buildJsonToolSystemPrompt(systemMessage, functionTools, {
-      allowParallelToolCalls: parallelToolExecutionOption,
-    });
+    const systemPrompt = await buildJsonToolSystemPrompt(
+      systemMessage,
+      functionTools,
+      {
+        allowParallelToolCalls: parallelToolExecutionOption,
+      },
+    );
 
-    const promptMessages = prependSystemPromptToMessages(messages, systemPrompt);
+    const promptMessages = prependSystemPromptToMessages(
+      messages,
+      systemPrompt,
+    );
     const rawResponse = await session.prompt(promptMessages, promptOptions);
 
     // Parse JSON tool calls from response
@@ -343,11 +346,15 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       if (debugToolCalls) {
         console.debug("[BuiltInAI] Tool calls detected:", toolCalls.length);
         if (!parallelToolExecutionOption && toolCalls.length > 1) {
-          console.debug("[BuiltInAI] Parallel execution disabled, emitting first call only");
+          console.debug(
+            "[BuiltInAI] Parallel execution disabled, emitting first call only",
+          );
         }
       }
 
-      const toolCallsToEmit = parallelToolExecutionOption ? toolCalls : toolCalls.slice(0, 1);
+      const toolCallsToEmit = parallelToolExecutionOption
+        ? toolCalls
+        : toolCalls.slice(0, 1);
 
       const parts: LanguageModelV2Content[] = [];
 
@@ -383,7 +390,9 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     if (debugToolCalls) {
       const hasFence = hasJsonFunctionCalls(rawResponse);
       if (hasFence) {
-        console.debug("[BuiltInAI] Tool call fence detected but parsing failed");
+        console.debug(
+          "[BuiltInAI] Tool call fence detected but parsing failed",
+        );
       }
     }
 
@@ -430,7 +439,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * @param onDownloadProgress Optional callback receiving progress values 0-1 during model download
    * @returns Promise resolving to a configured LanguageModel session
    * @throws {LoadSettingError} When the Prompt API is not available or model is unavailable
-  */
+   */
   public async createSessionWithProgress(
     onDownloadProgress?: (progress: number) => void,
   ): Promise<LanguageModel> {
@@ -456,11 +465,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       debugToolCalls,
     } = converted;
 
-    const session = await this.getSession(
-      undefined,
-      expectedInputs,
-      undefined,
-    );
+    const session = await this.getSession(undefined, expectedInputs, undefined);
 
     const parallelToolExecutionOption = shouldExecuteToolsInParallel(
       options,
@@ -468,10 +473,17 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     );
 
     // Build system prompt with JSON tool calling
-    const systemPrompt = await buildJsonToolSystemPrompt(systemMessage, functionTools, {
-      allowParallelToolCalls: parallelToolExecutionOption,
-    });
-    const promptMessages = prependSystemPromptToMessages(messages, systemPrompt);
+    const systemPrompt = await buildJsonToolSystemPrompt(
+      systemMessage,
+      functionTools,
+      {
+        allowParallelToolCalls: parallelToolExecutionOption,
+      },
+    );
+    const promptMessages = prependSystemPromptToMessages(
+      messages,
+      systemPrompt,
+    );
 
     // Pass abort signal to the native streaming method
     const streamOptions = {
@@ -621,7 +633,9 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
                   }
 
                   if (toolInputStartEmitted && currentToolCallId) {
-                    const argsContent = extractArgumentsContent(accumulatedFenceContent);
+                    const argsContent = extractArgumentsContent(
+                      accumulatedFenceContent,
+                    );
                     if (argsContent.length > streamedArgumentsLength) {
                       const delta = argsContent.slice(streamedArgumentsLength);
                       streamedArgumentsLength = argsContent.length;
@@ -681,12 +695,17 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
                   toolBlockDetected = toolCalls.length > 0;
 
                   if (debugToolCalls && toolCalls.length > 0) {
-                    console.debug("[BuiltInAI] Tool calls parsed:", toolCalls.length);
+                    console.debug(
+                      "[BuiltInAI] Tool calls parsed:",
+                      toolCalls.length,
+                    );
                   }
 
                   for (const [index, call] of toolCalls.entries()) {
                     const toolCallId =
-                      index === 0 && currentToolCallId ? currentToolCallId : call.toolCallId;
+                      index === 0 && currentToolCallId
+                        ? currentToolCallId
+                        : call.toolCallId;
                     const toolName = call.toolName;
                     const argsJson = JSON.stringify(call.args ?? {});
 
@@ -700,13 +719,19 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
                         toolInputStartEmitted = true;
 
                         if (debugToolCalls) {
-                          console.debug(`[BuiltInAI] Tool call started: ${toolName}`);
+                          console.debug(
+                            `[BuiltInAI] Tool call started: ${toolName}`,
+                          );
                         }
                       }
 
-                      const argsContent = extractArgumentsContent(accumulatedFenceContent);
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
                       if (argsContent.length > streamedArgumentsLength) {
-                        const delta = argsContent.slice(streamedArgumentsLength);
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
                         streamedArgumentsLength = argsContent.length;
                         if (delta.length > 0) {
                           controller.enqueue({
@@ -766,7 +791,11 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
                     madeProgress = true;
 
                     const toolName = extractToolName(accumulatedFenceContent);
-                    if (toolName && !toolInputStartEmitted && currentToolCallId) {
+                    if (
+                      toolName &&
+                      !toolInputStartEmitted &&
+                      currentToolCallId
+                    ) {
                       controller.enqueue({
                         type: "tool-input-start",
                         id: currentToolCallId,
@@ -775,14 +804,20 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
                       toolInputStartEmitted = true;
 
                       if (debugToolCalls) {
-                        console.debug(`[BuiltInAI] Tool call started: ${toolName}`);
+                        console.debug(
+                          `[BuiltInAI] Tool call started: ${toolName}`,
+                        );
                       }
                     }
 
                     if (toolInputStartEmitted && currentToolCallId) {
-                      const argsContent = extractArgumentsContent(accumulatedFenceContent);
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
                       if (argsContent.length > streamedArgumentsLength) {
-                        const delta = argsContent.slice(streamedArgumentsLength);
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
                         streamedArgumentsLength = argsContent.length;
                         if (delta.length > 0) {
                           controller.enqueue({

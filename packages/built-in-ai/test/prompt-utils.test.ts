@@ -183,10 +183,7 @@ describe("prompt-utils", () => {
         { role: "user", content: "Hello" },
       ] as LanguageModelMessage[];
 
-      const result = prependSystemPromptToMessages(
-        messages,
-        "You are helpful"
-      );
+      const result = prependSystemPromptToMessages(messages, "You are helpful");
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
@@ -203,10 +200,7 @@ describe("prompt-utils", () => {
         },
       ] as LanguageModelMessage[];
 
-      const result = prependSystemPromptToMessages(
-        messages,
-        "You are helpful"
-      );
+      const result = prependSystemPromptToMessages(messages, "You are helpful");
 
       expect(result).toHaveLength(1);
       expect(result[0].content).toEqual([
@@ -220,10 +214,7 @@ describe("prompt-utils", () => {
         { role: "assistant", content: "Hi there" },
       ] as LanguageModelMessage[];
 
-      const result = prependSystemPromptToMessages(
-        messages,
-        "You are helpful"
-      );
+      const result = prependSystemPromptToMessages(messages, "You are helpful");
 
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({
@@ -243,10 +234,7 @@ describe("prompt-utils", () => {
         { role: "user", content: "Second user" },
       ] as LanguageModelMessage[];
 
-      const result = prependSystemPromptToMessages(
-        messages,
-        "Be helpful"
-      );
+      const result = prependSystemPromptToMessages(messages, "Be helpful");
 
       expect(result).toHaveLength(3);
       expect(result[1]).toMatchObject({

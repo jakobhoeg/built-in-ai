@@ -1,6 +1,8 @@
-import type { JSONSchema7, LanguageModelV2FunctionTool } from "@ai-sdk/provider";
+import type {
+  JSONSchema7,
+  LanguageModelV2FunctionTool,
+} from "@ai-sdk/provider";
 import type { ToolDefinition } from "./types";
-
 
 /**
  * Builds an enhanced system prompt for JSON-based tool calling.
@@ -77,7 +79,9 @@ Important:
  * @param tool - The tool definition to extract parameters from
  * @returns The JSON Schema for the tool's parameters, or undefined if not present
  */
-function getParameters(tool: ToolDefinition | LanguageModelV2FunctionTool): JSONSchema7 | undefined {
+function getParameters(
+  tool: ToolDefinition | LanguageModelV2FunctionTool,
+): JSONSchema7 | undefined {
   if ("parameters" in tool) {
     return tool.parameters;
   }

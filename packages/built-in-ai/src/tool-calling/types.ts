@@ -1,4 +1,7 @@
-import type { JSONSchema7, LanguageModelV2FunctionTool } from "@ai-sdk/provider";
+import type {
+  JSONSchema7,
+  LanguageModelV2FunctionTool,
+} from "@ai-sdk/provider";
 
 /**
  * JSON Schema definition for tool parameters
@@ -35,7 +38,6 @@ export interface ToolResult {
   result: unknown;
   isError?: boolean;
 }
-
 
 /**
  * Result of parsing a response that may contain tool calls

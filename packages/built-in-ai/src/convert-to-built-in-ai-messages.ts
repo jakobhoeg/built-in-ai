@@ -6,9 +6,7 @@ import {
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import { formatToolResults } from "./tool-calling/format-tool-results";
-import type {
-  ToolResult,
-} from "./tool-calling/types";
+import type { ToolResult } from "./tool-calling/types";
 export interface ConvertedMessages {
   systemMessage?: string;
   messages: LanguageModelMessage[];
@@ -37,7 +35,7 @@ function convertBase64ToUint8Array(base64: string): Uint8Array {
  */
 function convertFileData(
   data: URL | Uint8Array | string,
-  mediaType: string
+  mediaType: string,
 ): Uint8Array | string {
   // Handle different data types from Vercel AI SDK
   if (data instanceof URL) {
@@ -190,7 +188,7 @@ export function convertToBuiltInAIMessages(
               default: {
                 const exhaustiveCheck: never = part;
                 throw new UnsupportedFunctionalityError({
-                  functionality: `content type: ${(exhaustiveCheck as { type?: string }).type ?? 'unknown'}`,
+                  functionality: `content type: ${(exhaustiveCheck as { type?: string }).type ?? "unknown"}`,
                 });
               }
             }
@@ -224,13 +222,14 @@ export function convertToBuiltInAIMessages(
             }
             case "tool-result": {
               throw new UnsupportedFunctionalityError({
-                functionality: "tool-result parts in assistant messages (should be in tool messages)",
+                functionality:
+                  "tool-result parts in assistant messages (should be in tool messages)",
               });
             }
             default: {
               const exhaustiveCheck: never = part;
               throw new UnsupportedFunctionalityError({
-                functionality: `assistant part type: ${(exhaustiveCheck as { type?: string }).type ?? 'unknown'}`,
+                functionality: `assistant part type: ${(exhaustiveCheck as { type?: string }).type ?? "unknown"}`,
               });
             }
           }
@@ -274,7 +273,9 @@ export function convertToBuiltInAIMessages(
 
       default: {
         const exhaustiveCheck: never = message;
-        throw new Error(`Unsupported role: ${(exhaustiveCheck as { role?: string }).role ?? 'unknown'}`);
+        throw new Error(
+          `Unsupported role: ${(exhaustiveCheck as { role?: string }).role ?? "unknown"}`,
+        );
       }
     }
   }
