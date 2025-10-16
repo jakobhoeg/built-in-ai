@@ -246,7 +246,7 @@ You can configure tool calling behavior using provider options:
 const result = await generateText({
   model: builtInAI({
     providerOptions: {
-      toolCallFormat: "json", // or "xml" (default)
+      toolCallFormat: "json",
       includeThinkingInResponse: false, // Exclude <thinking> tags from final response
     },
   }),
@@ -267,7 +267,7 @@ const result = await generateText({
 
 **Provider Options:**
 
-- `toolCallFormat`: Choose between `"json"` (more structured) or `"xml"` (default, more flexible)
+- `toolCallFormat`: Currently only `"json"` format is supported (uses ```tool_call code fence with JSON schema)
 - `includeThinkingInResponse`: When `false`, removes `<thinking>` tags from the final response text
 
 ## Generating Structured Data
@@ -319,7 +319,7 @@ const { object } = await generateObject({
 - [x] **Multimodal functionality** (image and audio support)\*
 - [x] **Temperature control**
 - [x] **Response format constraints** (JSON `generateObject()/streamObject()`)
-- [x] **Tool calling** - Full support for function calling with both XML and JSON formats
+- [x] **Tool calling** - Full support for function calling with JSON format
 - [x] **Abort signals**
 
 ### Planned (when implemented in the Prompt API)
