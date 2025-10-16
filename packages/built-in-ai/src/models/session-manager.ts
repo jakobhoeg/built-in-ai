@@ -14,10 +14,7 @@ export type ProgressCallback = (progress: number) => void;
 /**
  * Custom provider options that extend the standard API
  */
-interface CustomProviderOptions {
-  parallelToolExecution?: boolean;
-  debugToolCalls?: boolean;
-}
+interface CustomProviderOptions {}
 
 /**
  * Options for creating a new session
@@ -64,9 +61,7 @@ export class SessionManager {
     baseOptions: LanguageModelCreateOptions & Partial<CustomProviderOptions>,
   ) {
     // Filter out our custom options that aren't part of LanguageModelCreateOptions
-    const { parallelToolExecution, debugToolCalls, ...validOptions } =
-      baseOptions;
-    this.baseOptions = validOptions;
+    this.baseOptions = baseOptions;
   }
 
   /**
@@ -252,7 +247,5 @@ export class SessionManager {
     options: LanguageModelCreateOptions & Partial<CustomProviderOptions>,
   ): void {
     // Remove our custom options that the Prompt API doesn't understand
-    delete options.parallelToolExecution;
-    delete options.debugToolCalls;
   }
 }

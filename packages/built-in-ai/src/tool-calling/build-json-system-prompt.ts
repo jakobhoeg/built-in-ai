@@ -10,22 +10,19 @@ import type { ToolDefinition } from "./types";
  *
  * @param originalSystemPrompt - The original system prompt (if any)
  * @param tools - Array of available tool definitions
- * @param options - Configuration options for tool calling behavior
- * @param options.allowParallelToolCalls - Whether to allow multiple tool calls in parallel (default: false)
+ * @param options - Configuration options for tool calling behavior (unused, kept for backwards compatibility)
  * @returns Enhanced system prompt with JSON tool calling instructions
  */
 export function buildJsonToolSystemPrompt(
   originalSystemPrompt: string | undefined,
   tools: Array<ToolDefinition | LanguageModelV2FunctionTool>,
-  options: { allowParallelToolCalls?: boolean } = {},
+  options?: { allowParallelToolCalls?: boolean },
 ): string {
   if (!tools || tools.length === 0) {
     return originalSystemPrompt || "";
   }
 
-  const parallelInstruction = options.allowParallelToolCalls
-    ? "You may return multiple tool calls in the array if they are independent and can be executed in parallel."
-    : "Only request one tool call at a time. Wait for tool results before asking for another tool.";
+  const parallelInstruction = "Only request one tool call at a time. Wait for tool results before asking for another tool.";
 
   const toolSchemas = tools.map((tool) => {
     const schema = getParameters(tool);
@@ -52,7 +49,6 @@ To call a tool, output JSON in this exact format inside a \`\`\`tool_call code f
 {"name": "tool_name", "arguments": {"param1": "value1", "param2": "value2"}}
 \`\`\`
 
-${options.allowParallelToolCalls ? `For multiple parallel calls:\n\`\`\`tool_call\n{"name": "tool1", "arguments": {...}}\n{"name": "tool2", "arguments": {...}}\n\`\`\`\n` : ""}
 Tool responses will be provided in \`\`\`tool_result fences. Each line contains JSON like:
 \`\`\`tool_result
 {"id": "call_123", "name": "tool_name", "result": {...}, "error": false}
