@@ -172,7 +172,105 @@ for await (const chunk of result.textStream) {
 }
 ```
 
-## Generating structured data
+## Tool Calling
+
+The `builtInAI` model supports tool calling, allowing the AI to use external functions and APIs. This is particularly useful for building AI agents that can perform actions or retrieve data:
+
+```typescript
+import { generateText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+import { z } from "zod";
+
+const result = await generateText({
+  model: builtInAI(),
+  messages: [{ role: "user", content: "What's the weather in San Francisco?" }],
+  tools: {
+    getWeather: {
+      description: "Get the weather for a location",
+      parameters: z.object({
+        location: z.string().describe("The city name"),
+      }),
+      execute: async ({ location }) => {
+        // Your weather API call here
+        return { temperature: 72, conditions: "sunny" };
+      },
+    },
+  },
+});
+```
+
+### Tool Calling with Multiple Steps
+
+The AI can call multiple tools in sequence to accomplish complex tasks:
+
+```typescript
+const result = await generateText({
+  model: builtInAI(),
+  messages: [
+    {
+      role: "user",
+      content: "Search for recent AI news and summarize the top result",
+    },
+  ],
+  tools: {
+    search: {
+      description: "Search the web for information",
+      parameters: z.object({
+        query: z.string(),
+      }),
+      execute: async ({ query }) => {
+        // Search implementation
+        return { results: [{ title: "...", url: "..." }] };
+      },
+    },
+    fetchContent: {
+      description: "Fetch the content of a URL",
+      parameters: z.object({
+        url: z.string(),
+      }),
+      execute: async ({ url }) => {
+        // Fetch implementation
+        return { content: "Article content..." };
+      },
+    },
+  },
+  maxSteps: 5, // Allow multiple tool calls
+});
+```
+
+### Tool Calling Configuration
+
+You can configure tool calling behavior using provider options:
+
+```typescript
+const result = await generateText({
+  model: builtInAI({
+    providerOptions: {
+      toolCallFormat: "json", // or "xml" (default)
+      includeThinkingInResponse: false, // Exclude <thinking> tags from final response
+    },
+  }),
+  messages: [{ role: "user", content: "Use the calculator tool" }],
+  tools: {
+    calculator: {
+      description: "Perform a calculation",
+      parameters: z.object({
+        expression: z.string(),
+      }),
+      execute: async ({ expression }) => {
+        return { result: eval(expression) };
+      },
+    },
+  },
+});
+```
+
+**Provider Options:**
+
+- `toolCallFormat`: Choose between `"json"` (more structured) or `"xml"` (default, more flexible)
+- `includeThinkingInResponse`: When `false`, removes `<thinking>` tags from the final response text
+
+## Generating Structured Data
 
 The `builtInAI` model also allows using the AI SDK `generateObject` and `streamObject`:
 
@@ -221,11 +319,11 @@ const { object } = await generateObject({
 - [x] **Multimodal functionality** (image and audio support)\*
 - [x] **Temperature control**
 - [x] **Response format constraints** (JSON `generateObject()/streamObject()`)
+- [x] **Tool calling** - Full support for function calling with both XML and JSON formats
 - [x] **Abort signals**
 
 ### Planned (when implemented in the Prompt API)
 
-- [ ] **Tool calling**
 - [ ] **Token counting**
 - [ ] **Custom stop sequences**
 - [ ] **Presence/frequency penalties**

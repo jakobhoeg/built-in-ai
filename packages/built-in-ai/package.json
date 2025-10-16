@@ -45,7 +45,9 @@
     "chrome",
     "edge",
     "prompt-api",
-    "language-model"
+    "language-model",
+    "tool-calling",
+    "function-calling"
   ],
   "license": "Apache License",
   "dependencies": {
