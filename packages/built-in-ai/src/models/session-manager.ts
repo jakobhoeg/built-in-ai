@@ -60,9 +60,12 @@ export class SessionManager {
    *
    * @param baseOptions - Base configuration options for all sessions
    */
-  constructor(baseOptions: LanguageModelCreateOptions & Partial<CustomProviderOptions>) {
+  constructor(
+    baseOptions: LanguageModelCreateOptions & Partial<CustomProviderOptions>,
+  ) {
     // Filter out our custom options that aren't part of LanguageModelCreateOptions
-    const { parallelToolExecution, debugToolCalls, ...validOptions } = baseOptions;
+    const { parallelToolExecution, debugToolCalls, ...validOptions } =
+      baseOptions;
     this.baseOptions = validOptions;
   }
 
@@ -102,7 +105,7 @@ export class SessionManager {
     const availability = await LanguageModel.availability();
     if (availability === "unavailable") {
       throw new LoadSettingError({
-        message: "Built-in model not available in this browser"
+        message: "Built-in model not available in this browser",
       });
     }
 
@@ -196,7 +199,8 @@ export class SessionManager {
     options?: SessionCreateOptions,
   ): LanguageModelCreateOptions {
     // Start with base options
-    const mergedOptions: LanguageModelCreateOptions & Partial<CustomProviderOptions> = { ...this.baseOptions };
+    const mergedOptions: LanguageModelCreateOptions &
+      Partial<CustomProviderOptions> = { ...this.baseOptions };
 
     // Merge in request-specific options if provided
     if (options) {
@@ -244,7 +248,9 @@ export class SessionManager {
    * @param options - Options object to sanitize in-place
    * @private
    */
-  private sanitizeOptions(options: LanguageModelCreateOptions & Partial<CustomProviderOptions>): void {
+  private sanitizeOptions(
+    options: LanguageModelCreateOptions & Partial<CustomProviderOptions>,
+  ): void {
     // Remove our custom options that the Prompt API doesn't understand
     delete options.parallelToolExecution;
     delete options.debugToolCalls;

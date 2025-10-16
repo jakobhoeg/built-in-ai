@@ -465,7 +465,9 @@ Running the tool now.`);
         prompt: [
           {
             role: "user",
-            content: [{ type: "text", text: "What is the weather in Seattle?" }],
+            content: [
+              { type: "text", text: "What is the weather in Seattle?" },
+            ],
           },
         ],
         tools: [
@@ -491,7 +493,7 @@ Running the tool now.`);
           type: "tool-call",
           toolCallId: expect.any(String),
           toolName: "getWeather",
-          input: "{\"location\":\"Seattle\"}",
+          input: '{"location":"Seattle"}',
         },
       ]);
 
@@ -550,12 +552,14 @@ I'll follow up once I have the results.`,
         ],
       });
 
-      const toolCalls = response.content.filter((part) => part.type === "tool-call");
+      const toolCalls = response.content.filter(
+        (part) => part.type === "tool-call",
+      );
 
       expect(toolCalls).toHaveLength(1);
       expect(toolCalls[0]).toMatchObject({
         toolName: "getWeather",
-        input: "{\"location\":\"Seattle\"}",
+        input: '{"location":"Seattle"}',
       });
     });
 
@@ -607,16 +611,18 @@ I'll follow up once I have the results.`,
         ],
       });
 
-      const toolCalls = response.content.filter((part) => part.type === "tool-call");
+      const toolCalls = response.content.filter(
+        (part) => part.type === "tool-call",
+      );
 
       expect(toolCalls).toHaveLength(2);
       expect(toolCalls[0]).toMatchObject({
         toolName: "getWeather",
-        input: "{\"location\":\"Seattle\"}",
+        input: '{"location":"Seattle"}',
       });
       expect(toolCalls[1]).toMatchObject({
         toolName: "getNews",
-        input: "{\"topic\":\"Seattle\"}",
+        input: '{"topic":"Seattle"}',
       });
     });
 
@@ -642,7 +648,9 @@ Running the tool now.`;
         prompt: [
           {
             role: "user",
-            content: [{ type: "text", text: "What is the weather in Seattle?" }],
+            content: [
+              { type: "text", text: "What is the weather in Seattle?" },
+            ],
           },
         ],
         tools: [
@@ -673,23 +681,37 @@ Running the tool now.`;
       expect(events).toContainEqual({ type: "text-start", id: "text-0" });
 
       const textDeltas = events
-        .filter((event): event is Extract<LanguageModelV2StreamPart, { type: "text-delta" }> => event.type === "text-delta")
+        .filter(
+          (
+            event,
+          ): event is Extract<
+            LanguageModelV2StreamPart,
+            { type: "text-delta" }
+          > => event.type === "text-delta",
+        )
         .map((event) => event.delta.trim());
-      expect(textDeltas).toEqual(["Checking the weather.", "Running the tool now."]);
+      expect(textDeltas).toEqual([
+        "Checking the weather.",
+        "Running the tool now.",
+      ]);
 
       const toolEvent = events.find(
-        (event): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
+        (
+          event,
+        ): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
           event.type === "tool-call",
       );
 
       expect(toolEvent).toMatchObject({
         toolName: "getWeather",
-        input: "{\"location\":\"Seattle\"}",
+        input: '{"location":"Seattle"}',
         providerExecuted: false,
       });
 
       const finishEvent = events.find(
-        (event): event is Extract<LanguageModelV2StreamPart, { type: "finish" }> =>
+        (
+          event,
+        ): event is Extract<LanguageModelV2StreamPart, { type: "finish" }> =>
           event.type === "finish",
       );
 
@@ -768,7 +790,7 @@ Running the tool now.`;
       expect(toolEvents).toHaveLength(1);
       expect(toolEvents[0]).toMatchObject({
         toolName: "getWeather",
-        input: "{\"location\":\"Seattle\"}",
+        input: '{"location":"Seattle"}',
       });
 
       const finishEvent = events.find((event) => event.type === "finish");
@@ -846,11 +868,11 @@ I'll follow up once I have the results.`;
       expect(toolEvents).toHaveLength(2);
       expect(toolEvents[0]).toMatchObject({
         toolName: "getWeather",
-        input: "{\"location\":\"Seattle\"}",
+        input: '{"location":"Seattle"}',
       });
       expect(toolEvents[1]).toMatchObject({
         toolName: "getNews",
-        input: "{\"topic\":\"Seattle\"}",
+        input: '{"topic":"Seattle"}',
       });
 
       const finishEvent = events.find((event) => event.type === "finish");
@@ -877,7 +899,9 @@ I'll follow up once I have the results.`;
         prompt: [
           {
             role: "user",
-            content: [{ type: "text", text: "What is the weather in Seattle?" }],
+            content: [
+              { type: "text", text: "What is the weather in Seattle?" },
+            ],
           },
         ],
         tools: [
@@ -906,19 +930,33 @@ I'll follow up once I have the results.`;
 
       // Extract tool-related events
       const toolInputStartEvent = events.find(
-        (event): event is Extract<LanguageModelV2StreamPart, { type: "tool-input-start" }> =>
-          event.type === "tool-input-start",
+        (
+          event,
+        ): event is Extract<
+          LanguageModelV2StreamPart,
+          { type: "tool-input-start" }
+        > => event.type === "tool-input-start",
       );
       const toolInputDeltaEvents = events.filter(
-        (event): event is Extract<LanguageModelV2StreamPart, { type: "tool-input-delta" }> =>
-          event.type === "tool-input-delta",
+        (
+          event,
+        ): event is Extract<
+          LanguageModelV2StreamPart,
+          { type: "tool-input-delta" }
+        > => event.type === "tool-input-delta",
       );
       const toolInputEndEvent = events.find(
-        (event): event is Extract<LanguageModelV2StreamPart, { type: "tool-input-end" }> =>
-          event.type === "tool-input-end",
+        (
+          event,
+        ): event is Extract<
+          LanguageModelV2StreamPart,
+          { type: "tool-input-end" }
+        > => event.type === "tool-input-end",
       );
       const toolCallEvent = events.find(
-        (event): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
+        (
+          event,
+        ): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
           event.type === "tool-call",
       );
 
@@ -946,14 +984,14 @@ I'll follow up once I have the results.`;
       // Additional verification: ensure we don't have multiple different tool call IDs
       const allToolCallIds = new Set([
         toolInputStartEvent!.id,
-        ...toolInputDeltaEvents.map(e => e.id),
+        ...toolInputDeltaEvents.map((e) => e.id),
         toolInputEndEvent!.id,
         toolCallEvent!.toolCallId,
       ]);
 
       expect(allToolCallIds.size).toBe(1); // All IDs should be identical
     });
-});
+  });
 
   describe("createSessionWithProgress", () => {
     let mockEventTarget: {

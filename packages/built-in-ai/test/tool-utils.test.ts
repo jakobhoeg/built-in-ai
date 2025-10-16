@@ -30,7 +30,9 @@ describe("tool-utils", () => {
     });
 
     it("correctly narrows type when true", () => {
-      const tool: LanguageModelV2FunctionTool | LanguageModelV2ProviderDefinedTool = {
+      const tool:
+        | LanguageModelV2FunctionTool
+        | LanguageModelV2ProviderDefinedTool = {
         type: "function",
         name: "test",
         inputSchema: {
@@ -47,7 +49,9 @@ describe("tool-utils", () => {
     });
 
     it("correctly narrows type when false", () => {
-      const tool: LanguageModelV2FunctionTool | LanguageModelV2ProviderDefinedTool = {
+      const tool:
+        | LanguageModelV2FunctionTool
+        | LanguageModelV2ProviderDefinedTool = {
         type: "provider-defined",
         id: "test.tool",
         name: "test",

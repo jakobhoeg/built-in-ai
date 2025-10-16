@@ -97,7 +97,9 @@ export class ToolCallFenceDetector {
    * @returns Detection result with fence info and safe text
    */
   detectFence(): FenceDetectionResult {
-    const { index: startIdx, prefix: matchedPrefix } = this.findFenceStart(this.buffer);
+    const { index: startIdx, prefix: matchedPrefix } = this.findFenceStart(
+      this.buffer,
+    );
 
     // No fence start found
     if (startIdx === -1) {
@@ -105,7 +107,8 @@ export class ToolCallFenceDetector {
       const overlap = this.computeOverlapLength(this.buffer, this.FENCE_STARTS);
       const safeTextLength = this.buffer.length - overlap;
 
-      const prefixText = safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : "";
+      const prefixText =
+        safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : "";
       const remaining = overlap > 0 ? this.buffer.slice(-overlap) : "";
 
       // Update buffer to keep only the overlap
@@ -161,7 +164,10 @@ export class ToolCallFenceDetector {
    * @returns Index of first fence start and which prefix matched
    * @private
    */
-  private findFenceStart(text: string): { index: number; prefix: string | null } {
+  private findFenceStart(text: string): {
+    index: number;
+    prefix: string | null;
+  } {
     let bestIndex = -1;
     let matchedPrefix: string | null = null;
 
@@ -245,13 +251,19 @@ export class ToolCallFenceDetector {
   detectStreamingFence(): StreamingFenceResult {
     if (!this.inFence) {
       // Look for fence start
-      const { index: startIdx, prefix: matchedPrefix } = this.findFenceStart(this.buffer);
+      const { index: startIdx, prefix: matchedPrefix } = this.findFenceStart(
+        this.buffer,
+      );
 
       if (startIdx === -1) {
         // No fence start found - emit safe text
-        const overlap = this.computeOverlapLength(this.buffer, this.FENCE_STARTS);
+        const overlap = this.computeOverlapLength(
+          this.buffer,
+          this.FENCE_STARTS,
+        );
         const safeTextLength = this.buffer.length - overlap;
-        const safeContent = safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : "";
+        const safeContent =
+          safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : "";
         this.buffer = this.buffer.slice(safeTextLength);
 
         return {
@@ -323,7 +335,9 @@ export class ToolCallFenceDetector {
     const completeFence = `${this.FENCE_STARTS[0]}\n${this.fenceStartBuffer}\n${this.FENCE_END}`;
 
     // Get text after fence
-    const textAfterFence = this.buffer.slice(closingIdx + this.FENCE_END.length);
+    const textAfterFence = this.buffer.slice(
+      closingIdx + this.FENCE_END.length,
+    );
 
     // Reset state
     this.inFence = false;

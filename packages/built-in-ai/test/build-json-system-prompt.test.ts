@@ -51,7 +51,9 @@ describe("buildJsonToolSystemPrompt", () => {
       const result = buildJsonToolSystemPrompt(undefined, [mockTool]);
 
       expect(result).toContain("```tool_call");
-      expect(result).toContain("You are a helpful AI assistant with access to tools");
+      expect(result).toContain(
+        "You are a helpful AI assistant with access to tools",
+      );
       expect(result).toContain("Available Tools");
       expect(result).toContain("Tool Calling Instructions");
     });
@@ -134,7 +136,9 @@ describe("buildJsonToolSystemPrompt", () => {
       const result = buildJsonToolSystemPrompt(undefined, [mockTool]);
 
       expect(result).toContain("Only request one tool call at a time");
-      expect(result).toContain("Wait for tool results before asking for another");
+      expect(result).toContain(
+        "Wait for tool results before asking for another",
+      );
     });
 
     it("should include sequential instruction when explicitly disabled", () => {
@@ -156,7 +160,9 @@ describe("buildJsonToolSystemPrompt", () => {
       expect(result).toContain(
         "You may return multiple tool calls in the array",
       );
-      expect(result).toContain("if they are independent and can be executed in parallel");
+      expect(result).toContain(
+        "if they are independent and can be executed in parallel",
+      );
       expect(result).not.toContain("Only request one tool call at a time");
     });
 

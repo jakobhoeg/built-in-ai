@@ -86,7 +86,9 @@ export function prependSystemPromptToMessages(
   }
 
   const prompts = messages.map((message) => ({ ...message }));
-  const firstUserIndex = prompts.findIndex((message) => message.role === "user");
+  const firstUserIndex = prompts.findIndex(
+    (message) => message.role === "user",
+  );
 
   if (firstUserIndex !== -1) {
     const firstUserMessage = prompts[firstUserIndex];

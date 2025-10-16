@@ -63,7 +63,7 @@ export function parseJsonFunctionCalls(response: string): ParsedResponse {
         }
       } catch {
         // If single JSON parsing fails, try parsing as newline-separated JSON objects
-        const lines = trimmed.split('\n').filter(line => line.trim());
+        const lines = trimmed.split("\n").filter((line) => line.trim());
 
         for (const line of lines) {
           try {

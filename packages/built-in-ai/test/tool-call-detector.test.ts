@@ -10,7 +10,9 @@ describe("ToolCallFenceDetector", () => {
 
   describe("basic functionality", () => {
     it("detects complete fence in single chunk", () => {
-      detector.addChunk("```tool_call\n<tool_call><name>test</name></tool_call>\n```");
+      detector.addChunk(
+        "```tool_call\n<tool_call><name>test</name></tool_call>\n```",
+      );
       const result = detector.detectFence();
 
       expect(result.fence).toContain("```tool_call");
@@ -19,7 +21,9 @@ describe("ToolCallFenceDetector", () => {
     });
 
     it("handles text before fence", () => {
-      detector.addChunk("Hello world ```tool_call\n<tool_call></tool_call>\n```");
+      detector.addChunk(
+        "Hello world ```tool_call\n<tool_call></tool_call>\n```",
+      );
       const result = detector.detectFence();
 
       expect(result.prefixText).toBe("Hello world ");
@@ -27,7 +31,9 @@ describe("ToolCallFenceDetector", () => {
     });
 
     it("handles text after fence", () => {
-      detector.addChunk("```tool_call\n<tool_call></tool_call>\n``` after text");
+      detector.addChunk(
+        "```tool_call\n<tool_call></tool_call>\n``` after text",
+      );
       const result = detector.detectFence();
 
       expect(result.fence).toContain("```tool_call");
@@ -173,7 +179,9 @@ describe("ToolCallFenceDetector", () => {
 
       // Add another fence
       detector.clearBuffer();
-      detector.addChunk("```tool_call\n<tool_call><name>second</name></tool_call>\n```");
+      detector.addChunk(
+        "```tool_call\n<tool_call><name>second</name></tool_call>\n```",
+      );
       result = detector.detectFence();
       expect(result.fence).toContain("<name>second</name>");
     });
@@ -208,7 +216,7 @@ describe("ToolCallFenceDetector", () => {
         "<tool_call>\n",
         "<name>search</name>\n",
         "<parameters>\n",
-        "<query type=\"string\">test query</query>\n",
+        '<query type="string">test query</query>\n',
         "</parameters>\n",
         "</tool_call>\n",
         "```\n",
