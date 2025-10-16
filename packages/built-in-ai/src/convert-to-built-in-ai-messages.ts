@@ -1,8 +1,14 @@
 import {
   LanguageModelV2Prompt,
+  LanguageModelV2ToolCallPart,
+  LanguageModelV2ToolResultPart,
+  LanguageModelV2ToolResultOutput,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
-
+import { formatToolResults } from "./tool-calling/format-tool-results";
+import type {
+  ToolResult,
+} from "./tool-calling/types";
 export interface ConvertedMessages {
   systemMessage?: string;
   messages: LanguageModelMessage[];
@@ -29,7 +35,10 @@ function convertBase64ToUint8Array(base64: string): Uint8Array {
  * Convert file data to the appropriate format for built-in AI
  * Built-in AI supports: Blob, BufferSource (Uint8Array), URLs
  */
-function convertFileData(data: any, mediaType: string): Uint8Array | string {
+function convertFileData(
+  data: URL | Uint8Array | string,
+  mediaType: string
+): Uint8Array | string {
   // Handle different data types from Vercel AI SDK
   if (data instanceof URL) {
     // URLs - keep as string (if supported by provider)
@@ -46,9 +55,80 @@ function convertFileData(data: any, mediaType: string): Uint8Array | string {
     return convertBase64ToUint8Array(data);
   }
 
-  // Fallback for other types (shouldn't happen with current AI SDK)
-  console.warn(`Unexpected data type for ${mediaType}:`, typeof data);
-  return data;
+  // Exhaustive check - this should never happen with the union type
+  const exhaustiveCheck: never = data;
+  throw new Error(`Unexpected data type for ${mediaType}: ${exhaustiveCheck}`);
+}
+
+function normalizeToolArguments(input: unknown): unknown {
+  if (input === undefined) {
+    return {};
+  }
+
+  if (typeof input === "string") {
+    try {
+      return JSON.parse(input);
+    } catch {
+      return input;
+    }
+  }
+
+  return input ?? {};
+}
+
+function formatToolCallsJson(parts: LanguageModelV2ToolCallPart[]): string {
+  if (!parts.length) {
+    return "";
+  }
+
+  const payloads = parts.map((call) => {
+    const payload: Record<string, unknown> = {
+      name: call.toolName,
+      arguments: normalizeToolArguments(call.input),
+    };
+
+    if (call.toolCallId) {
+      payload.id = call.toolCallId;
+    }
+
+    return JSON.stringify(payload);
+  });
+
+  return `\`\`\`tool_call
+${payloads.join("\n")}
+\`\`\``;
+}
+
+function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
+  value: unknown;
+  isError: boolean;
+} {
+  switch (output.type) {
+    case "text":
+      return { value: output.value, isError: false };
+    case "json":
+      return { value: output.value, isError: false };
+    case "error-text":
+      return { value: output.value, isError: true };
+    case "error-json":
+      return { value: output.value, isError: true };
+    case "content":
+      return { value: output.value, isError: false };
+    default: {
+      const exhaustiveCheck: never = output;
+      return { value: exhaustiveCheck, isError: false };
+    }
+  }
+}
+
+function toToolResult(part: LanguageModelV2ToolResultPart): ToolResult {
+  const { value, isError } = convertToolResultOutput(part.output);
+  return {
+    toolCallId: part.toolCallId,
+    toolName: part.toolName,
+    result: value,
+    isError,
+  };
 }
 
 /**
@@ -58,10 +138,12 @@ function convertFileData(data: any, mediaType: string): Uint8Array | string {
 export function convertToBuiltInAIMessages(
   prompt: LanguageModelV2Prompt,
 ): ConvertedMessages {
+  const normalizedPrompt = prompt.slice();
+
   let systemMessage: string | undefined;
   const messages: LanguageModelMessage[] = [];
 
-  for (const message of prompt) {
+  for (const message of normalizedPrompt) {
     switch (message.role) {
       case "system": {
         // There's only ever one system message from AI SDK
@@ -82,7 +164,7 @@ export function convertToBuiltInAIMessages(
               }
 
               case "file": {
-                const { mediaType, data, filename } = part;
+                const { mediaType, data } = part;
 
                 if (mediaType?.startsWith("image/")) {
                   const convertedData = convertFileData(data, mediaType);
@@ -106,8 +188,9 @@ export function convertToBuiltInAIMessages(
               }
 
               default: {
+                const exhaustiveCheck: never = part;
                 throw new UnsupportedFunctionalityError({
-                  functionality: `content type: ${(part as any).type}`,
+                  functionality: `content type: ${(exhaustiveCheck as { type?: string }).type ?? 'unknown'}`,
                 });
               }
             }
@@ -118,6 +201,7 @@ export function convertToBuiltInAIMessages(
 
       case "assistant": {
         let text = "";
+        const toolCallParts: LanguageModelV2ToolCallPart[] = [];
 
         for (const part of message.content) {
           switch (part.type) {
@@ -125,29 +209,72 @@ export function convertToBuiltInAIMessages(
               text += part.text;
               break;
             }
+            case "reasoning": {
+              text += part.text;
+              break;
+            }
             case "tool-call": {
+              toolCallParts.push(part);
+              break;
+            }
+            case "file": {
               throw new UnsupportedFunctionalityError({
-                functionality: "tool calls",
+                functionality: "assistant file attachments",
+              });
+            }
+            case "tool-result": {
+              throw new UnsupportedFunctionalityError({
+                functionality: "tool-result parts in assistant messages (should be in tool messages)",
+              });
+            }
+            default: {
+              const exhaustiveCheck: never = part;
+              throw new UnsupportedFunctionalityError({
+                functionality: `assistant part type: ${(exhaustiveCheck as { type?: string }).type ?? 'unknown'}`,
               });
             }
           }
         }
 
+        const toolCallJson = formatToolCallsJson(toolCallParts);
+        const contentSegments: string[] = [];
+
+        if (text.trim().length > 0) {
+          contentSegments.push(text);
+        } else if (text.length > 0) {
+          // preserve purely whitespace responses so we don't lose formatting
+          contentSegments.push(text);
+        }
+
+        if (toolCallJson) {
+          contentSegments.push(toolCallJson);
+        }
+
+        const content =
+          contentSegments.length > 0 ? contentSegments.join("\n") : "";
+
         messages.push({
           role: "assistant",
-          content: text,
+          content,
         } as LanguageModelMessage);
         break;
       }
 
       case "tool": {
-        throw new UnsupportedFunctionalityError({
-          functionality: "tool messages",
-        });
+        const toolParts = message.content as LanguageModelV2ToolResultPart[];
+        const results: ToolResult[] = toolParts.map(toToolResult);
+        const toolResultsJson = formatToolResults(results);
+
+        messages.push({
+          role: "user",
+          content: toolResultsJson,
+        } as LanguageModelMessage);
+        break;
       }
 
       default: {
-        throw new Error(`Unsupported role: ${(message as any).role}`);
+        const exhaustiveCheck: never = message;
+        throw new Error(`Unsupported role: ${(exhaustiveCheck as { role?: string }).role ?? 'unknown'}`);
       }
     }
   }

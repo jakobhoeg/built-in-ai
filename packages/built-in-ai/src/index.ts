@@ -2,7 +2,7 @@
 export {
   BuiltInAIChatLanguageModel,
   doesBrowserSupportBuiltInAI,
-  isBuiltInAIModelAvailable, // deprecated. TODO: remove in v.2
+  isBuiltInAIModelAvailable, // deprecated, use doesBrowserSupportBuiltInAI instead
 } from "./built-in-ai-language-model";
 export type { BuiltInAIChatSettings } from "./built-in-ai-language-model";
 
