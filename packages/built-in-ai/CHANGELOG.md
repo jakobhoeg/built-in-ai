@@ -1,5 +1,17 @@
 # @built-in-ai/core
 
+## Unreleased
+
+### Minor Changes
+
+- feat: Add comprehensive tool calling support with JSON-based implementation
+  - Full support for Vercel AI SDK tool calling with built-in AI models
+  - JSON-based tool call encoding using code fences for reliability
+  - Support for both streaming and non-streaming tool execution
+  - Configurable parallel tool execution mode
+  - Debug mode for tool call inspection
+  - Comprehensive test coverage (174 tests)
+
 ## 2.0.0
 
 ### Major Changes
