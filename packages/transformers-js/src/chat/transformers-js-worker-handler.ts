@@ -10,6 +10,12 @@ import {
   type ProgressInfo,
 } from "@huggingface/transformers";
 import { decodeGeneratedText } from "./decode-utils";
+import {
+  buildJsonToolSystemPrompt,
+  parseJsonFunctionCalls,
+} from "../tool-calling";
+import { prependSystemPromptToMessages } from "../utils/prompt-utils";
+import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
 
 import type {
   WorkerMessage,
@@ -52,17 +58,17 @@ class ModelManager {
 
     const instancePromise = isVisionModel
       ? this.createVisionModel(modelId, {
-          dtype,
-          device,
-          use_external_data_format,
-          progressCallback,
-        })
+        dtype,
+        device,
+        use_external_data_format,
+        progressCallback,
+      })
       : this.createTextModel(modelId, {
-          dtype,
-          device,
-          use_external_data_format,
-          progressCallback,
-        });
+        dtype,
+        device,
+        use_external_data_format,
+        progressCallback,
+      });
 
     this.instances.set(key, instancePromise);
     return instancePromise;
@@ -118,12 +124,13 @@ export class TransformersJSWorkerHandler {
   async generate(
     messages: Array<{ role: string; content: any }>,
     generationOptions?: GenerationOptions,
+    tools?: any[],
   ) {
     try {
       const modelInstance = await ModelManager.getInstance(
         this.currentModelKey,
       );
-      await this.runGeneration(modelInstance, messages, generationOptions);
+      await this.runGeneration(modelInstance, messages, generationOptions, tools);
     } catch (error) {
       this.sendError(error instanceof Error ? error.message : String(error));
     }
@@ -133,15 +140,26 @@ export class TransformersJSWorkerHandler {
     modelInstance: ModelInstance,
     messages: Array<{ role: string; content: any }>,
     userGenerationOptions?: GenerationOptions,
+    tools?: any[],
   ) {
     const [processor, model] = modelInstance;
     const isVision = this.isVisionModel;
+
+    // Build system prompt with tool calling if tools are provided
+    const systemPrompt = tools && tools.length > 0
+      ? buildJsonToolSystemPrompt(undefined, tools, { allowParallelToolCalls: false })
+      : "";
+
+    // Prepend system prompt to messages if tools are available
+    const processedMessages = systemPrompt
+      ? prependSystemPromptToMessages(messages, systemPrompt)
+      : messages;
 
     // Prepare inputs based on model type
     let inputs: any;
     if (isVision) {
       // For vision models, use last message and extract images
-      const lastMessages = messages.slice(-1);
+      const lastMessages = processedMessages.slice(-1);
       const images = await Promise.all(
         lastMessages
           .map((x) => x.content)
@@ -149,25 +167,47 @@ export class TransformersJSWorkerHandler {
           .filter((msg) => msg.image !== undefined)
           .map((msg) => load_image(msg.image)),
       );
-      const text = processor.apply_chat_template(lastMessages, {
+      const text = processor.apply_chat_template(lastMessages as any, {
         add_generation_prompt: true,
       });
       inputs = await processor(text, images);
     } else {
-      inputs = processor.apply_chat_template(messages, {
+      inputs = processor.apply_chat_template(processedMessages as any, {
         add_generation_prompt: true,
         return_dict: true,
       });
     }
 
-    // Setup performance tracking
+    // Setup performance tracking and tool call detection
     let startTime: number | undefined;
     let numTokens = 0;
+    const fenceDetector = new ToolCallFenceDetector();
+    let accumulatedText = "";
+    let toolCallDetected = false;
+
     const token_callback = () => {
       startTime ??= performance.now();
       numTokens++;
     };
     const output_callback = (output: string) => {
+      accumulatedText += output;
+
+      // Check for tool calls if tools are available
+      if (tools && tools.length > 0 && !toolCallDetected) {
+        fenceDetector.addChunk(output);
+        const result = fenceDetector.detectStreamingFence();
+
+        // If we detect a complete fence, check if it's a valid tool call
+        if (result.completeFence) {
+          const { toolCalls } = parseJsonFunctionCalls(result.completeFence);
+          if (toolCalls.length > 0) {
+            toolCallDetected = true;
+            // Stop generation after tool call
+            this.stopping_criteria.interrupt();
+          }
+        }
+      }
+
       const tps = startTime
         ? (numTokens / (performance.now() - startTime)) * 1000
         : undefined;
@@ -190,16 +230,16 @@ export class TransformersJSWorkerHandler {
     // Merge user generation options with defaults based on model type
     const defaultOptions = isVision
       ? {
-          do_sample: false,
-          repetition_penalty: 1.1,
-          max_new_tokens: 1024,
-        }
+        do_sample: false,
+        repetition_penalty: 1.1,
+        max_new_tokens: 1024,
+      }
       : {
-          do_sample: true,
-          top_k: 3,
-          temperature: 0.7,
-          max_new_tokens: 512,
-        };
+        do_sample: true,
+        top_k: 3,
+        temperature: 0.7,
+        max_new_tokens: 512,
+      };
 
     const generationOptions = {
       ...defaultOptions,
@@ -222,7 +262,19 @@ export class TransformersJSWorkerHandler {
       isVision ? 0 : inputs.input_ids.data.length,
     );
 
-    self.postMessage({ status: "complete", output: decoded });
+    // Parse tool calls from the complete response if tools are available
+    let toolCalls: any[] = [];
+    if (tools && tools.length > 0) {
+      const finalText = Array.isArray(decoded) ? decoded[0] : decoded;
+      const parsed = parseJsonFunctionCalls(finalText);
+      toolCalls = parsed.toolCalls;
+    }
+
+    self.postMessage({
+      status: "complete",
+      output: decoded,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+    });
   }
 
   async load(options?: WorkerLoadOptions) {
@@ -322,7 +374,7 @@ export class TransformersJSWorkerHandler {
           break;
         case "generate":
           this.stopping_criteria.reset();
-          this.generate(data, e.data.generationOptions);
+          this.generate(data, e.data.generationOptions, e.data.tools);
           break;
         case "interrupt":
           this.interrupt();

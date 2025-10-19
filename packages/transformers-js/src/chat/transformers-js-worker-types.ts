@@ -33,6 +33,7 @@ export type WorkerMessage = {
     do_sample?: boolean;
     repetition_penalty?: number;
   };
+  tools?: any[]; // Tool definitions for tool calling
 };
 
 /**
@@ -40,12 +41,13 @@ export type WorkerMessage = {
  */
 export type WorkerResponse =
   | {
-      status: "loading" | "ready" | "start" | "update" | "complete" | "error";
-      output?: string | string[];
-      data?: string;
-      tps?: number;
-      numTokens?: number;
-    }
+    status: "loading" | "ready" | "start" | "update" | "complete" | "error";
+    output?: string | string[];
+    data?: string;
+    tps?: number;
+    numTokens?: number;
+    toolCalls?: any[]; // Parsed tool calls from the response
+  }
   | ProgressInfo;
 
 /**

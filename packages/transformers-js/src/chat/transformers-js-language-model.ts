@@ -4,7 +4,9 @@ import {
   LanguageModelV2CallWarning,
   LanguageModelV2Content,
   LanguageModelV2FinishReason,
+  LanguageModelV2ProviderDefinedTool,
   LanguageModelV2StreamPart,
+  LanguageModelV2ToolCall,
   LoadSettingError,
 } from "@ai-sdk/provider";
 import {
@@ -27,6 +29,18 @@ import type {
   ModelInstance,
   GenerationOptions,
 } from "./transformers-js-worker-types";
+import {
+  buildJsonToolSystemPrompt,
+  parseJsonFunctionCalls,
+} from "../tool-calling";
+import type { ParsedToolCall } from "../tool-calling";
+import {
+  createUnsupportedSettingWarning,
+  createUnsupportedToolWarning,
+} from "../utils/warnings";
+import { isFunctionTool } from "../utils/tool-utils";
+import { prependSystemPromptToMessages } from "../utils/prompt-utils";
+import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
 
 declare global {
   interface Navigator {
@@ -129,6 +143,83 @@ class CallbackTextStreamer extends TextStreamer {
   on_finalized_text(text: string): void {
     this.cb(text);
   }
+}
+
+/**
+ * Extract tool name from partial fence content for early emission
+ * This allows us to emit tool-input-start as soon as we know the tool name
+ * Expects JSON format: {"name":"toolName"
+ */
+function extractToolName(content: string): string | null {
+  // For JSON mode: {"name":"toolName"
+  const jsonMatch = content.match(/\{\s*"name"\s*:\s*"([^"]+)"/);
+  if (jsonMatch) {
+    return jsonMatch[1];
+  }
+  return null;
+}
+
+/**
+ * Extract the argument section from a streaming tool call fence.
+ * Returns the substring after `"arguments":` (best-effort for partial JSON).
+ */
+function extractArgumentsContent(content: string): string {
+  const match = content.match(/"arguments"\s*:\s*/);
+  if (!match || match.index === undefined) {
+    return "";
+  }
+
+  const startIndex = match.index + match[0].length;
+  let result = "";
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let started = false;
+
+  for (let i = startIndex; i < content.length; i++) {
+    const char = content[i];
+    result += char;
+
+    if (!started) {
+      if (!/\s/.test(char)) {
+        started = true;
+        if (char === "{" || char === "[") {
+          depth = 1;
+        }
+      }
+      continue;
+    }
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === "{" || char === "[") {
+        depth += 1;
+      } else if (char === "}" || char === "]") {
+        if (depth > 0) {
+          depth -= 1;
+          if (depth === 0) {
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 export class TransformersJSLanguageModel implements LanguageModelV2 {
@@ -338,56 +429,80 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     responseFormat,
     seed,
     tools,
+    toolChoice,
   }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     const warnings: LanguageModelV2CallWarning[] = [];
 
-    // Add warnings for unsupported settings
-    if (tools && tools.length > 0) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "tools",
-        details: "Tool calling is not yet supported by TransformersJS",
-      });
+    // Filter and warn about unsupported tools
+    const functionTools = (tools ?? []).filter(isFunctionTool);
+
+    const unsupportedTools = (tools ?? []).filter(
+      (tool): tool is LanguageModelV2ProviderDefinedTool =>
+        !isFunctionTool(tool),
+    );
+
+    for (const tool of unsupportedTools) {
+      warnings.push(
+        createUnsupportedToolWarning(
+          tool,
+          "Only function tools are supported by TransformersJS",
+        ),
+      );
     }
 
+    // Add warnings for unsupported settings
     if (frequencyPenalty != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "frequencyPenalty",
-        details: "Frequency penalty is not supported by TransformersJS",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "frequencyPenalty",
+          "Frequency penalty is not supported by TransformersJS",
+        ),
+      );
     }
 
     if (presencePenalty != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "presencePenalty",
-        details: "Presence penalty is not supported by TransformersJS",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "presencePenalty",
+          "Presence penalty is not supported by TransformersJS",
+        ),
+      );
     }
 
     if (stopSequences != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "stopSequences",
-        details: "Stop sequences are not supported by TransformersJS",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "stopSequences",
+          "Stop sequences are not supported by TransformersJS",
+        ),
+      );
     }
 
     if (responseFormat?.type === "json") {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "responseFormat",
-        details: "JSON response format is not supported by TransformersJS",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "responseFormat",
+          "JSON response format is not supported by TransformersJS",
+        ),
+      );
     }
 
     if (seed != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "seed",
-        details: "Seed is not supported by TransformersJS",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "seed",
+          "Seed is not supported by TransformersJS",
+        ),
+      );
+    }
+
+    if (toolChoice != null) {
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "toolChoice",
+          "toolChoice is not supported by TransformersJS",
+        ),
+      );
     }
 
     // Convert messages to TransformersJS format
@@ -408,6 +523,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       messages,
       warnings,
       generationOptions,
+      functionTools,
     };
   }
 
@@ -457,7 +573,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
    * Generates a complete text response using TransformersJS
    */
   public async doGenerate(options: LanguageModelV2CallOptions) {
-    const { messages, warnings, generationOptions } = this.getArgs(options);
+    const { messages, warnings, generationOptions, functionTools } =
+      this.getArgs(options);
 
     // Use worker if provided and in browser environment
     if (this.config.worker && isBrowserEnvironment()) {
@@ -466,8 +583,22 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         warnings,
         generationOptions,
         options,
+        functionTools,
       );
     }
+
+    // Build system prompt with JSON tool calling
+    const systemPrompt = buildJsonToolSystemPrompt(
+      undefined,
+      functionTools,
+      {
+        allowParallelToolCalls: false,
+      },
+    );
+
+
+    // Prepend system prompt to messages
+    const promptMessages = prependSystemPromptToMessages(messages, systemPrompt);
 
     // Main thread generation (browser without worker or server environment)
     const [processor, model] = await this.getSession(
@@ -486,10 +617,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       let newTokens: any[] = [];
 
       if (isVision) {
-        const text = processor.apply_chat_template(messages, {
+        const text = processor.apply_chat_template(promptMessages as any, {
           add_generation_prompt: true,
         });
-        const images = messages
+        const images = promptMessages
           .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
           .filter((part) => part.type === "image")
           .map((part) => part.image);
@@ -503,7 +634,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           skip_special_tokens: true,
         })[0];
       } else {
-        inputs = processor.apply_chat_template(messages, {
+        inputs = processor.apply_chat_template(promptMessages as any, {
           add_generation_prompt: true,
           return_dict: true,
         }) as { input_ids: Tensor; attention_mask?: Tensor };
@@ -527,10 +658,53 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         newTokens = generatedText.split("");
       }
 
+      // Parse JSON tool calls from response
+      const { toolCalls, textContent } = parseJsonFunctionCalls(generatedText);
+
+      if (toolCalls.length > 0) {
+        const toolCallsToEmit = toolCalls.slice(0, 1);
+
+        const parts: LanguageModelV2Content[] = [];
+
+        if (textContent) {
+          parts.push({
+            type: "text",
+            text: textContent,
+          });
+        }
+
+        for (const call of toolCallsToEmit) {
+          parts.push({
+            type: "tool-call",
+            toolCallId: call.toolCallId,
+            toolName: call.toolName,
+            input: JSON.stringify(call.args ?? {}),
+          } satisfies LanguageModelV2ToolCall);
+        }
+
+        return {
+          content: parts,
+          finishReason: "tool-calls" as LanguageModelV2FinishReason,
+          usage: isVision
+            ? {
+              inputTokens: undefined,
+              outputTokens: undefined,
+              totalTokens: undefined,
+            }
+            : {
+              inputTokens: inputLength,
+              outputTokens: generatedText.length,
+              totalTokens: inputLength + generatedText.length,
+            },
+          request: { body: { messages: promptMessages, ...generationOptions } },
+          warnings,
+        };
+      }
+
       const content: LanguageModelV2Content[] = [
         {
           type: "text",
-          text: generatedText,
+          text: textContent || generatedText,
         },
       ];
 
@@ -539,22 +713,21 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         finishReason: "stop" as LanguageModelV2FinishReason,
         usage: isVision
           ? {
-              inputTokens: undefined,
-              outputTokens: undefined,
-              totalTokens: undefined,
-            }
+            inputTokens: undefined,
+            outputTokens: undefined,
+            totalTokens: undefined,
+          }
           : {
-              inputTokens: inputLength,
-              outputTokens: generatedText.length,
-              totalTokens: inputLength + generatedText.length,
-            },
-        request: { body: { messages, ...generationOptions } },
+            inputTokens: inputLength,
+            outputTokens: generatedText.length,
+            totalTokens: inputLength + generatedText.length,
+          },
+        request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
@@ -568,18 +741,25 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
+    functionTools: any[] = [],
   ) {
     const worker = this.config.worker!;
 
     await this.initializeWorker();
 
-    const result = await new Promise<string>((resolve, reject) => {
+    const result = await new Promise<{ text: string; toolCalls?: any[] }>((resolve, reject) => {
       const onMessage = (e: MessageEvent) => {
         const msg = e.data;
         if (!msg) return;
-        if (msg.status === "complete" && Array.isArray(msg.output)) {
+        if (msg.status === "complete") {
           worker.removeEventListener("message", onMessage);
-          resolve(String(msg.output[0] ?? ""));
+          const text = Array.isArray(msg.output)
+            ? String(msg.output[0] ?? "")
+            : String(msg.output ?? "");
+          resolve({
+            text,
+            toolCalls: msg.toolCalls
+          });
         } else if (msg.status === "error") {
           worker.removeEventListener("message", onMessage);
           reject(new Error(String(msg.data || "Worker error")));
@@ -590,6 +770,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         type: "generate",
         data: messages,
         generationOptions,
+        tools: functionTools.length > 0 ? functionTools : undefined,
       });
 
       if (options.abortSignal) {
@@ -601,7 +782,43 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       }
     });
 
-    const content: LanguageModelV2Content[] = [{ type: "text", text: result }];
+    // Handle tool calls if present
+    if (result.toolCalls && result.toolCalls.length > 0) {
+      const toolCallsToEmit = result.toolCalls.slice(0, 1);
+      const parts: LanguageModelV2Content[] = [];
+
+      // Extract text content from result
+      const { textContent } = parseJsonFunctionCalls(result.text);
+      if (textContent) {
+        parts.push({
+          type: "text",
+          text: textContent,
+        });
+      }
+
+      for (const call of toolCallsToEmit) {
+        parts.push({
+          type: "tool-call",
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          input: JSON.stringify(call.args ?? {}),
+        } satisfies LanguageModelV2ToolCall);
+      }
+
+      return {
+        content: parts,
+        finishReason: "tool-calls" as LanguageModelV2FinishReason,
+        usage: {
+          inputTokens: undefined,
+          outputTokens: undefined,
+          totalTokens: undefined,
+        },
+        request: { body: { messages, ...generationOptions } },
+        warnings,
+      };
+    }
+
+    const content: LanguageModelV2Content[] = [{ type: "text", text: result.text }];
     return {
       content,
       finishReason: "stop" as LanguageModelV2FinishReason,
@@ -675,7 +892,16 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
    * Generates a streaming text response using TransformersJS
    */
   public async doStream(options: LanguageModelV2CallOptions) {
-    const { messages, warnings, generationOptions } = this.getArgs(options);
+
+    let converted;
+    try {
+      converted = this.getArgs(options);
+    } catch (error) {
+      console.error('[TransformersJS Model doStream] getArgs FAILED:', error);
+      throw error;
+    }
+
+    const { messages, warnings, generationOptions, functionTools } = converted;
 
     // Use worker if available and in browser environment
     if (this.config.worker && isBrowserEnvironment()) {
@@ -684,27 +910,102 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         warnings,
         generationOptions,
         options,
+        functionTools,
       );
     }
 
+    // Build system prompt with JSON tool calling
+    const systemPrompt = buildJsonToolSystemPrompt(
+      undefined,
+      functionTools,
+      {
+        allowParallelToolCalls: false,
+      },
+    );
+
+
+    // Prepend system prompt to messages
+    const promptMessages = prependSystemPromptToMessages(messages, systemPrompt);
+
     const self = this;
+    const textId = "text-0";
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
       async start(controller) {
-        let isFirstChunk = true;
-        const textId = "text-0";
-
         controller.enqueue({
           type: "stream-start",
           warnings,
         });
+
+        let textStarted = false;
+        let finished = false;
+        let aborted = false;
+
+        const ensureTextStart = () => {
+          if (!textStarted) {
+            controller.enqueue({
+              type: "text-start",
+              id: textId,
+            });
+            textStarted = true;
+          }
+        };
+
+        const emitTextDelta = (delta: string) => {
+          if (!delta) return;
+          ensureTextStart();
+          controller.enqueue({
+            type: "text-delta",
+            id: textId,
+            delta,
+          });
+        };
+
+        const emitTextEndIfNeeded = () => {
+          if (!textStarted) return;
+          controller.enqueue({
+            type: "text-end",
+            id: textId,
+          });
+          textStarted = false;
+        };
+
+        const finishStream = (
+          finishReason: LanguageModelV2FinishReason,
+          inputLength: number = 0,
+          outputTokens: number = 0,
+        ) => {
+          if (finished) return;
+          finished = true;
+          emitTextEndIfNeeded();
+          controller.enqueue({
+            type: "finish",
+            finishReason,
+            usage: {
+              inputTokens: inputLength,
+              outputTokens,
+              totalTokens: inputLength + outputTokens,
+            },
+          });
+          controller.close();
+        };
+
+        const abortHandler = () => {
+          if (aborted) return;
+          aborted = true;
+          self.stoppingCriteria.interrupt();
+        };
+
+        if (options.abortSignal) {
+          options.abortSignal.addEventListener("abort", abortHandler);
+        }
 
         try {
           const [tokenizer, model] = await self.getSession(
             self.config.initProgressCallback,
           );
 
-          const inputs = tokenizer.apply_chat_template(messages, {
+          const inputs = tokenizer.apply_chat_template(promptMessages as any, {
             add_generation_prompt: true,
             return_dict: true,
           }) as { input_ids: Tensor; attention_mask?: Tensor };
@@ -712,18 +1013,226 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           let inputLength = inputs.input_ids.data.length;
           let outputTokens = 0;
 
+          // Use ToolCallFenceDetector for real-time streaming
+          const fenceDetector = new ToolCallFenceDetector();
+          let accumulatedText = "";
+
+          // Streaming tool call state
+          let currentToolCallId: string | null = null;
+          let toolInputStartEmitted = false;
+          let accumulatedFenceContent = "";
+          let streamedArgumentsLength = 0;
+          let insideFence = false;
+          let toolCallDetected = false; // Add flag to stop processing after tool call
+
           const streamCallback = (text: string) => {
-            if (isFirstChunk) {
-              controller.enqueue({ type: "text-start", id: textId });
-              isFirstChunk = false;
-            }
+            if (aborted || toolCallDetected) return; // Stop if tool call detected
 
             outputTokens++;
-            controller.enqueue({
-              type: "text-delta",
-              id: textId,
-              delta: text,
-            });
+            accumulatedText += text;
+
+            // Add chunk to detector
+            fenceDetector.addChunk(text);
+
+            // Process buffer using streaming detection
+            while (fenceDetector.hasContent() && !aborted && !toolCallDetected) {
+              const wasInsideFence = insideFence;
+              const result = fenceDetector.detectStreamingFence();
+              insideFence = result.inFence;
+
+              let madeProgress = false;
+
+              if (!wasInsideFence && result.inFence) {
+                if (result.safeContent) {
+                  emitTextDelta(result.safeContent);
+                  madeProgress = true;
+                }
+
+                currentToolCallId = `call_${Date.now()}_${Math.random()
+                  .toString(36)
+                  .slice(2, 9)}`;
+                toolInputStartEmitted = false;
+                accumulatedFenceContent = "";
+                streamedArgumentsLength = 0;
+                insideFence = true;
+
+                continue;
+              }
+
+              if (result.completeFence) {
+                madeProgress = true;
+                if (result.safeContent) {
+                  accumulatedFenceContent += result.safeContent;
+                }
+
+                if (toolInputStartEmitted && currentToolCallId) {
+                  const argsContent = extractArgumentsContent(
+                    accumulatedFenceContent,
+                  );
+                  if (argsContent.length > streamedArgumentsLength) {
+                    const delta = argsContent.slice(streamedArgumentsLength);
+                    streamedArgumentsLength = argsContent.length;
+                    if (delta.length > 0) {
+                      controller.enqueue({
+                        type: "tool-input-delta",
+                        id: currentToolCallId,
+                        delta,
+                      });
+                    }
+                  }
+                }
+
+                const parsed = parseJsonFunctionCalls(result.completeFence);
+                const parsedToolCalls = parsed.toolCalls;
+                const selectedToolCalls = parsedToolCalls.slice(0, 1);
+
+                if (selectedToolCalls.length === 0) {
+                  emitTextDelta(result.completeFence);
+                  if (result.textAfterFence) {
+                    emitTextDelta(result.textAfterFence);
+                  }
+
+                  currentToolCallId = null;
+                  toolInputStartEmitted = false;
+                  accumulatedFenceContent = "";
+                  streamedArgumentsLength = 0;
+                  insideFence = false;
+                  continue;
+                }
+
+                if (selectedToolCalls.length > 0 && currentToolCallId) {
+                  selectedToolCalls[0].toolCallId = currentToolCallId;
+                }
+
+                for (const [index, call] of selectedToolCalls.entries()) {
+                  const toolCallId =
+                    index === 0 && currentToolCallId
+                      ? currentToolCallId
+                      : call.toolCallId;
+                  const toolName = call.toolName;
+                  const argsJson = JSON.stringify(call.args ?? {});
+
+                  if (toolCallId === currentToolCallId) {
+                    if (!toolInputStartEmitted) {
+                      controller.enqueue({
+                        type: "tool-input-start",
+                        id: toolCallId,
+                        toolName,
+                      });
+                      toolInputStartEmitted = true;
+                    }
+
+                    const argsContent = extractArgumentsContent(
+                      accumulatedFenceContent,
+                    );
+                    if (argsContent.length > streamedArgumentsLength) {
+                      const delta = argsContent.slice(streamedArgumentsLength);
+                      streamedArgumentsLength = argsContent.length;
+                      if (delta.length > 0) {
+                        controller.enqueue({
+                          type: "tool-input-delta",
+                          id: toolCallId,
+                          delta,
+                        });
+                      }
+                    }
+                  } else {
+                    controller.enqueue({
+                      type: "tool-input-start",
+                      id: toolCallId,
+                      toolName,
+                    });
+                    if (argsJson.length > 0) {
+                      controller.enqueue({
+                        type: "tool-input-delta",
+                        id: toolCallId,
+                        delta: argsJson,
+                      });
+                    }
+                  }
+
+                  controller.enqueue({
+                    type: "tool-input-end",
+                    id: toolCallId,
+                  });
+                  controller.enqueue({
+                    type: "tool-call",
+                    toolCallId,
+                    toolName,
+                    input: argsJson,
+                    providerExecuted: false,
+                  });
+                }
+
+                if (result.textAfterFence) {
+                  emitTextDelta(result.textAfterFence);
+                }
+
+                madeProgress = true;
+
+                // Stop streaming after tool call detected
+                toolCallDetected = true;
+                self.stoppingCriteria.interrupt();
+
+                currentToolCallId = null;
+                toolInputStartEmitted = false;
+                accumulatedFenceContent = "";
+                streamedArgumentsLength = 0;
+                insideFence = false;
+
+                // Break out of the processing loop
+                break;
+              }
+
+              if (insideFence) {
+                if (result.safeContent) {
+                  accumulatedFenceContent += result.safeContent;
+                  madeProgress = true;
+
+                  const toolName = extractToolName(accumulatedFenceContent);
+                  if (
+                    toolName &&
+                    !toolInputStartEmitted &&
+                    currentToolCallId
+                  ) {
+                    controller.enqueue({
+                      type: "tool-input-start",
+                      id: currentToolCallId,
+                      toolName,
+                    });
+                    toolInputStartEmitted = true;
+                  }
+
+                  if (toolInputStartEmitted && currentToolCallId) {
+                    const argsContent = extractArgumentsContent(
+                      accumulatedFenceContent,
+                    );
+                    if (argsContent.length > streamedArgumentsLength) {
+                      const delta = argsContent.slice(streamedArgumentsLength);
+                      streamedArgumentsLength = argsContent.length;
+                      if (delta.length > 0) {
+                        controller.enqueue({
+                          type: "tool-input-delta",
+                          id: currentToolCallId,
+                          delta,
+                        });
+                      }
+                    }
+                  }
+                }
+
+                continue;
+              }
+
+              if (!insideFence && result.safeContent) {
+                emitTextDelta(result.safeContent);
+                madeProgress = true;
+              }
+
+              if (!madeProgress) {
+                break;
+              }
+            }
           };
 
           const streamer = new CallbackTextStreamer(
@@ -731,12 +1240,6 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             streamCallback,
           );
           self.stoppingCriteria.reset();
-
-          if (options.abortSignal) {
-            options.abortSignal.addEventListener("abort", () => {
-              self.stoppingCriteria.interrupt();
-            });
-          }
 
           const stoppingCriteriaList = new StoppingCriteriaList();
           stoppingCriteriaList.extend([self.stoppingCriteria]);
@@ -748,31 +1251,34 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             stopping_criteria: stoppingCriteriaList,
           });
 
-          // Send text end event
-          if (!isFirstChunk) {
-            controller.enqueue({ type: "text-end", id: textId });
+          // Emit any remaining buffer content if no tool was detected
+          if (fenceDetector.hasContent() && !aborted) {
+            emitTextDelta(fenceDetector.getBuffer());
+            fenceDetector.clearBuffer();
           }
 
-          controller.enqueue({
-            type: "finish",
-            finishReason: "stop",
-            usage: {
-              inputTokens: inputLength,
-              outputTokens,
-              totalTokens: inputLength + outputTokens,
-            },
-          });
+          // Check if we detected any tool calls
+          const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
+
+
+          const finishReason =
+            toolCalls.length > 0 ? "tool-calls" : "stop";
+
+          finishStream(finishReason, inputLength, outputTokens);
         } catch (error) {
-          controller.error(error);
-        } finally {
+          controller.enqueue({ type: "error", error });
           controller.close();
+        } finally {
+          if (options.abortSignal) {
+            options.abortSignal.removeEventListener("abort", abortHandler);
+          }
         }
       },
     });
 
     return {
       stream,
-      request: { body: { messages, ...generationOptions } },
+      request: { body: { messages: promptMessages, ...generationOptions } },
     };
   }
 
@@ -784,6 +1290,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
+    functionTools: any[] = [],
   ) {
     const worker = this.config.worker!;
 
@@ -795,6 +1302,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         const textId = "text-0";
         controller.enqueue({ type: "stream-start", warnings });
 
+        // Use fence detector to filter out tool calls from text stream
+        const fenceDetector = new ToolCallFenceDetector();
+
         const onMessage = (e: MessageEvent) => {
           const msg = e.data;
           if (!msg) return;
@@ -804,20 +1314,84 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             msg.status === "update" &&
             typeof msg.output === "string"
           ) {
-            if (isFirst) {
-              controller.enqueue({ type: "text-start", id: textId });
-              isFirst = false;
+            // Filter out tool call fences from the text stream
+            fenceDetector.addChunk(msg.output);
+
+            while (fenceDetector.hasContent()) {
+              const result = fenceDetector.detectStreamingFence();
+
+              // Only emit non-fence content as text
+              if (!result.inFence && result.safeContent) {
+                if (isFirst) {
+                  controller.enqueue({ type: "text-start", id: textId });
+                  isFirst = false;
+                }
+                controller.enqueue({
+                  type: "text-delta",
+                  id: textId,
+                  delta: result.safeContent,
+                });
+              }
+
+              // If we detect a complete fence, don't emit it as text
+              if (result.completeFence) {
+                // Tool call will be emitted separately in "complete" message
+                break;
+              }
+
+              if (!result.safeContent && !result.completeFence) {
+                break;
+              }
             }
-            controller.enqueue({
-              type: "text-delta",
-              id: textId,
-              delta: msg.output,
-            });
           } else if (msg.status === "complete") {
             if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
+
+            // Check for tool calls in the response
+            const finishReason = msg.toolCalls && msg.toolCalls.length > 0
+              ? "tool-calls"
+              : "stop";
+
+            // Emit tool calls if present
+            if (msg.toolCalls && msg.toolCalls.length > 0) {
+              const toolCallsToEmit = msg.toolCalls.slice(0, 1);
+
+              for (const call of toolCallsToEmit) {
+                const toolCallId = call.toolCallId;
+                const toolName = call.toolName;
+                const argsJson = JSON.stringify(call.args ?? {});
+
+                controller.enqueue({
+                  type: "tool-input-start",
+                  id: toolCallId,
+                  toolName,
+                });
+
+                if (argsJson.length > 0) {
+                  controller.enqueue({
+                    type: "tool-input-delta",
+                    id: toolCallId,
+                    delta: argsJson,
+                  });
+                }
+
+                controller.enqueue({
+                  type: "tool-input-end",
+                  id: toolCallId,
+                });
+
+                controller.enqueue({
+                  type: "tool-call",
+                  toolCallId,
+                  toolName,
+                  input: argsJson,
+                  providerExecuted: false,
+                });
+              }
+            }
+
             controller.enqueue({
               type: "finish",
-              finishReason: "stop",
+              finishReason,
               usage: {
                 inputTokens: undefined,
                 outputTokens: msg.numTokens,
@@ -845,6 +1419,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           type: "generate",
           data: messages,
           generationOptions,
+          tools: functionTools.length > 0 ? functionTools : undefined,
         });
       },
     });
@@ -852,3 +1427,5 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     return { stream, request: { body: { messages, ...generationOptions } } };
   }
 }
+
+
