@@ -182,10 +182,10 @@ function TransformersJSChat({
               key={m.id}
             >
               <MessageContent>
-                {/* Handle download progress parts first */}
-                {m.parts
-                  .filter((part) => part.type === "data-modelDownloadProgress")
-                  .map((part, partIndex) => {
+                {/* Render parts in chronological order */}
+                {m.parts.map((part, partIndex) => {
+                  // Handle download progress parts
+                  if (part.type === "data-modelDownloadProgress") {
                     // Only show if message is not empty (hiding completed/cleared progress)
                     if (!part.data.message) return null;
 
@@ -206,12 +206,10 @@ function TransformersJSChat({
                           )}
                       </div>
                     );
-                  })}
+                  }
 
-                {/* Handle file parts */}
-                {m.parts
-                  .filter((part) => part.type === "file")
-                  .map((part, partIndex) => {
+                  // Handle file parts
+                  if (part.type === "file") {
                     if (part.mediaType?.startsWith("image/")) {
                       return (
                         <div key={partIndex} className="mt-2">
@@ -238,28 +236,26 @@ function TransformersJSChat({
 
                     // TODO: Handle other file types
                     return null;
-                  })}
+                  }
 
-                {/* Handle reasoning */}
-                {m.parts
-                  .filter((part) => part.type === "reasoning")
-                  .map((part, partIndex) => (
-                    <Reasoning
-                      key={`${m.id}-${partIndex}`}
-                      className="w-full"
-                      isStreaming={
-                        status === "streaming" && index === messages.length - 1
-                      }
-                    >
-                      <ReasoningTrigger />
-                      <ReasoningContent>{part.text}</ReasoningContent>
-                    </Reasoning>
-                  ))}
+                  // Handle reasoning
+                  if (part.type === "reasoning") {
+                    return (
+                      <Reasoning
+                        key={`${m.id}-${partIndex}`}
+                        className="w-full"
+                        isStreaming={
+                          status === "streaming" && index === messages.length - 1
+                        }
+                      >
+                        <ReasoningTrigger />
+                        <ReasoningContent>{part.text}</ReasoningContent>
+                      </Reasoning>
+                    );
+                  }
 
-                {/* Handle tool parts */}
-                {m.parts
-                  .filter((part) => part.type.startsWith("tool-"))
-                  .map((part, partIndex) => {
+                  // Handle tool parts
+                  if (part.type.startsWith("tool-")) {
                     // Type guard to ensure part is a ToolUIPart
                     if (!('state' in part)) return null;
 
@@ -291,14 +287,15 @@ function TransformersJSChat({
                         </ToolContent>
                       </Tool>
                     );
-                  })}
+                  }
 
-                {/* Handle text parts */}
-                {m.parts
-                  .filter((part) => part.type === "text")
-                  .map((part, partIndex) => (
-                    <Response key={partIndex}>{part.text}</Response>
-                  ))}
+                  // Handle text parts
+                  if (part.type === "text") {
+                    return <Response key={partIndex}>{part.text}</Response>;
+                  }
+
+                  return null;
+                })}
 
                 {/* Action buttons for assistant messages */}
                 {(m.role === "assistant" || m.role === "system") &&
