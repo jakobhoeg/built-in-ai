@@ -26,7 +26,7 @@ export {
   type TransformersJSProviderSettings,
 } from "./transformers-js-provider";
 
-export type { TransformersUIMessage } from "./chat/ui-message-types.d";
+export type { TransformersUIMessage } from "./chat/ui-message-types.d.ts";
 
 export type {
   GenerationOptions,
