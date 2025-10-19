@@ -1,5 +1,15 @@
 # @built-in-ai/transformers-js
 
+## 0.3.0
+
+### Minor Changes
+
+- f439a61: feat: tool call support
+
+### Patch Changes
+
+- c92ae2c: chore: update readme
+
 ## 0.2.0
 
 ### Minor Changes
