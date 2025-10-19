@@ -40,7 +40,10 @@ import {
   createUnsupportedToolWarning,
 } from "../utils/warnings";
 import { isFunctionTool } from "../utils/tool-utils";
-import { prependSystemPromptToMessages } from "../utils/prompt-utils";
+import {
+  prependSystemPromptToMessages,
+  extractSystemPrompt,
+} from "../utils/prompt-utils";
 import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
 
 declare global {
@@ -599,14 +602,23 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       );
     }
 
-    // Build system prompt with JSON tool calling
-    const systemPrompt = buildJsonToolSystemPrompt(undefined, functionTools, {
-      allowParallelToolCalls: false,
-    });
+    // Extract system prompt from messages and build combined prompt with tool calling
+    const {
+      systemPrompt: originalSystemPrompt,
+      messages: messagesWithoutSystem,
+    } = extractSystemPrompt(messages);
+
+    const systemPrompt = buildJsonToolSystemPrompt(
+      originalSystemPrompt,
+      functionTools,
+      {
+        allowParallelToolCalls: false,
+      },
+    );
 
     // Prepend system prompt to messages
     const promptMessages = prependSystemPromptToMessages(
-      messages,
+      messagesWithoutSystem,
       systemPrompt,
     );
 
@@ -929,14 +941,23 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       );
     }
 
-    // Build system prompt with JSON tool calling
-    const systemPrompt = buildJsonToolSystemPrompt(undefined, functionTools, {
-      allowParallelToolCalls: false,
-    });
+    // Extract system prompt from messages and build combined prompt with tool calling
+    const {
+      systemPrompt: originalSystemPrompt,
+      messages: messagesWithoutSystem,
+    } = extractSystemPrompt(messages);
+
+    const systemPrompt = buildJsonToolSystemPrompt(
+      originalSystemPrompt,
+      functionTools,
+      {
+        allowParallelToolCalls: false,
+      },
+    );
 
     // Prepend system prompt to messages
     const promptMessages = prependSystemPromptToMessages(
-      messages,
+      messagesWithoutSystem,
       systemPrompt,
     );
 

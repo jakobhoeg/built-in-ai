@@ -14,7 +14,10 @@ import {
   buildJsonToolSystemPrompt,
   parseJsonFunctionCalls,
 } from "../tool-calling";
-import { prependSystemPromptToMessages } from "../utils/prompt-utils";
+import {
+  prependSystemPromptToMessages,
+  extractSystemPrompt,
+} from "../utils/prompt-utils";
 import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
 
 import type {
@@ -150,18 +153,23 @@ export class TransformersJSWorkerHandler {
     const [processor, model] = modelInstance;
     const isVision = this.isVisionModel;
 
-    // Build system prompt with tool calling if tools are provided
+    // Extract system prompt from messages and build combined prompt with tool calling
+    const {
+      systemPrompt: originalSystemPrompt,
+      messages: messagesWithoutSystem,
+    } = extractSystemPrompt(messages);
+
     const systemPrompt =
       tools && tools.length > 0
-        ? buildJsonToolSystemPrompt(undefined, tools, {
+        ? buildJsonToolSystemPrompt(originalSystemPrompt, tools, {
             allowParallelToolCalls: false,
           })
-        : "";
+        : originalSystemPrompt || "";
 
-    // Prepend system prompt to messages if tools are available
+    // Prepend system prompt to messages if not empty
     const processedMessages = systemPrompt
-      ? prependSystemPromptToMessages(messages, systemPrompt)
-      : messages;
+      ? prependSystemPromptToMessages(messagesWithoutSystem, systemPrompt)
+      : messagesWithoutSystem;
 
     // Prepare inputs based on model type
     let inputs: any;
@@ -172,7 +180,13 @@ export class TransformersJSWorkerHandler {
         lastMessages
           .map((x) => x.content)
           .flat(Infinity)
-          .filter((msg) => msg.image !== undefined)
+          .filter(
+            (msg): msg is { type: string; image: string } =>
+              typeof msg === "object" &&
+              msg !== null &&
+              "image" in msg &&
+              msg.image !== undefined,
+          )
           .map((msg) => load_image(msg.image)),
       );
       const text = processor.apply_chat_template(lastMessages as any, {
