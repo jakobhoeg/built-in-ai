@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { PlusIcon, RefreshCcw, Copy, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { DefaultChatTransport, UIMessage } from "ai";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, UIMessage } from "ai";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
@@ -48,6 +48,7 @@ import {
   TransformersUIMessage,
 } from "@built-in-ai/transformers-js";
 import { ModelConfig, MODELS } from "./util/models-config";
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
 
 function TransformersJSChat({
   useClientSideInference,
@@ -85,6 +86,7 @@ function TransformersJSChat({
   const { error, status, sendMessage, messages, regenerate, stop } =
     useChat<TransformersUIMessage>({
       transport: chatTransport, // use custom transport
+      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
       onError(error) {
         toast.error(error.message);
       },
@@ -253,6 +255,43 @@ function TransformersJSChat({
                       <ReasoningContent>{part.text}</ReasoningContent>
                     </Reasoning>
                   ))}
+
+                {/* Handle tool parts */}
+                {m.parts
+                  .filter((part) => part.type.startsWith("tool-"))
+                  .map((part, partIndex) => {
+                    // Type guard to ensure part is a ToolUIPart
+                    if (!('state' in part)) return null;
+
+                    // Map state values to the expected type
+                    const toolState = (part.state === 'streaming' || part.state === 'done')
+                      ? 'output-available'
+                      : part.state || 'input-streaming';
+
+                    // Format output as ReactNode
+                    const formatOutput = (output: unknown): React.ReactNode => {
+                      if (output === undefined || output === null) return undefined;
+                      if (typeof output === 'string') return output;
+                      return <pre className="text-xs overflow-auto">{JSON.stringify(output, null, 2)}</pre>;
+                    };
+
+                    return (
+                      <Tool key={partIndex}>
+                        <ToolHeader type={part.type as any} state={toolState as any} />
+                        <ToolContent>
+                          {'input' in part && part.input !== undefined && (
+                            <ToolInput input={part.input} />
+                          )}
+                          {('output' in part || 'errorText' in part) && (
+                            <ToolOutput
+                              output={'output' in part && part.output ? formatOutput(part.output) : undefined}
+                              errorText={'errorText' in part && part.errorText ? String(part.errorText) : undefined}
+                            />
+                          )}
+                        </ToolContent>
+                      </Tool>
+                    );
+                  })}
 
                 {/* Handle text parts */}
                 {m.parts
