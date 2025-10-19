@@ -42,6 +42,16 @@ function convertDataToURL(
 }
 
 /**
+ * TransformersJS message type
+ * For text models: content is a string
+ * For vision models: content can be an array of text and image parts
+ */
+export interface TransformersMessage {
+  role: string;
+  content: string | Array<{ type: string; text?: string; image?: string }>;
+}
+
+/**
  * Safely normalize tool arguments - handles both string and object inputs
  */
 function normalizeToolArguments(input: unknown): unknown {
@@ -98,7 +108,7 @@ function processVisionContent(
 export function convertToTransformersMessages(
   prompt: LanguageModelV2Prompt,
   isVisionModel: boolean = false,
-): Array<{ role: string; content: any }> {
+): TransformersMessage[] {
   return prompt.map((message) => {
     switch (message.role) {
       case "system":

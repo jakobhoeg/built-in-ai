@@ -24,6 +24,7 @@ import {
   type Tensor,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
+import type { TransformersMessage } from "./convert-to-transformers-message";
 import { decodeSingleSequence } from "./decode-utils";
 import type {
   ModelInstance,
@@ -33,7 +34,7 @@ import {
   buildJsonToolSystemPrompt,
   parseJsonFunctionCalls,
 } from "../tool-calling";
-import type { ParsedToolCall } from "../tool-calling";
+import type { ParsedToolCall, ToolDefinition } from "../tool-calling";
 import {
   createUnsupportedSettingWarning,
   createUnsupportedToolWarning,
@@ -430,11 +431,22 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     seed,
     tools,
     toolChoice,
-  }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
+  }: Parameters<LanguageModelV2["doGenerate"]>[0]): {
+    messages: TransformersMessage[];
+    warnings: LanguageModelV2CallWarning[];
+    generationOptions: GenerationOptions;
+    functionTools: ToolDefinition[];
+  } {
     const warnings: LanguageModelV2CallWarning[] = [];
 
     // Filter and warn about unsupported tools
-    const functionTools = (tools ?? []).filter(isFunctionTool);
+    const functionTools: ToolDefinition[] = (tools ?? [])
+      .filter(isFunctionTool)
+      .map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.inputSchema,
+      }));
 
     const unsupportedTools = (tools ?? []).filter(
       (tool): tool is LanguageModelV2ProviderDefinedTool =>
@@ -614,9 +626,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       };
       let generatedText: string;
       let inputLength: number = 0;
-      let newTokens: any[] = [];
 
       if (isVision) {
+        // Cast to any for vision models since transformers.js supports vision content arrays too
+        // but the type definition is Message[] with content: string
         const text = processor.apply_chat_template(promptMessages as any, {
           add_generation_prompt: true,
         });
@@ -626,10 +639,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           .map((part) => part.image);
 
         inputs = await processor(text, images.length > 0 ? images : undefined);
-        const outputs = await model.generate({
+        // Cast to any because transformers.js generate() has complex overload types
+        const outputs = await (model.generate as any)({
           ...inputs,
           ...generationOptions,
-        } as any);
+        });
         generatedText = processor.batch_decode(outputs as Tensor, {
           skip_special_tokens: true,
         })[0];
@@ -638,14 +652,16 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           add_generation_prompt: true,
           return_dict: true,
         }) as { input_ids: Tensor; attention_mask?: Tensor };
-        const outputs = await model.generate({
+        // Cast to any because transformers.js generate() has complex overload types
+        const outputs = await (model.generate as any)({
           ...inputs,
           ...generationOptions,
-        } as any);
+        });
         inputLength = inputs.input_ids.data.length;
 
         // Extract first sequence from outputs
-        const sequences = (outputs as any).sequences || outputs;
+        const outputsAsAny = outputs as any;
+        const sequences = outputsAsAny.sequences || outputs;
         const firstSequence = Array.isArray(sequences)
           ? sequences[0]
           : sequences;
@@ -655,7 +671,6 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           firstSequence,
           inputLength,
         );
-        newTokens = generatedText.split("");
       }
 
       // Parse JSON tool calls from response
@@ -734,20 +749,17 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   }
 
   private async doGenerateWithWorker(
-    messages: Array<{
-      role: string;
-      content: string | Array<{ type: string; text?: string; image?: string }>;
-    }>,
+    messages: TransformersMessage[],
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
-    functionTools: any[] = [],
+    functionTools: ToolDefinition[],
   ) {
     const worker = this.config.worker!;
 
     await this.initializeWorker();
 
-    const result = await new Promise<{ text: string; toolCalls?: any[] }>((resolve, reject) => {
+    const result = await new Promise<{ text: string; toolCalls?: ParsedToolCall[] }>((resolve, reject) => {
       const onMessage = (e: MessageEvent) => {
         const msg = e.data;
         if (!msg) return;
@@ -1005,6 +1017,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             self.config.initProgressCallback,
           );
 
+          // Cast to any for vision models since transformers.js supports vision content arrays
+          // but the type definition is Message[] with content: string
           const inputs = tokenizer.apply_chat_template(promptMessages as any, {
             add_generation_prompt: true,
             return_dict: true,
@@ -1283,14 +1297,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
   }
 
   private async doStreamWithWorker(
-    messages: Array<{
-      role: string;
-      content: string | Array<{ type: string; text?: string; image?: string }>;
-    }>,
+    messages: TransformersMessage[],
     warnings: LanguageModelV2CallWarning[],
     generationOptions: GenerationOptions,
     options: LanguageModelV2CallOptions,
-    functionTools: any[] = [],
+    functionTools: ToolDefinition[],
   ) {
     const worker = this.config.worker!;
 
