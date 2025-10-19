@@ -1,17 +1,10 @@
 import type { ParsedResponse, ParsedToolCall } from "./types";
 
 /**
- * Regular expression to match JSON tool call code fences.
  * Matches blocks like ```tool_call or ```tool-call with content inside.
  */
 const JSON_TOOL_CALL_FENCE_REGEX = /```tool[_-]?call\s*([\s\S]*?)```/gi;
 
-/**
- * Generates a unique identifier for a tool call.
- * Uses timestamp and random string to ensure uniqueness.
- *
- * @returns A unique tool call ID in the format "call_{timestamp}_{random}"
- */
 function generateToolCallId(): string {
   return `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -93,24 +86,12 @@ export function parseJsonFunctionCalls(response: string): ParsedResponse {
   return { toolCalls, textContent: textContent.trim() };
 }
 
-/**
- * Checks if a response contains JSON-formatted tool calls.
- *
- * @param response - The model's response text to check
- * @returns true if the response contains tool call fences, false otherwise
- */
 export function hasJsonFunctionCalls(response: string): boolean {
   const hasMatch = JSON_TOOL_CALL_FENCE_REGEX.test(response);
   JSON_TOOL_CALL_FENCE_REGEX.lastIndex = 0;
   return hasMatch;
 }
 
-/**
- * Extracts the first JSON tool call code fence block from a response.
- *
- * @param response - The model's response text to extract from
- * @returns The first tool call fence block (including delimiters), or null if none found
- */
 export function extractJsonFunctionCallsBlock(response: string): string | null {
   const match = JSON_TOOL_CALL_FENCE_REGEX.exec(response);
   JSON_TOOL_CALL_FENCE_REGEX.lastIndex = 0;

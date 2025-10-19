@@ -8,9 +8,9 @@ import type { ToolDefinition } from "./types";
  * Builds an enhanced system prompt for JSON-based tool calling.
  * The model receives JSON schemas and is expected to return JSON tool calls.
  *
- * @param originalSystemPrompt - The original system prompt (if any)
- * @param tools - Array of available tool definitions
- * @param options - Configuration options for tool calling behavior (unused, kept for backwards compatibility)
+ * @param originalSystemPrompt
+ * @param tools
+ * @param options
  * @returns Enhanced system prompt with JSON tool calling instructions
  */
 export function buildJsonToolSystemPrompt(
@@ -72,7 +72,7 @@ Important:
  * Extracts the parameters/input schema from a tool definition.
  * Handles both ToolDefinition (parameters field) and LanguageModelV2FunctionTool (inputSchema field).
  *
- * @param tool - The tool definition to extract parameters from
+ * @param tool
  * @returns The JSON Schema for the tool's parameters, or undefined if not present
  */
 function getParameters(

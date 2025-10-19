@@ -1,4 +1,3 @@
-// Types
 export type {
   JSONSchema,
   ToolDefinition,
@@ -7,7 +6,6 @@ export type {
   ParsedResponse,
 } from "./types";
 
-// JSON tool calling (primary mode)
 export { buildJsonToolSystemPrompt } from "./build-json-system-prompt";
 export {
   parseJsonFunctionCalls,
