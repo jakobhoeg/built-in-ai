@@ -46,4 +46,3 @@ export interface ParsedResponse {
   toolCalls: ParsedToolCall[];
   textContent: string;
 }
-

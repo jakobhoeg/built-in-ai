@@ -600,17 +600,15 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
 
     // Build system prompt with JSON tool calling
-    const systemPrompt = buildJsonToolSystemPrompt(
-      undefined,
-      functionTools,
-      {
-        allowParallelToolCalls: false,
-      },
-    );
-
+    const systemPrompt = buildJsonToolSystemPrompt(undefined, functionTools, {
+      allowParallelToolCalls: false,
+    });
 
     // Prepend system prompt to messages
-    const promptMessages = prependSystemPromptToMessages(messages, systemPrompt);
+    const promptMessages = prependSystemPromptToMessages(
+      messages,
+      systemPrompt,
+    );
 
     // Main thread generation (browser without worker or server environment)
     const [processor, model] = await this.getSession(
@@ -702,15 +700,15 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           finishReason: "tool-calls" as LanguageModelV2FinishReason,
           usage: isVision
             ? {
-              inputTokens: undefined,
-              outputTokens: undefined,
-              totalTokens: undefined,
-            }
+                inputTokens: undefined,
+                outputTokens: undefined,
+                totalTokens: undefined,
+              }
             : {
-              inputTokens: inputLength,
-              outputTokens: generatedText.length,
-              totalTokens: inputLength + generatedText.length,
-            },
+                inputTokens: inputLength,
+                outputTokens: generatedText.length,
+                totalTokens: inputLength + generatedText.length,
+              },
           request: { body: { messages: promptMessages, ...generationOptions } },
           warnings,
         };
@@ -728,21 +726,22 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         finishReason: "stop" as LanguageModelV2FinishReason,
         usage: isVision
           ? {
-            inputTokens: undefined,
-            outputTokens: undefined,
-            totalTokens: undefined,
-          }
+              inputTokens: undefined,
+              outputTokens: undefined,
+              totalTokens: undefined,
+            }
           : {
-            inputTokens: inputLength,
-            outputTokens: generatedText.length,
-            totalTokens: inputLength + generatedText.length,
-          },
+              inputTokens: inputLength,
+              outputTokens: generatedText.length,
+              totalTokens: inputLength + generatedText.length,
+            },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
@@ -759,7 +758,10 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
 
     await this.initializeWorker();
 
-    const result = await new Promise<{ text: string; toolCalls?: ParsedToolCall[] }>((resolve, reject) => {
+    const result = await new Promise<{
+      text: string;
+      toolCalls?: ParsedToolCall[];
+    }>((resolve, reject) => {
       const onMessage = (e: MessageEvent) => {
         const msg = e.data;
         if (!msg) return;
@@ -770,7 +772,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             : String(msg.output ?? "");
           resolve({
             text,
-            toolCalls: msg.toolCalls
+            toolCalls: msg.toolCalls,
           });
         } else if (msg.status === "error") {
           worker.removeEventListener("message", onMessage);
@@ -830,7 +832,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       };
     }
 
-    const content: LanguageModelV2Content[] = [{ type: "text", text: result.text }];
+    const content: LanguageModelV2Content[] = [
+      { type: "text", text: result.text },
+    ];
     return {
       content,
       finishReason: "stop" as LanguageModelV2FinishReason,
@@ -904,12 +908,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
    * Generates a streaming text response using TransformersJS
    */
   public async doStream(options: LanguageModelV2CallOptions) {
-
     let converted;
     try {
       converted = this.getArgs(options);
     } catch (error) {
-      console.error('[TransformersJS Model doStream] getArgs FAILED:', error);
+      console.error("[TransformersJS Model doStream] getArgs FAILED:", error);
       throw error;
     }
 
@@ -927,17 +930,15 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     }
 
     // Build system prompt with JSON tool calling
-    const systemPrompt = buildJsonToolSystemPrompt(
-      undefined,
-      functionTools,
-      {
-        allowParallelToolCalls: false,
-      },
-    );
-
+    const systemPrompt = buildJsonToolSystemPrompt(undefined, functionTools, {
+      allowParallelToolCalls: false,
+    });
 
     // Prepend system prompt to messages
-    const promptMessages = prependSystemPromptToMessages(messages, systemPrompt);
+    const promptMessages = prependSystemPromptToMessages(
+      messages,
+      systemPrompt,
+    );
 
     const self = this;
     const textId = "text-0";
@@ -1049,7 +1050,11 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             fenceDetector.addChunk(text);
 
             // Process buffer using streaming detection
-            while (fenceDetector.hasContent() && !aborted && !toolCallDetected) {
+            while (
+              fenceDetector.hasContent() &&
+              !aborted &&
+              !toolCallDetected
+            ) {
               const wasInsideFence = insideFence;
               const result = fenceDetector.detectStreamingFence();
               insideFence = result.inFence;
@@ -1204,11 +1209,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
                   madeProgress = true;
 
                   const toolName = extractToolName(accumulatedFenceContent);
-                  if (
-                    toolName &&
-                    !toolInputStartEmitted &&
-                    currentToolCallId
-                  ) {
+                  if (toolName && !toolInputStartEmitted && currentToolCallId) {
                     controller.enqueue({
                       type: "tool-input-start",
                       id: currentToolCallId,
@@ -1274,9 +1275,7 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           // Check if we detected any tool calls
           const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
 
-
-          const finishReason =
-            toolCalls.length > 0 ? "tool-calls" : "stop";
+          const finishReason = toolCalls.length > 0 ? "tool-calls" : "stop";
 
           finishStream(finishReason, inputLength, outputTokens);
         } catch (error) {
@@ -1358,9 +1357,8 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
 
             // Check for tool calls in the response
-            const finishReason = msg.toolCalls && msg.toolCalls.length > 0
-              ? "tool-calls"
-              : "stop";
+            const finishReason =
+              msg.toolCalls && msg.toolCalls.length > 0 ? "tool-calls" : "stop";
 
             // Emit tool calls if present
             if (msg.toolCalls && msg.toolCalls.length > 0) {
@@ -1438,5 +1436,3 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
     return { stream, request: { body: { messages, ...generationOptions } } };
   }
 }
-
-

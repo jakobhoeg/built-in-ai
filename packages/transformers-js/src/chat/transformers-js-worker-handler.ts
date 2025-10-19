@@ -58,17 +58,17 @@ class ModelManager {
 
     const instancePromise = isVisionModel
       ? this.createVisionModel(modelId, {
-        dtype,
-        device,
-        use_external_data_format,
-        progressCallback,
-      })
+          dtype,
+          device,
+          use_external_data_format,
+          progressCallback,
+        })
       : this.createTextModel(modelId, {
-        dtype,
-        device,
-        use_external_data_format,
-        progressCallback,
-      });
+          dtype,
+          device,
+          use_external_data_format,
+          progressCallback,
+        });
 
     this.instances.set(key, instancePromise);
     return instancePromise;
@@ -130,7 +130,12 @@ export class TransformersJSWorkerHandler {
       const modelInstance = await ModelManager.getInstance(
         this.currentModelKey,
       );
-      await this.runGeneration(modelInstance, messages, generationOptions, tools);
+      await this.runGeneration(
+        modelInstance,
+        messages,
+        generationOptions,
+        tools,
+      );
     } catch (error) {
       this.sendError(error instanceof Error ? error.message : String(error));
     }
@@ -146,9 +151,12 @@ export class TransformersJSWorkerHandler {
     const isVision = this.isVisionModel;
 
     // Build system prompt with tool calling if tools are provided
-    const systemPrompt = tools && tools.length > 0
-      ? buildJsonToolSystemPrompt(undefined, tools, { allowParallelToolCalls: false })
-      : "";
+    const systemPrompt =
+      tools && tools.length > 0
+        ? buildJsonToolSystemPrompt(undefined, tools, {
+            allowParallelToolCalls: false,
+          })
+        : "";
 
     // Prepend system prompt to messages if tools are available
     const processedMessages = systemPrompt
@@ -230,16 +238,16 @@ export class TransformersJSWorkerHandler {
     // Merge user generation options with defaults based on model type
     const defaultOptions = isVision
       ? {
-        do_sample: false,
-        repetition_penalty: 1.1,
-        max_new_tokens: 1024,
-      }
+          do_sample: false,
+          repetition_penalty: 1.1,
+          max_new_tokens: 1024,
+        }
       : {
-        do_sample: true,
-        top_k: 3,
-        temperature: 0.7,
-        max_new_tokens: 512,
-      };
+          do_sample: true,
+          top_k: 3,
+          temperature: 0.7,
+          max_new_tokens: 512,
+        };
 
     const generationOptions = {
       ...defaultOptions,

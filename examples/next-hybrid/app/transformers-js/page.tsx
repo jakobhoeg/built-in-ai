@@ -35,7 +35,11 @@ import { Button } from "@/components/ui/button";
 import { PlusIcon, RefreshCcw, Copy, X } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, UIMessage } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  UIMessage,
+} from "ai";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
@@ -48,7 +52,13 @@ import {
   TransformersUIMessage,
 } from "@built-in-ai/transformers-js";
 import { ModelConfig, MODELS } from "./util/models-config";
-import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
 
 function TransformersJSChat({
   useClientSideInference,
@@ -245,7 +255,8 @@ function TransformersJSChat({
                         key={`${m.id}-${partIndex}`}
                         className="w-full"
                         isStreaming={
-                          status === "streaming" && index === messages.length - 1
+                          status === "streaming" &&
+                          index === messages.length - 1
                         }
                       >
                         <ReasoningTrigger />
@@ -257,31 +268,48 @@ function TransformersJSChat({
                   // Handle tool parts
                   if (part.type.startsWith("tool-")) {
                     // Type guard to ensure part is a ToolUIPart
-                    if (!('state' in part)) return null;
+                    if (!("state" in part)) return null;
 
                     // Map state values to the expected type
-                    const toolState = (part.state === 'streaming' || part.state === 'done')
-                      ? 'output-available'
-                      : part.state || 'input-streaming';
+                    const toolState =
+                      part.state === "streaming" || part.state === "done"
+                        ? "output-available"
+                        : part.state || "input-streaming";
 
                     // Format output as ReactNode
                     const formatOutput = (output: unknown): React.ReactNode => {
-                      if (output === undefined || output === null) return undefined;
-                      if (typeof output === 'string') return output;
-                      return <pre className="text-xs overflow-auto">{JSON.stringify(output, null, 2)}</pre>;
+                      if (output === undefined || output === null)
+                        return undefined;
+                      if (typeof output === "string") return output;
+                      return (
+                        <pre className="text-xs overflow-auto">
+                          {JSON.stringify(output, null, 2)}
+                        </pre>
+                      );
                     };
 
                     return (
                       <Tool key={partIndex}>
-                        <ToolHeader type={part.type as any} state={toolState as any} />
+                        <ToolHeader
+                          type={part.type as any}
+                          state={toolState as any}
+                        />
                         <ToolContent>
-                          {'input' in part && part.input !== undefined && (
+                          {"input" in part && part.input !== undefined && (
                             <ToolInput input={part.input} />
                           )}
-                          {('output' in part || 'errorText' in part) && (
+                          {("output" in part || "errorText" in part) && (
                             <ToolOutput
-                              output={'output' in part && part.output ? formatOutput(part.output) : undefined}
-                              errorText={'errorText' in part && part.errorText ? String(part.errorText) : undefined}
+                              output={
+                                "output" in part && part.output
+                                  ? formatOutput(part.output)
+                                  : undefined
+                              }
+                              errorText={
+                                "errorText" in part && part.errorText
+                                  ? String(part.errorText)
+                                  : undefined
+                              }
                             />
                           )}
                         </ToolContent>

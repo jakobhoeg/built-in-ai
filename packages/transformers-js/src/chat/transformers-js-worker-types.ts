@@ -41,13 +41,13 @@ export type WorkerMessage = {
  */
 export type WorkerResponse =
   | {
-    status: "loading" | "ready" | "start" | "update" | "complete" | "error";
-    output?: string | string[];
-    data?: string;
-    tps?: number;
-    numTokens?: number;
-    toolCalls?: any[]; // Parsed tool calls from the response
-  }
+      status: "loading" | "ready" | "start" | "update" | "complete" | "error";
+      output?: string | string[];
+      data?: string;
+      tps?: number;
+      numTokens?: number;
+      toolCalls?: any[]; // Parsed tool calls from the response
+    }
   | ProgressInfo;
 
 /**

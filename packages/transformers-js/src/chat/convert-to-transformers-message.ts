@@ -159,7 +159,9 @@ export function convertToTransformersMessages(
             if (part.type === "tool-result") {
               // Extract the result value based on output type
               let resultValue: unknown;
-              const isError = part.output.type === "error-text" || part.output.type === "error-json";
+              const isError =
+                part.output.type === "error-text" ||
+                part.output.type === "error-json";
 
               resultValue = part.output.value;
 

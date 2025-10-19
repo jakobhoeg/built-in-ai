@@ -4,7 +4,7 @@
 
 /**
  * Prepends a system prompt to messages by creating a new first message.
- * 
+ *
  * For TransformersJS, we handle system prompts differently than built-in-ai:
  * We prepend the system prompt as a separate message if needed.
  *
@@ -69,4 +69,3 @@ export function prependSystemPromptToMessages(
 
   return prompts;
 }
-

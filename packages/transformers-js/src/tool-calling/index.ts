@@ -12,4 +12,3 @@ export {
   hasJsonFunctionCalls,
   extractJsonFunctionCallsBlock,
 } from "./parse-json-function-calls";
-
