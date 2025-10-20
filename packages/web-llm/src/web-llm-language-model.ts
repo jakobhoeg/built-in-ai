@@ -4,7 +4,9 @@ import {
   LanguageModelV2CallWarning,
   LanguageModelV2Content,
   LanguageModelV2FinishReason,
+  LanguageModelV2ProviderDefinedTool,
   LanguageModelV2StreamPart,
+  LanguageModelV2ToolCall,
   LoadSettingError,
 } from "@ai-sdk/provider";
 import { convertToWebLLMMessages } from "./convert-to-webllm-messages";
@@ -19,6 +21,21 @@ import {
   MLCEngineInterface,
 } from "@mlc-ai/web-llm";
 import { Availability } from "./types";
+import {
+  buildJsonToolSystemPrompt,
+  parseJsonFunctionCalls,
+} from "./tool-calling";
+import type { ParsedToolCall, ToolDefinition } from "./tool-calling";
+import {
+  createUnsupportedSettingWarning,
+  createUnsupportedToolWarning,
+} from "./utils/warnings";
+import { isFunctionTool } from "./utils/tool-utils";
+import {
+  prependSystemPromptToMessages,
+  extractSystemPrompt,
+} from "./utils/prompt-utils";
+import { ToolCallFenceDetector } from "./streaming/tool-call-detector";
 
 declare global {
   interface Navigator {
@@ -56,6 +73,74 @@ export interface WebLLMSettings {
  */
 export function doesBrowserSupportWebLLM(): boolean {
   return globalThis?.navigator?.gpu !== undefined;
+}
+
+function extractToolName(content: string): string | null {
+  // For JSON mode: {"name":"toolName"
+  const jsonMatch = content.match(/\{\s*"name"\s*:\s*"([^"]+)"/);
+  if (jsonMatch) {
+    return jsonMatch[1];
+  }
+  return null;
+}
+
+function extractArgumentsContent(content: string): string {
+  const match = content.match(/"arguments"\s*:\s*/);
+  if (!match || match.index === undefined) {
+    return "";
+  }
+
+  const startIndex = match.index + match[0].length;
+  let result = "";
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let started = false;
+
+  for (let i = startIndex; i < content.length; i++) {
+    const char = content[i];
+    result += char;
+
+    if (!started) {
+      if (!/\s/.test(char)) {
+        started = true;
+        if (char === "{" || char === "[") {
+          depth = 1;
+        }
+      }
+      continue;
+    }
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString) {
+      if (char === "{" || char === "[") {
+        depth += 1;
+      } else if (char === "}" || char === "]") {
+        if (depth > 0) {
+          depth -= 1;
+          if (depth === 0) {
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 type WebLLMConfig = {
@@ -180,48 +265,75 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     responseFormat,
     seed,
     tools,
+    toolChoice,
   }: Parameters<LanguageModelV2["doGenerate"]>[0]) {
     const warnings: LanguageModelV2CallWarning[] = [];
 
-    // Add warnings for unsupported settings
-    if (tools && tools.length > 0) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "tools",
-        details: "Tool calling is not yet fully implemented",
-      });
+    const functionTools: ToolDefinition[] = (tools ?? [])
+      .filter(isFunctionTool)
+      .map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.inputSchema,
+      }));
+
+    const unsupportedTools = (tools ?? []).filter(
+      (tool): tool is LanguageModelV2ProviderDefinedTool =>
+        !isFunctionTool(tool),
+    );
+
+    for (const tool of unsupportedTools) {
+      warnings.push(
+        createUnsupportedToolWarning(
+          tool,
+          "Only function tools are supported by WebLLM",
+        ),
+      );
     }
 
     if (topK != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "topK",
-        details: "topK is not supported by WebLLM",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "topK",
+          "topK is not supported by WebLLM",
+        ),
+      );
     }
 
     if (stopSequences != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "stopSequences",
-        details: "Stop sequences may not be fully implemented",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "stopSequences",
+          "Stop sequences may not be fully implemented",
+        ),
+      );
     }
 
     if (presencePenalty != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "presencePenalty",
-        details: "Presence penalty is not fully implemented",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "presencePenalty",
+          "Presence penalty is not fully implemented",
+        ),
+      );
     }
 
     if (frequencyPenalty != null) {
-      warnings.push({
-        type: "unsupported-setting",
-        setting: "frequencyPenalty",
-        details: "Frequency penalty is not fully implemented",
-      });
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "frequencyPenalty",
+          "Frequency penalty is not fully implemented",
+        ),
+      );
+    }
+
+    if (toolChoice != null) {
+      warnings.push(
+        createUnsupportedSettingWarning(
+          "toolChoice",
+          "toolChoice is not supported by WebLLM",
+        ),
+      );
     }
 
     // Convert messages to WebLLM format
@@ -245,6 +357,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       messages,
       warnings,
       requestOptions,
+      functionTools,
     };
   }
 
@@ -257,7 +370,25 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
    */
   public async doGenerate(options: LanguageModelV2CallOptions) {
     const converted = this.getArgs(options);
-    const { warnings, requestOptions } = converted;
+    const { messages, warnings, requestOptions, functionTools } = converted;
+
+    // Extract system prompt and build tool calling prompt
+    const { systemPrompt: originalSystemPrompt, messages: messagesWithoutSystem } =
+      extractSystemPrompt(messages);
+
+    const systemPrompt = buildJsonToolSystemPrompt(
+      originalSystemPrompt,
+      functionTools,
+      {
+        allowParallelToolCalls: false,
+      },
+    );
+
+    // Prepend system prompt to messages
+    const promptMessages = prependSystemPromptToMessages(
+      messagesWithoutSystem,
+      systemPrompt,
+    );
 
     const engine = await this.getEngine();
 
@@ -272,6 +403,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     try {
       const response = await engine.chat.completions.create({
         ...requestOptions,
+        messages: promptMessages,
         stream: false,
         ...(options.abortSignal &&
           !this.config.options.worker && { signal: options.abortSignal }),
@@ -282,13 +414,51 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
         throw new Error("No response choice returned from WebLLM");
       }
 
-      const content: LanguageModelV2Content[] = [];
-      if (choice.message.content) {
-        content.push({
-          type: "text",
-          text: choice.message.content,
-        });
+      const rawResponse = choice.message.content || "";
+
+      // Parse JSON tool calls from response
+      const { toolCalls, textContent } = parseJsonFunctionCalls(rawResponse);
+
+      if (toolCalls.length > 0) {
+        const toolCallsToEmit = toolCalls.slice(0, 1);
+
+        const parts: LanguageModelV2Content[] = [];
+
+        if (textContent) {
+          parts.push({
+            type: "text",
+            text: textContent,
+          });
+        }
+
+        for (const call of toolCallsToEmit) {
+          parts.push({
+            type: "tool-call",
+            toolCallId: call.toolCallId,
+            toolName: call.toolName,
+            input: JSON.stringify(call.args ?? {}),
+          } satisfies LanguageModelV2ToolCall);
+        }
+
+        return {
+          content: parts,
+          finishReason: "tool-calls" as LanguageModelV2FinishReason,
+          usage: {
+            inputTokens: response.usage?.prompt_tokens,
+            outputTokens: response.usage?.completion_tokens,
+            totalTokens: response.usage?.total_tokens,
+          },
+          request: { body: { messages: promptMessages, ...requestOptions } },
+          warnings,
+        };
       }
+
+      const content: LanguageModelV2Content[] = [
+        {
+          type: "text",
+          text: textContent || rawResponse,
+        },
+      ];
 
       let finishReason: LanguageModelV2FinishReason = "stop";
       if (choice.finish_reason === "abort") {
@@ -303,13 +473,12 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           outputTokens: response.usage?.completion_tokens,
           totalTokens: response.usage?.total_tokens,
         },
-        request: { body: requestOptions },
+        request: { body: { messages: promptMessages, ...requestOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `WebLLM generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     } finally {
@@ -320,7 +489,7 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
   }
 
   /**
-   * Check the availability of the TransformersJS model
+   * Check the availability of the WebLLM model
    * @returns Promise resolving to "unavailable", "available", or "available-after-download"
    */
   public async availability(): Promise<Availability> {
@@ -366,7 +535,25 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
    */
   public async doStream(options: LanguageModelV2CallOptions) {
     const converted = this.getArgs(options);
-    const { warnings, requestOptions } = converted;
+    const { messages, warnings, requestOptions, functionTools } = converted;
+
+    // Extract system prompt and build tool calling prompt
+    const { systemPrompt: originalSystemPrompt, messages: messagesWithoutSystem } =
+      extractSystemPrompt(messages);
+
+    const systemPrompt = buildJsonToolSystemPrompt(
+      originalSystemPrompt,
+      functionTools,
+      {
+        allowParallelToolCalls: false,
+      },
+    );
+
+    // Prepend system prompt to messages
+    const promptMessages = prependSystemPromptToMessages(
+      messagesWithoutSystem,
+      systemPrompt,
+    );
 
     const engine = await this.getEngine();
     const useWorker = this.config.options.worker != null;
@@ -379,19 +566,74 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       options.abortSignal.addEventListener("abort", abortHandler);
     }
 
+    const textId = "text-0";
+
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
       async start(controller) {
-        let isFirstChunk = true;
-        const textId = "text-0";
-        // Send stream start event with warnings
         controller.enqueue({
           type: "stream-start",
           warnings,
         });
 
+        let textStarted = false;
+        let finished = false;
+
+        const ensureTextStart = () => {
+          if (!textStarted) {
+            controller.enqueue({
+              type: "text-start",
+              id: textId,
+            });
+            textStarted = true;
+          }
+        };
+
+        const emitTextDelta = (delta: string) => {
+          if (!delta) return;
+          ensureTextStart();
+          controller.enqueue({
+            type: "text-delta",
+            id: textId,
+            delta,
+          });
+        };
+
+        const emitTextEndIfNeeded = () => {
+          if (!textStarted) return;
+          controller.enqueue({
+            type: "text-end",
+            id: textId,
+          });
+          textStarted = false;
+        };
+
+        const finishStream = (
+          finishReason: LanguageModelV2FinishReason,
+          usage?: {
+            prompt_tokens?: number;
+            completion_tokens?: number;
+            total_tokens?: number;
+          },
+        ) => {
+          if (finished) return;
+          finished = true;
+          emitTextEndIfNeeded();
+          controller.enqueue({
+            type: "finish",
+            finishReason,
+            usage: {
+              inputTokens: usage?.prompt_tokens,
+              outputTokens: usage?.completion_tokens,
+              totalTokens: usage?.total_tokens,
+            },
+          });
+          controller.close();
+        };
+
         try {
           const streamingRequest: ChatCompletionRequestStreaming = {
             ...requestOptions,
+            messages: promptMessages,
             stream: true,
             stream_options: { include_usage: true },
             ...(options.abortSignal &&
@@ -401,41 +643,251 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           const response =
             await engine.chat.completions.create(streamingRequest);
 
+          // Use ToolCallFenceDetector for real-time streaming
+          const fenceDetector = new ToolCallFenceDetector();
+          let accumulatedText = "";
+
+          // Streaming tool call state
+          let currentToolCallId: string | null = null;
+          let toolInputStartEmitted = false;
+          let accumulatedFenceContent = "";
+          let streamedArgumentsLength = 0;
+          let insideFence = false;
+
           for await (const chunk of response) {
             const choice = chunk.choices[0];
             if (!choice) continue;
 
-            if (isFirstChunk && choice.delta.content) {
-              controller.enqueue({ type: "text-start", id: textId });
-              isFirstChunk = false;
-            }
-
             if (choice.delta.content) {
-              controller.enqueue({
-                type: "text-delta",
-                id: textId,
-                delta: choice.delta.content,
-              });
+              const delta = choice.delta.content;
+              accumulatedText += delta;
+
+              // Add chunk to detector
+              fenceDetector.addChunk(delta);
+
+              // Process buffer using streaming detection
+              while (fenceDetector.hasContent()) {
+                const wasInsideFence = insideFence;
+                const result = fenceDetector.detectStreamingFence();
+                insideFence = result.inFence;
+
+                let madeProgress = false;
+
+                if (!wasInsideFence && result.inFence) {
+                  if (result.safeContent) {
+                    emitTextDelta(result.safeContent);
+                    madeProgress = true;
+                  }
+
+                  currentToolCallId = `call_${Date.now()}_${Math.random()
+                    .toString(36)
+                    .slice(2, 9)}`;
+                  toolInputStartEmitted = false;
+                  accumulatedFenceContent = "";
+                  streamedArgumentsLength = 0;
+                  insideFence = true;
+
+                  continue;
+                }
+
+                if (result.completeFence) {
+                  madeProgress = true;
+                  if (result.safeContent) {
+                    accumulatedFenceContent += result.safeContent;
+                  }
+
+                  if (toolInputStartEmitted && currentToolCallId) {
+                    const argsContent = extractArgumentsContent(
+                      accumulatedFenceContent,
+                    );
+                    if (argsContent.length > streamedArgumentsLength) {
+                      const delta = argsContent.slice(streamedArgumentsLength);
+                      streamedArgumentsLength = argsContent.length;
+                      if (delta.length > 0) {
+                        controller.enqueue({
+                          type: "tool-input-delta",
+                          id: currentToolCallId,
+                          delta,
+                        });
+                      }
+                    }
+                  }
+
+                  const parsed = parseJsonFunctionCalls(result.completeFence);
+                  const parsedToolCalls = parsed.toolCalls;
+                  const selectedToolCalls = parsedToolCalls.slice(0, 1);
+
+                  if (selectedToolCalls.length === 0) {
+                    emitTextDelta(result.completeFence);
+                    if (result.textAfterFence) {
+                      emitTextDelta(result.textAfterFence);
+                    }
+
+                    currentToolCallId = null;
+                    toolInputStartEmitted = false;
+                    accumulatedFenceContent = "";
+                    streamedArgumentsLength = 0;
+                    insideFence = false;
+                    continue;
+                  }
+
+                  if (selectedToolCalls.length > 0 && currentToolCallId) {
+                    selectedToolCalls[0].toolCallId = currentToolCallId;
+                  }
+
+                  for (const [index, call] of selectedToolCalls.entries()) {
+                    const toolCallId =
+                      index === 0 && currentToolCallId
+                        ? currentToolCallId
+                        : call.toolCallId;
+                    const toolName = call.toolName;
+                    const argsJson = JSON.stringify(call.args ?? {});
+
+                    if (toolCallId === currentToolCallId) {
+                      if (!toolInputStartEmitted) {
+                        controller.enqueue({
+                          type: "tool-input-start",
+                          id: toolCallId,
+                          toolName,
+                        });
+                        toolInputStartEmitted = true;
+                      }
+
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
+                      if (argsContent.length > streamedArgumentsLength) {
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
+                        streamedArgumentsLength = argsContent.length;
+                        if (delta.length > 0) {
+                          controller.enqueue({
+                            type: "tool-input-delta",
+                            id: toolCallId,
+                            delta,
+                          });
+                        }
+                      }
+                    } else {
+                      controller.enqueue({
+                        type: "tool-input-start",
+                        id: toolCallId,
+                        toolName,
+                      });
+                      if (argsJson.length > 0) {
+                        controller.enqueue({
+                          type: "tool-input-delta",
+                          id: toolCallId,
+                          delta: argsJson,
+                        });
+                      }
+                    }
+
+                    controller.enqueue({
+                      type: "tool-input-end",
+                      id: toolCallId,
+                    });
+                    controller.enqueue({
+                      type: "tool-call",
+                      toolCallId,
+                      toolName,
+                      input: argsJson,
+                      providerExecuted: false,
+                    });
+                  }
+
+                  if (result.textAfterFence) {
+                    emitTextDelta(result.textAfterFence);
+                  }
+
+                  madeProgress = true;
+
+                  currentToolCallId = null;
+                  toolInputStartEmitted = false;
+                  accumulatedFenceContent = "";
+                  streamedArgumentsLength = 0;
+                  insideFence = false;
+                  continue;
+                }
+
+                if (insideFence) {
+                  if (result.safeContent) {
+                    accumulatedFenceContent += result.safeContent;
+                    madeProgress = true;
+
+                    const toolName = extractToolName(accumulatedFenceContent);
+                    if (
+                      toolName &&
+                      !toolInputStartEmitted &&
+                      currentToolCallId
+                    ) {
+                      controller.enqueue({
+                        type: "tool-input-start",
+                        id: currentToolCallId,
+                        toolName,
+                      });
+                      toolInputStartEmitted = true;
+                    }
+
+                    if (toolInputStartEmitted && currentToolCallId) {
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
+                      if (argsContent.length > streamedArgumentsLength) {
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
+                        streamedArgumentsLength = argsContent.length;
+                        if (delta.length > 0) {
+                          controller.enqueue({
+                            type: "tool-input-delta",
+                            id: currentToolCallId,
+                            delta,
+                          });
+                        }
+                      }
+                    }
+                  }
+
+                  continue;
+                }
+
+                if (!insideFence && result.safeContent) {
+                  emitTextDelta(result.safeContent);
+                  madeProgress = true;
+                }
+
+                if (!madeProgress) {
+                  break;
+                }
+              }
             }
 
             if (choice.finish_reason) {
-              controller.enqueue({ type: "text-end", id: textId });
+              // Emit any remaining buffer content
+              if (fenceDetector.hasContent()) {
+                emitTextDelta(fenceDetector.getBuffer());
+                fenceDetector.clearBuffer();
+              }
 
               let finishReason: LanguageModelV2FinishReason = "stop";
               if (choice.finish_reason === "abort") {
                 finishReason = "other";
+              } else {
+                // Check if we detected any tool calls
+                const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
+                if (toolCalls.length > 0) {
+                  finishReason = "tool-calls";
+                }
               }
 
-              controller.enqueue({
-                type: "finish",
-                finishReason,
-                usage: {
-                  inputTokens: chunk.usage?.prompt_tokens,
-                  outputTokens: chunk.usage?.completion_tokens,
-                  totalTokens: chunk.usage?.total_tokens,
-                },
-              });
+              finishStream(finishReason, chunk.usage);
             }
+          }
+
+          if (!finished) {
+            finishStream("stop");
           }
         } catch (error) {
           // Propagate all other errors.
@@ -444,14 +896,16 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
           if (options.abortSignal) {
             options.abortSignal.removeEventListener("abort", abortHandler);
           }
-          controller.close();
+          if (!finished) {
+            controller.close();
+          }
         }
       },
     });
 
     return {
       stream,
-      request: { body: requestOptions },
+      request: { body: { messages: promptMessages, ...requestOptions } },
     };
   }
 }
