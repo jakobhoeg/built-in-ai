@@ -1,5 +1,11 @@
 # @built-in-ai/web-llm
 
+## 0.3.0
+
+### Minor Changes
+
+- 5837187: feat: non-native tool calling
+
 ## 0.2.2
 
 ### Patch Changes
