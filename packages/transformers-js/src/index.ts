@@ -36,27 +36,3 @@ export type {
 export { TransformersJSWorkerHandler } from "./chat/transformers-js-worker-handler";
 
 export { TransformersJSTranscriptionWorkerHandler } from "./transcription/transformers-js-transcription-worker-handler";
-
-// Tool calling utilities
-export {
-  buildJsonToolSystemPrompt,
-  parseJsonFunctionCalls,
-  hasJsonFunctionCalls,
-  extractJsonFunctionCallsBlock,
-  type JSONSchema,
-  type ToolDefinition,
-  type ParsedToolCall,
-  type ToolResult,
-  type ParsedResponse,
-} from "./tool-calling";
-
-// Streaming utilities
-export { ToolCallFenceDetector } from "./streaming/tool-call-detector";
-
-// Utility functions
-export { isFunctionTool } from "./utils/tool-utils";
-export { prependSystemPromptToMessages } from "./utils/prompt-utils";
-export {
-  createUnsupportedSettingWarning,
-  createUnsupportedToolWarning,
-} from "./utils/warnings";
