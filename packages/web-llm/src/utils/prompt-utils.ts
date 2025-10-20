@@ -7,9 +7,7 @@ import type { ChatCompletionMessageParam } from "@mlc-ai/web-llm";
  * @param messages - Array of chat messages
  * @returns Object with systemPrompt string and messages array without system messages
  */
-export function extractSystemPrompt(
-  messages: ChatCompletionMessageParam[],
-): {
+export function extractSystemPrompt(messages: ChatCompletionMessageParam[]): {
   systemPrompt: string | undefined;
   messages: ChatCompletionMessageParam[];
 } {
@@ -75,4 +73,3 @@ export function prependSystemPromptToMessages(
     ...messages,
   ];
 }
-

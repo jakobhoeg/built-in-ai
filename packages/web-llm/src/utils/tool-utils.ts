@@ -8,4 +8,3 @@ export function isFunctionTool(
 ): tool is LanguageModelV2FunctionTool {
   return tool.type === "function";
 }
-

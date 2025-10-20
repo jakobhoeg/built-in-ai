@@ -472,7 +472,11 @@ describe("WebLLMLanguageModel", () => {
           yield { choices: [{ delta: { content: "\n```" } }] };
           yield {
             choices: [{ delta: {}, finish_reason: "stop" }],
-            usage: { prompt_tokens: 50, completion_tokens: 25, total_tokens: 75 },
+            usage: {
+              prompt_tokens: 50,
+              completion_tokens: 25,
+              total_tokens: 75,
+            },
           };
         }
 
@@ -483,9 +487,7 @@ describe("WebLLMLanguageModel", () => {
           prompt: [
             {
               role: "user",
-              content: [
-                { type: "text", text: "What's the weather in SF?" },
-              ],
+              content: [{ type: "text", text: "What's the weather in SF?" }],
             },
           ],
           tools: [
@@ -538,7 +540,11 @@ describe("WebLLMLanguageModel", () => {
           yield { choices: [{ delta: { content: "world!" } }] };
           yield {
             choices: [{ delta: {}, finish_reason: "stop" }],
-            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+            usage: {
+              prompt_tokens: 10,
+              completion_tokens: 5,
+              total_tokens: 15,
+            },
           };
         }
 
@@ -592,7 +598,11 @@ describe("WebLLMLanguageModel", () => {
       });
 
       it("should handle text before tool call in stream", async () => {
-        async function* createMixedStream(): AsyncGenerator<any, void, unknown> {
+        async function* createMixedStream(): AsyncGenerator<
+          any,
+          void,
+          unknown
+        > {
           yield { choices: [{ delta: { content: "Let me help. " } }] };
           yield { choices: [{ delta: { content: "```tool_call\n" } }] };
           yield {
@@ -601,7 +611,11 @@ describe("WebLLMLanguageModel", () => {
           yield { choices: [{ delta: { content: "\n```" } }] };
           yield {
             choices: [{ delta: {}, finish_reason: "stop" }],
-            usage: { prompt_tokens: 30, completion_tokens: 15, total_tokens: 45 },
+            usage: {
+              prompt_tokens: 30,
+              completion_tokens: 15,
+              total_tokens: 45,
+            },
           };
         }
 
@@ -689,8 +703,10 @@ describe("WebLLMLanguageModel", () => {
       expect(result.warnings).toBeDefined();
       expect(result.warnings?.length).toBeGreaterThan(0);
 
-      const toolChoiceWarning = result.warnings?.find((w) =>
-        (w as any).type === "unsupported-setting" && (w as any).setting === "toolChoice"
+      const toolChoiceWarning = result.warnings?.find(
+        (w) =>
+          (w as any).type === "unsupported-setting" &&
+          (w as any).setting === "toolChoice",
       );
       expect(toolChoiceWarning).toBeDefined();
     });

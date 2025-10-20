@@ -373,8 +373,10 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     const { messages, warnings, requestOptions, functionTools } = converted;
 
     // Extract system prompt and build tool calling prompt
-    const { systemPrompt: originalSystemPrompt, messages: messagesWithoutSystem } =
-      extractSystemPrompt(messages);
+    const {
+      systemPrompt: originalSystemPrompt,
+      messages: messagesWithoutSystem,
+    } = extractSystemPrompt(messages);
 
     const systemPrompt = buildJsonToolSystemPrompt(
       originalSystemPrompt,
@@ -478,7 +480,8 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
       };
     } catch (error) {
       throw new Error(
-        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `WebLLM generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     } finally {
@@ -538,8 +541,10 @@ export class WebLLMLanguageModel implements LanguageModelV2 {
     const { messages, warnings, requestOptions, functionTools } = converted;
 
     // Extract system prompt and build tool calling prompt
-    const { systemPrompt: originalSystemPrompt, messages: messagesWithoutSystem } =
-      extractSystemPrompt(messages);
+    const {
+      systemPrompt: originalSystemPrompt,
+      messages: messagesWithoutSystem,
+    } = extractSystemPrompt(messages);
 
     const systemPrompt = buildJsonToolSystemPrompt(
       originalSystemPrompt,

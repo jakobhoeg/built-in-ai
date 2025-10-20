@@ -17,4 +17,3 @@ export {
   formatToolResults,
   formatSingleToolResult,
 } from "./format-tool-results";
-

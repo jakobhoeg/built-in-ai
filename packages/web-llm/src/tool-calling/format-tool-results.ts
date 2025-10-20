@@ -62,4 +62,3 @@ export function formatSingleToolResult(result: ToolResult): string {
     error: result.isError ?? false,
   });
 }
-

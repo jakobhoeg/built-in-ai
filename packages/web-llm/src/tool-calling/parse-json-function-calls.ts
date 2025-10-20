@@ -93,4 +93,3 @@ export function extractJsonFunctionCallsBlock(response: string): string | null {
   JSON_TOOL_CALL_FENCE_REGEX.lastIndex = 0;
   return match ? match[0] : null;
 }
-

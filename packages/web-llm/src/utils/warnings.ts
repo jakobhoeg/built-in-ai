@@ -54,4 +54,3 @@ export function createUnsupportedToolWarning(
     details,
   };
 }
-

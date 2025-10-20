@@ -297,4 +297,3 @@ export class ToolCallFenceDetector {
     this.fenceStartBuffer = "";
   }
 }
-

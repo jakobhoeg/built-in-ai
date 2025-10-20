@@ -303,4 +303,3 @@ describe("extractSystemPrompt", () => {
     expect(result.messages[0].role).toBe("user");
   });
 });
-

@@ -40,14 +40,24 @@ import {
   webLLM,
   WebLLMUIMessage,
 } from "@built-in-ai/web-llm";
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, UIMessage } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  UIMessage,
+} from "ai";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 import { WebLLMChatTransport } from "@/app/web-llm/util/web-llm-chat-transport";
 import { ModelSelector } from "@/components/model-selector";
-import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
 
 const MODELS = [
   "Qwen3-0.6B-q0f16-MLC",
