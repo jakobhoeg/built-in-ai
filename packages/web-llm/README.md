@@ -115,6 +115,33 @@ const result = streamText({
 });
 ```
 
+### Tool calling
+
+> Be aware that some models might struggle with this.
+> If you want to try it out with best succes, I suggest using a reasoning model (Qwen3).
+
+```ts
+const result = streamText({
+  model: webLLM("Qwen3-1.7B-q4f16_1-MLC"),
+  tools: {
+    weather: tool({
+      description: "Get the weather in a location",
+      inputSchema: z.object({
+        location: z.string().describe("The location to get the weather for"),
+      }),
+      execute: async ({ location }) => ({
+        location,
+        temperature: 72 + Math.floor(Math.random() * 21) - 10,
+      }),
+    }),
+  },
+  stopWhen: stepCountIs(5),
+  prompt: "What is the weather in San Francisco?",
+});
+```
+
+And then in your useChat use `sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls`.
+
 ## Integration with useChat Hook
 
 When using this library with the `useChat` hook, you'll need to create a [custom transport](https://v5.ai-sdk.dev/docs/ai-sdk-ui/transport#transport) implementation to handle client-side AI with download progress.
