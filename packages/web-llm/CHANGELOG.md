@@ -1,5 +1,11 @@
 # @built-in-ai/web-llm
 
+## 0.3.1
+
+### Patch Changes
+
+- be5f3b8: refactor: remove unused exports
+
 ## 0.3.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 0.3.1
+
+### Patch Changes
+
+- 93fd80a: chore: bump @huggingface-transformers verison
+
 ## 0.3.0
 
 ### Minor Changes
