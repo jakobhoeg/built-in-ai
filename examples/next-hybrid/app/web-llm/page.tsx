@@ -40,17 +40,18 @@ import {
   webLLM,
   WebLLMUIMessage,
 } from "@built-in-ai/web-llm";
-import { DefaultChatTransport, UIMessage } from "ai";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, UIMessage } from "ai";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
 import { WebLLMChatTransport } from "@/app/web-llm/util/web-llm-chat-transport";
 import { ModelSelector } from "@/components/model-selector";
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
 
 const MODELS = [
   "Qwen3-0.6B-q0f16-MLC",
-  "Qwen3-1.7B-q4f16_1-MLC",
+  "Qwen3-4B-q4f16_1-MLC",
   "gemma-2-2b-it-q4f16_1-MLC",
   "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC",
 ];
@@ -87,10 +88,10 @@ function WebLLMChat({
   const { error, status, sendMessage, messages, regenerate, stop } =
     useChat<WebLLMUIMessage>({
       transport: chatTransport, // use custom transport
+      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
       onError(error) {
         toast.error(error.message);
       },
-      experimental_throttle: 50,
     });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -176,10 +177,10 @@ function WebLLMChat({
               key={m.id}
             >
               <MessageContent>
-                {/* Handle download progress parts first */}
-                {m.parts
-                  .filter((part) => part.type === "data-modelDownloadProgress")
-                  .map((part, partIndex) => {
+                {/* Render parts in chronological order */}
+                {m.parts.map((part, partIndex) => {
+                  // Handle download progress parts
+                  if (part.type === "data-modelDownloadProgress") {
                     // Only show if message is not empty (hiding completed/cleared progress)
                     if (!part.data.message) return null;
 
@@ -200,12 +201,10 @@ function WebLLMChat({
                           )}
                       </div>
                     );
-                  })}
+                  }
 
-                {/* Handle file parts */}
-                {m.parts
-                  .filter((part) => part.type === "file")
-                  .map((part, partIndex) => {
+                  // Handle file parts
+                  if (part.type === "file") {
                     if (part.mediaType?.startsWith("image/")) {
                       return (
                         <div key={partIndex} className="mt-2">
@@ -232,30 +231,84 @@ function WebLLMChat({
 
                     // TODO: Handle other file types
                     return null;
-                  })}
+                  }
 
-                {/* Handle reasoning */}
-                {m.parts
-                  .filter((part) => part.type === "reasoning")
-                  .map((part, partIndex) => (
-                    <Reasoning
-                      key={`${m.id}-${partIndex}`}
-                      className="w-full"
-                      isStreaming={
-                        status === "streaming" && index === messages.length - 1
-                      }
-                    >
-                      <ReasoningTrigger />
-                      <ReasoningContent>{part.text}</ReasoningContent>
-                    </Reasoning>
-                  ))}
+                  // Handle reasoning
+                  if (part.type === "reasoning") {
+                    return (
+                      <Reasoning
+                        key={`${m.id}-${partIndex}`}
+                        className="w-full"
+                        isStreaming={
+                          status === "streaming" &&
+                          index === messages.length - 1
+                        }
+                      >
+                        <ReasoningTrigger />
+                        <ReasoningContent>{part.text}</ReasoningContent>
+                      </Reasoning>
+                    );
+                  }
 
-                {/* Handle text parts */}
-                {m.parts
-                  .filter((part) => part.type === "text")
-                  .map((part, partIndex) => (
-                    <Response key={partIndex}>{part.text}</Response>
-                  ))}
+                  // Handle tool parts
+                  if (part.type.startsWith("tool-")) {
+                    // Type guard to ensure part is a ToolUIPart
+                    if (!("state" in part)) return null;
+
+                    // Map state values to the expected type
+                    const toolState =
+                      part.state === "streaming" || part.state === "done"
+                        ? "output-available"
+                        : part.state || "input-streaming";
+
+                    // Format output as ReactNode
+                    const formatOutput = (output: unknown): React.ReactNode => {
+                      if (output === undefined || output === null)
+                        return undefined;
+                      if (typeof output === "string") return output;
+                      return (
+                        <pre className="text-xs overflow-auto">
+                          {JSON.stringify(output, null, 2)}
+                        </pre>
+                      );
+                    };
+
+                    return (
+                      <Tool key={partIndex}>
+                        <ToolHeader
+                          type={part.type as any}
+                          state={toolState as any}
+                        />
+                        <ToolContent>
+                          {"input" in part && part.input !== undefined && (
+                            <ToolInput input={part.input} />
+                          )}
+                          {("output" in part || "errorText" in part) && (
+                            <ToolOutput
+                              output={
+                                "output" in part && part.output
+                                  ? formatOutput(part.output)
+                                  : undefined
+                              }
+                              errorText={
+                                "errorText" in part && part.errorText
+                                  ? String(part.errorText)
+                                  : undefined
+                              }
+                            />
+                          )}
+                        </ToolContent>
+                      </Tool>
+                    );
+                  }
+
+                  // Handle text parts
+                  if (part.type === "text") {
+                    return <Response key={partIndex}>{part.text}</Response>;
+                  }
+
+                  return null;
+                })}
 
                 {/* Action buttons for assistant messages */}
                 {(m.role === "assistant" || m.role === "system") &&
