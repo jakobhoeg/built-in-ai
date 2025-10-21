@@ -76,26 +76,46 @@ describe("convertToTransformersMessages", () => {
     ]);
   });
 
-  it("throws for tool role", () => {
+  it("converts tool role to user message with fence format", () => {
     const prompt = [
-      { role: "tool", content: [{ type: "text", text: "hi" }] as any },
-    ] as LanguageModelV2Prompt;
-    expect(() => convertToTransformersMessages(prompt)).toThrow(
-      UnsupportedFunctionalityError,
-    );
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "call_123",
+            toolName: "get_weather",
+            output: { type: "text", value: "72°F and sunny" },
+          },
+        ],
+      },
+    ] as any;
+    const result = convertToTransformersMessages(prompt);
+    expect(result).toHaveLength(1);
+    expect(result[0].role).toBe("user");
+    expect(result[0].content).toContain("```tool_result");
+    expect(result[0].content).toContain("call_123");
+    expect(result[0].content).toContain("get_weather");
   });
 
-  it("throws for assistant tool-call content", () => {
+  it("converts assistant tool-call content to fence format", () => {
     const prompt: LanguageModelV2Prompt = [
       {
         role: "assistant",
         content: [
-          { type: "tool-call", toolCallId: "x", name: "t", args: {} } as any,
+          {
+            type: "tool-call",
+            toolCallId: "call_456",
+            toolName: "calculate",
+            input: { x: 5, y: 10 },
+          } as any,
         ],
       },
     ];
-    expect(() => convertToTransformersMessages(prompt)).toThrow(
-      UnsupportedFunctionalityError,
-    );
+    const result = convertToTransformersMessages(prompt);
+    expect(result).toHaveLength(1);
+    expect(result[0].role).toBe("assistant");
+    expect(result[0].content).toContain("```tool_call");
+    expect(result[0].content).toContain("calculate");
   });
 });

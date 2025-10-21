@@ -33,6 +33,7 @@ export type WorkerMessage = {
     do_sample?: boolean;
     repetition_penalty?: number;
   };
+  tools?: any[]; // Tool definitions for tool calling
 };
 
 /**
@@ -45,6 +46,7 @@ export type WorkerResponse =
       data?: string;
       tps?: number;
       numTokens?: number;
+      toolCalls?: any[]; // Parsed tool calls from the response
     }
   | ProgressInfo;
 

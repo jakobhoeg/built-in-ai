@@ -41,6 +41,36 @@ function convertDataToURL(
   });
 }
 
+/**
+ * TransformersJS message type
+ * For text models: content is a string
+ * For vision models: content can be an array of text and image parts
+ */
+export interface TransformersMessage {
+  role: string;
+  content: string | Array<{ type: string; text?: string; image?: string }>;
+}
+
+/**
+ * Safely normalize tool arguments - handles both string and object inputs
+ */
+function normalizeToolArguments(input: unknown): unknown {
+  if (input === undefined) {
+    return {};
+  }
+
+  if (typeof input === "string") {
+    try {
+      return JSON.parse(input);
+    } catch {
+      // If parsing fails, return the string as-is
+      return input;
+    }
+  }
+
+  return input ?? {};
+}
+
 function processVisionContent(
   content: any[],
 ): Array<{ type: "text"; text: string } | { type: "image"; image: string }> {
@@ -78,7 +108,7 @@ function processVisionContent(
 export function convertToTransformersMessages(
   prompt: LanguageModelV2Prompt,
   isVisionModel: boolean = false,
-): Array<{ role: string; content: any }> {
+): TransformersMessage[] {
   return prompt.map((message) => {
     switch (message.role) {
       case "system":
@@ -108,19 +138,45 @@ export function convertToTransformersMessages(
         const assistantContent = message.content
           .map((part) => {
             if (part.type === "text") return part.text;
-            if (part.type === "tool-call")
-              throw new UnsupportedFunctionalityError({
-                functionality: "tool calling",
-              });
+            if (part.type === "tool-call") {
+              // Format tool call as the expected fence format
+              // Use normalizeToolArguments to safely handle input
+              return `\`\`\`tool_call\n${JSON.stringify({
+                name: part.toolName,
+                arguments: normalizeToolArguments(part.input),
+              })}\n\`\`\``;
+            }
             return "";
           })
-          .join("");
+          .filter(Boolean) // Remove empty strings
+          .join("\n");
         return { role: "assistant", content: assistantContent };
 
       case "tool":
-        throw new UnsupportedFunctionalityError({
-          functionality: "tool results",
-        });
+        // Format tool results as expected fence format
+        const toolResults = message.content
+          .map((part) => {
+            if (part.type === "tool-result") {
+              // Extract the result value based on output type
+              let resultValue: unknown;
+              const isError =
+                part.output.type === "error-text" ||
+                part.output.type === "error-json";
+
+              resultValue = part.output.value;
+
+              return `\`\`\`tool_result\n${JSON.stringify({
+                id: part.toolCallId,
+                name: part.toolName,
+                result: resultValue,
+                error: isError,
+              })}\n\`\`\``;
+            }
+            return "";
+          })
+          .filter(Boolean) // Remove empty strings
+          .join("\n");
+        return { role: "user", content: toolResults };
 
       default:
         throw new Error(`Unsupported message role: ${(message as any).role}`);
