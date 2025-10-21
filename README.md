@@ -1,4 +1,4 @@
-# Built-in AI provider for Vercel AI SDK
+# Built-in AI model providers for Vercel AI SDK
 
 <div align="center">
 <img src="npm-header.png">
