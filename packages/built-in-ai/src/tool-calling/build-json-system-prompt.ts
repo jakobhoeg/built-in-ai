@@ -22,7 +22,8 @@ export function buildJsonToolSystemPrompt(
     return originalSystemPrompt || "";
   }
 
-  const parallelInstruction = "Only request one tool call at a time. Wait for tool results before asking for another tool.";
+  const parallelInstruction =
+    "Only request one tool call at a time. Wait for tool results before asking for another tool.";
 
   const toolSchemas = tools.map((tool) => {
     const schema = getParameters(tool);
