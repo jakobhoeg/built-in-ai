@@ -254,6 +254,207 @@ describe("convertToBuiltInAIMessages", () => {
     });
   });
 
+  describe("tool support", () => {
+    it("should convert assistant tool calls into toolCall fences", () => {
+      const prompt: LanguageModelV2Prompt = [
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Let me check that." },
+            {
+              type: "tool-call",
+              toolCallId: "call_123",
+              toolName: "getWeather",
+              input: { location: "Seattle" },
+            },
+          ],
+        } as LanguageModelV2Message,
+        {
+          role: "user",
+          content: [{ type: "text", text: "Thanks!" }],
+        } as LanguageModelV2Message,
+      ];
+
+      const result = convertToBuiltInAIMessages(prompt);
+
+      expect(result.messages[0]).toEqual({
+        role: "assistant",
+        content:
+          'Let me check that.\n```tool_call\n{"name":"getWeather","arguments":{"location":"Seattle"},"id":"call_123"}\n```',
+      });
+      expect(result.messages[1]).toEqual({
+        role: "user",
+        content: [{ type: "text", value: "Thanks!" }],
+      });
+    });
+
+    it("should serialize scalar tool inputs as JSON strings", () => {
+      const prompt: LanguageModelV2Prompt = [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolCallId: "call_456",
+              toolName: "getTemperature",
+              input: "Zurich",
+            },
+          ],
+        } as LanguageModelV2Message,
+        {
+          role: "user",
+          content: [{ type: "text", text: "Appreciate it." }],
+        } as LanguageModelV2Message,
+      ];
+
+      const result = convertToBuiltInAIMessages(prompt);
+
+      expect(result.messages[0]).toEqual({
+        role: "assistant",
+        content:
+          '```tool_call\n{"name":"getTemperature","arguments":"Zurich","id":"call_456"}\n```',
+      });
+      expect(result.messages[1]).toEqual({
+        role: "user",
+        content: [{ type: "text", value: "Appreciate it." }],
+      });
+    });
+
+    it("should handle parameter names with special characters", () => {
+      const prompt: LanguageModelV2Prompt = [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolCallId: "call_789",
+              toolName: "register",
+              input: { "123-name": "Alice" },
+            },
+          ],
+        } as LanguageModelV2Message,
+        {
+          role: "user",
+          content: [{ type: "text", text: "Continue." }],
+        } as LanguageModelV2Message,
+      ];
+
+      const result = convertToBuiltInAIMessages(prompt);
+
+      expect(result.messages[0].content).toContain('"id":"call_789"');
+      expect(result.messages[0].content).toContain('"123-name":"Alice"');
+    });
+
+    it("should deserialize JSON-stringified tool inputs", () => {
+      const prompt: LanguageModelV2Prompt = [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolCallId: "call_321",
+              toolName: "search",
+              input: JSON.stringify({ query: "status:open", limit: 5 }),
+            },
+          ],
+        } as LanguageModelV2Message,
+      ];
+
+      const result = convertToBuiltInAIMessages(prompt);
+
+      expect(result.messages[0].content).toContain('"id":"call_321"');
+      expect(result.messages[0].content).toContain(
+        '"arguments":{"query":"status:open","limit":5}',
+      );
+    });
+
+    it("should serialize multiple tool calls within a single fence", () => {
+      const prompt: LanguageModelV2Prompt = [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolCallId: "call_a",
+              toolName: "first",
+              input: { value: 1 },
+            },
+            {
+              type: "tool-call",
+              toolCallId: "call_b",
+              toolName: "second",
+              input: { value: 2 },
+            },
+          ],
+        } as LanguageModelV2Message,
+      ];
+
+      const result = convertToBuiltInAIMessages(prompt);
+
+      const content = result.messages[0].content as string;
+      expect(content.match(/```tool_call/g)).toHaveLength(1);
+      expect(content).toContain('"id":"call_a"');
+      expect(content).toContain('"id":"call_b"');
+      expect(content).toContain('"name":"first"');
+      expect(content).toContain('"name":"second"');
+    });
+
+    it("should retain a trailing assistant tool call message", () => {
+      const prompt: LanguageModelV2Prompt = [
+        {
+          role: "assistant",
+          content: [
+            { type: "text", text: "Let me check that." },
+            {
+              type: "tool-call",
+              toolCallId: "call_123",
+              toolName: "getWeather",
+              input: { location: "Seattle" },
+            },
+          ],
+        } as LanguageModelV2Message,
+      ];
+
+      const result = convertToBuiltInAIMessages(prompt);
+
+      expect(result.messages).toHaveLength(1);
+      const content = result.messages[0].content as string;
+      expect(content).toContain("Let me check that.");
+      expect(content).toContain("```tool_call");
+      expect(content).toContain('"id":"call_123"');
+      expect(content).toContain('"name":"getWeather"');
+    });
+
+    it("should convert tool results into user tool_result blocks", () => {
+      const prompt: LanguageModelV2Prompt = [
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call_123",
+              toolName: "getWeather",
+              output: {
+                type: "json",
+                value: { temperature: 70 },
+              },
+            },
+          ],
+        } as LanguageModelV2Message,
+      ];
+
+      const result = convertToBuiltInAIMessages(prompt);
+
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0]).toMatchObject({ role: "user" });
+      const content = result.messages[0].content as string;
+      expect(content).toContain("```tool_result");
+      expect(content).toContain('"name":"getWeather"');
+      expect(content).toContain('"id":"call_123"');
+      expect(content).toContain('"result":{"temperature":70}');
+    });
+  });
+
   describe("error handling", () => {
     it("should throw for unsupported file types", () => {
       const prompt: LanguageModelV2Prompt = [
