@@ -650,7 +650,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           .map((part) => part.image);
 
         // Load images using load_image
-        const images = await Promise.all(imageUrls.map((url) => load_image(url)));
+        const images = await Promise.all(
+          imageUrls.map((url) => load_image(url)),
+        );
 
         inputs = await processor(text, images);
         // Cast to any because transformers.js generate() has complex overload types
@@ -716,15 +718,15 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           finishReason: "tool-calls" as LanguageModelV2FinishReason,
           usage: isVision
             ? {
-              inputTokens: undefined,
-              outputTokens: undefined,
-              totalTokens: undefined,
-            }
+                inputTokens: undefined,
+                outputTokens: undefined,
+                totalTokens: undefined,
+              }
             : {
-              inputTokens: inputLength,
-              outputTokens: generatedText.length,
-              totalTokens: inputLength + generatedText.length,
-            },
+                inputTokens: inputLength,
+                outputTokens: generatedText.length,
+                totalTokens: inputLength + generatedText.length,
+              },
           request: { body: { messages: promptMessages, ...generationOptions } },
           warnings,
         };
@@ -742,21 +744,22 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         finishReason: "stop" as LanguageModelV2FinishReason,
         usage: isVision
           ? {
-            inputTokens: undefined,
-            outputTokens: undefined,
-            totalTokens: undefined,
-          }
+              inputTokens: undefined,
+              outputTokens: undefined,
+              totalTokens: undefined,
+            }
           : {
-            inputTokens: inputLength,
-            outputTokens: generatedText.length,
-            totalTokens: inputLength + generatedText.length,
-          },
+              inputTokens: inputLength,
+              outputTokens: generatedText.length,
+              totalTokens: inputLength + generatedText.length,
+            },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
@@ -1063,7 +1066,9 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
               .map((part) => part.image);
 
             // Load images using load_image
-            const images = await Promise.all(imageUrls.map((url) => load_image(url)));
+            const images = await Promise.all(
+              imageUrls.map((url) => load_image(url)),
+            );
 
             inputs = await tokenizer(text, images);
           } else {
