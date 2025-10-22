@@ -640,15 +640,19 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
       if (isVision) {
         // Cast to any for vision models since transformers.js supports vision content arrays too
         // but the type definition is Message[] with content: string
+        const { load_image } = await import("@huggingface/transformers");
         const text = processor.apply_chat_template(promptMessages as any, {
           add_generation_prompt: true,
         });
-        const images = promptMessages
+        const imageUrls = promptMessages
           .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
           .filter((part) => part.type === "image")
           .map((part) => part.image);
 
-        inputs = await processor(text, images.length > 0 ? images : undefined);
+        // Load images using load_image
+        const images = await Promise.all(imageUrls.map((url) => load_image(url)));
+
+        inputs = await processor(text, images);
         // Cast to any because transformers.js generate() has complex overload types
         const outputs = await (model.generate as any)({
           ...inputs,
@@ -712,15 +716,15 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
           finishReason: "tool-calls" as LanguageModelV2FinishReason,
           usage: isVision
             ? {
-                inputTokens: undefined,
-                outputTokens: undefined,
-                totalTokens: undefined,
-              }
+              inputTokens: undefined,
+              outputTokens: undefined,
+              totalTokens: undefined,
+            }
             : {
-                inputTokens: inputLength,
-                outputTokens: generatedText.length,
-                totalTokens: inputLength + generatedText.length,
-              },
+              inputTokens: inputLength,
+              outputTokens: generatedText.length,
+              totalTokens: inputLength + generatedText.length,
+            },
           request: { body: { messages: promptMessages, ...generationOptions } },
           warnings,
         };
@@ -738,22 +742,21 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
         finishReason: "stop" as LanguageModelV2FinishReason,
         usage: isVision
           ? {
-              inputTokens: undefined,
-              outputTokens: undefined,
-              totalTokens: undefined,
-            }
+            inputTokens: undefined,
+            outputTokens: undefined,
+            totalTokens: undefined,
+          }
           : {
-              inputTokens: inputLength,
-              outputTokens: generatedText.length,
-              totalTokens: inputLength + generatedText.length,
-            },
+            inputTokens: inputLength,
+            outputTokens: generatedText.length,
+            totalTokens: inputLength + generatedText.length,
+          },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
@@ -1039,14 +1042,40 @@ export class TransformersJSLanguageModel implements LanguageModelV2 {
             self.config.initProgressCallback,
           );
 
-          // Cast to any for vision models since transformers.js supports vision content arrays
-          // but the type definition is Message[] with content: string
-          const inputs = tokenizer.apply_chat_template(promptMessages as any, {
-            add_generation_prompt: true,
-            return_dict: true,
-          }) as { input_ids: Tensor; attention_mask?: Tensor };
+          const isVision = self.config.isVisionModel;
 
-          let inputLength = inputs.input_ids.data.length;
+          // Prepare inputs based on model type
+          let inputs: {
+            input_ids: Tensor;
+            attention_mask?: Tensor;
+            pixel_values?: Tensor;
+          };
+
+          if (isVision) {
+            // For vision models, process images
+            const { load_image } = await import("@huggingface/transformers");
+            const text = tokenizer.apply_chat_template(promptMessages as any, {
+              add_generation_prompt: true,
+            });
+            const imageUrls = promptMessages
+              .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
+              .filter((part) => part.type === "image")
+              .map((part) => part.image);
+
+            // Load images using load_image
+            const images = await Promise.all(imageUrls.map((url) => load_image(url)));
+
+            inputs = await tokenizer(text, images);
+          } else {
+            // Cast to any for vision models since transformers.js supports vision content arrays
+            // but the type definition is Message[] with content: string
+            inputs = tokenizer.apply_chat_template(promptMessages as any, {
+              add_generation_prompt: true,
+              return_dict: true,
+            }) as { input_ids: Tensor; attention_mask?: Tensor };
+          }
+
+          let inputLength = isVision ? 0 : inputs.input_ids.data.length;
           let outputTokens = 0;
 
           // Use ToolCallFenceDetector for real-time streaming
