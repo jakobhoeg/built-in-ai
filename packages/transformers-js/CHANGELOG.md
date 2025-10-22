@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 0.3.2
+
+### Patch Changes
+
+- 967ff24: fix: vision model main thread issue
+
 ## 0.3.1
 
 ### Patch Changes
