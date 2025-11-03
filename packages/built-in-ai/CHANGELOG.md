@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 2.0.1
+
+### Patch Changes
+
+- 47f6375: chore: bump @types/dom-chromium-ai version
+
 ## 2.0.0
 
 ### Major Changes
