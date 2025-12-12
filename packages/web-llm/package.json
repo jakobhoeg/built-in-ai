@@ -50,10 +50,8 @@
     "inference"
   ],
   "license": "Apache License",
-  "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.79"
-  },
   "peerDependencies": {
+    "@mlc-ai/web-llm": "^0.2.79",
     "ai": ">=5.0.0"
   },
   "devDependencies": {
