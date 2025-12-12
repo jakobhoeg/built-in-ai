@@ -50,10 +50,8 @@
     "text-generation"
   ],
   "license": "Apache-2.0",
-  "dependencies": {
-    "@huggingface/transformers": "^3.7.6"
-  },
   "peerDependencies": {
+    "@huggingface/transformers": "^3.7.0",
     "ai": ">=5.0.0"
   },
   "devDependencies": {
