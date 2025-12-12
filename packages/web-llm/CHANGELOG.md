@@ -1,5 +1,11 @@
 # @built-in-ai/web-llm
 
+## 0.3.2
+
+### Patch Changes
+
+- eb37fdd: fix: move @mlc-ai/web-llm to peerDependency
+
 ## 0.3.1
 
 ### Patch Changes

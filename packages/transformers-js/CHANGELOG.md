@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 0.3.4
+
+### Patch Changes
+
+- 81fde44: fix: move @huggingface/transformers to peerDependency
+
 ## 0.3.3
 
 ### Patch Changes
