@@ -45,6 +45,7 @@ import { Kbd, KbdKey } from "@/components/ui/kbd";
 import { ModelSelector } from "@/components/model-selector";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import Link from "next/link";
+import { BrowserSupportInstructions } from "@/components/browser-support-instructions";
 
 const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
 
@@ -165,9 +166,9 @@ export default function Chat() {
         </div>
       </header>
       {messages.length === 0 && (
-        <div className="flex h-full flex-col items-center justify-center text-center">
+        <>
           {browserSupportsModel ? (
-            <>
+            <div className="flex h-full flex-col items-center justify-center text-center">
               <p className="text-xs">@built-in-ai/core demo</p>
               <h1 className="text-lg font-medium">
                 Using your browser's built-in AI model
@@ -175,16 +176,11 @@ export default function Chat() {
               <p className="text-sm max-w-xs">
                 Your browser supports built-in AI models
               </p>
-            </>
+            </div>
           ) : (
-            <>
-              <h1 className="text-lg font-medium">Using server-side model</h1>
-              <p className="text-sm max-w-xs">
-                Your device doesn&apos;t support built-in AI models
-              </p>
-            </>
+            <BrowserSupportInstructions />
           )}
-        </div>
+        </>
       )}
       <Conversation className="flex-1">
         <ConversationContent>
