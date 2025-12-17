@@ -1,5 +1,15 @@
 # @built-in-ai/core
 
+## 2.1.0
+
+### Minor Changes
+
+- 8639e02: feat: tool call support
+
+### Patch Changes
+
+- 5affe53: Add comprehensive tool calling support with JSON format, streaming detection, and multi-step execution
+
 ## 2.0.1
 
 ### Patch Changes
