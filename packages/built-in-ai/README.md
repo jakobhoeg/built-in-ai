@@ -172,46 +172,18 @@ for await (const chunk of result.textStream) {
 }
 ```
 
-## Tool Calling
+## Tool Calling (with support for multiple steps)
 
 The `builtInAI` model supports tool calling, allowing the AI to use external functions and APIs. This is particularly useful for building AI agents that can perform actions or retrieve data:
 
 ```typescript
-import { generateText } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 import { z } from "zod";
 
-const result = await generateText({
+const result = await streamText({
   model: builtInAI(),
   messages: [{ role: "user", content: "What's the weather in San Francisco?" }],
-  tools: {
-    getWeather: {
-      description: "Get the weather for a location",
-      parameters: z.object({
-        location: z.string().describe("The city name"),
-      }),
-      execute: async ({ location }) => {
-        // Your weather API call here
-        return { temperature: 72, conditions: "sunny" };
-      },
-    },
-  },
-});
-```
-
-### Tool Calling with Multiple Steps
-
-The AI can call multiple tools in sequence to accomplish complex tasks:
-
-```typescript
-const result = await generateText({
-  model: builtInAI(),
-  messages: [
-    {
-      role: "user",
-      content: "Search for recent AI news and summarize the top result",
-    },
-  ],
   tools: {
     search: {
       description: "Search the web for information",
@@ -234,7 +206,7 @@ const result = await generateText({
       },
     },
   },
-  maxSteps: 5, // Allow multiple tool calls
+  stopWhen: stepCountIs(5), // allow multiple steps
 });
 ```
 
