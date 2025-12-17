@@ -5,7 +5,7 @@ import {
 } from "../src/built-in-ai-language-model";
 
 import { generateText, streamText, generateObject, streamObject } from "ai";
-import { LoadSettingError } from "@ai-sdk/provider";
+import { LanguageModelV2StreamPart, LoadSettingError } from "@ai-sdk/provider";
 import { z } from "zod";
 
 describe("BuiltInAIChatLanguageModel", () => {
@@ -23,6 +23,8 @@ describe("BuiltInAIChatLanguageModel", () => {
     mockSession = {
       prompt: mockPrompt,
       promptStreaming: mockPromptStreaming,
+      destroy: vi.fn(),
+      inputUsage: 0,
     };
     // Mock the global LanguageModel API
     vi.stubGlobal("LanguageModel", {
@@ -97,15 +99,14 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     expect(result.text).toBe("I am a helpful assistant.");
-    expect(mockPrompt).toHaveBeenCalledWith(
-      [
-        {
-          role: "user",
-          content: [{ type: "text", value: "Who are you?" }],
-        },
-      ],
-      {},
-    );
+    const [messagesArg, optionsArg] = mockPrompt.mock.calls[0];
+    expect(optionsArg).toEqual({});
+    expect(messagesArg).toHaveLength(1);
+    expect(messagesArg[0].role).toBe("user");
+    expect(messagesArg[0].content).toEqual([
+      { type: "text", value: "You are a helpful assistant.\n\n" },
+      { type: "text", value: "Who are you?" },
+    ]);
   });
 
   it("should handle conversation history", async () => {
@@ -447,6 +448,403 @@ describe("BuiltInAIChatLanguageModel", () => {
           expectedInputs: [{ type: "image" }],
         }),
       );
+    });
+  });
+
+  describe("tool support", () => {
+    it("should return tool call parts when the model requests a tool", async () => {
+      mockPrompt.mockResolvedValue(`Checking the weather.
+\`\`\`tool_call
+{"name": "getWeather", "arguments": {"location": "Seattle"}}
+\`\`\`
+Running the tool now.`);
+
+      const model = new BuiltInAIChatLanguageModel("text");
+
+      const response = await model.doGenerate({
+        prompt: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What is the weather in Seattle?" },
+            ],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            name: "getWeather",
+            description: "Get the weather in a location.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                location: { type: "string" },
+              },
+              required: ["location"],
+            },
+          },
+        ],
+      });
+
+      expect(response.finishReason).toBe("tool-calls");
+      expect(response.content).toEqual([
+        { type: "text", text: "Checking the weather.\nRunning the tool now." },
+        {
+          type: "tool-call",
+          toolCallId: expect.any(String),
+          toolName: "getWeather",
+          input: '{"location":"Seattle"}',
+        },
+      ]);
+
+      const promptCallArgs = mockPrompt.mock.calls[0][0] as any[];
+      const firstUserMessage = promptCallArgs[0];
+      const firstContentPart = firstUserMessage.content[0];
+      expect(firstContentPart.type).toBe("text");
+      expect(firstContentPart.value).toContain("getWeather");
+      expect(firstContentPart.value).toContain("```tool_call");
+      expect(firstContentPart.value).toContain("Available Tools");
+    });
+
+    it("should emit only the first tool call when parallel execution is disabled", async () => {
+      mockPrompt.mockResolvedValue(
+        `\`\`\`tool_call
+{"name": "getWeather", "arguments": {"location": "Seattle"}}
+{"name": "getNews", "arguments": {"topic": "Seattle"}}
+\`\`\`
+I'll follow up once I have the results.`,
+      );
+
+      const model = new BuiltInAIChatLanguageModel("text");
+
+      const response = await model.doGenerate({
+        prompt: [
+          {
+            role: "user",
+            content: [{ type: "text", text: "What's happening in Seattle?" }],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            name: "getWeather",
+            description: "Get the weather in a location.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                location: { type: "string" },
+              },
+              required: ["location"],
+            },
+          },
+          {
+            type: "function",
+            name: "getNews",
+            description: "Get the latest news.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                topic: { type: "string" },
+              },
+              required: ["topic"],
+            },
+          },
+        ],
+      });
+
+      const toolCalls = response.content.filter(
+        (part) => part.type === "tool-call",
+      );
+
+      expect(toolCalls).toHaveLength(1);
+      expect(toolCalls[0]).toMatchObject({
+        toolName: "getWeather",
+        input: '{"location":"Seattle"}',
+      });
+    });
+
+    it("should emit tool call events during streaming", async () => {
+      const streamingResponse = `Checking the weather.
+\`\`\`tool_call
+{"name": "getWeather", "arguments": {"location": "Seattle"}}
+\`\`\`
+Running the tool now.`;
+
+      mockPromptStreaming.mockReturnValue(
+        new ReadableStream<string>({
+          start(controller) {
+            controller.enqueue(streamingResponse);
+            controller.close();
+          },
+        }),
+      );
+
+      const model = new BuiltInAIChatLanguageModel("text");
+
+      const { stream } = await model.doStream({
+        prompt: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What is the weather in Seattle?" },
+            ],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            name: "getWeather",
+            description: "Get the weather in a location.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                location: { type: "string" },
+              },
+              required: ["location"],
+            },
+          },
+        ],
+      });
+
+      const events: LanguageModelV2StreamPart[] = [];
+      const reader = stream.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        events.push(value);
+      }
+
+      expect(events[0]).toMatchObject({ type: "stream-start" });
+      expect(events).toContainEqual({ type: "text-start", id: "text-0" });
+
+      const textDeltas = events
+        .filter(
+          (
+            event,
+          ): event is Extract<
+            LanguageModelV2StreamPart,
+            { type: "text-delta" }
+          > => event.type === "text-delta",
+        )
+        .map((event) => event.delta.trim());
+      expect(textDeltas).toEqual([
+        "Checking the weather.",
+        "Running the tool now.",
+      ]);
+
+      const toolEvent = events.find(
+        (
+          event,
+        ): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
+          event.type === "tool-call",
+      );
+
+      expect(toolEvent).toMatchObject({
+        toolName: "getWeather",
+        input: '{"location":"Seattle"}',
+        providerExecuted: false,
+      });
+
+      const finishEvent = events.find(
+        (
+          event,
+        ): event is Extract<LanguageModelV2StreamPart, { type: "finish" }> =>
+          event.type === "finish",
+      );
+
+      expect(finishEvent).toMatchObject({ finishReason: "tool-calls" });
+
+      const promptCallArgs = mockPromptStreaming.mock.calls[0][0];
+      const firstContentPart = promptCallArgs[0].content[0];
+      expect(firstContentPart.value).toContain("getWeather");
+      expect(firstContentPart.value).toContain("```tool_call");
+      expect(firstContentPart.value).toContain("Available Tools");
+    });
+
+    it("should emit only the first streaming tool call when parallel execution is disabled", async () => {
+      const streamingResponse = `\`\`\`tool_call
+{"name": "getWeather", "arguments": {"location": "Seattle"}}
+{"name": "getNews", "arguments": {"topic": "Seattle"}}
+\`\`\`
+Running the tool now.`;
+
+      mockPromptStreaming.mockReturnValue(
+        new ReadableStream<string>({
+          start(controller) {
+            controller.enqueue(streamingResponse);
+            controller.close();
+          },
+        }),
+      );
+
+      const model = new BuiltInAIChatLanguageModel("text");
+
+      const { stream } = await model.doStream({
+        prompt: [
+          {
+            role: "user",
+            content: [{ type: "text", text: "What's happening in Seattle?" }],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            name: "getWeather",
+            description: "Get the weather in a location.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                location: { type: "string" },
+              },
+              required: ["location"],
+            },
+          },
+          {
+            type: "function",
+            name: "getNews",
+            description: "Get the latest news.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                topic: { type: "string" },
+              },
+              required: ["topic"],
+            },
+          },
+        ],
+      });
+
+      const events: LanguageModelV2StreamPart[] = [];
+      const reader = stream.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        events.push(value);
+      }
+
+      const toolEvents = events.filter((event) => event.type === "tool-call");
+
+      expect(toolEvents).toHaveLength(1);
+      expect(toolEvents[0]).toMatchObject({
+        toolName: "getWeather",
+        input: '{"location":"Seattle"}',
+      });
+
+      const finishEvent = events.find((event) => event.type === "finish");
+      expect(finishEvent).toMatchObject({ finishReason: "tool-calls" });
+    });
+
+    it("should use consistent tool call ID across all streaming events", async () => {
+      const streamingResponse = `\`\`\`tool_call
+{"name": "getWeather", "arguments": {"location": "Seattle"}}
+\`\`\``;
+
+      mockPromptStreaming.mockReturnValue(
+        new ReadableStream<string>({
+          start(controller) {
+            controller.enqueue(streamingResponse);
+            controller.close();
+          },
+        }),
+      );
+
+      const model = new BuiltInAIChatLanguageModel("text");
+
+      const { stream } = await model.doStream({
+        prompt: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "What is the weather in Seattle?" },
+            ],
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            name: "getWeather",
+            description: "Get the weather in a location.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                location: { type: "string" },
+              },
+              required: ["location"],
+            },
+          },
+        ],
+      });
+
+      const events: LanguageModelV2StreamPart[] = [];
+      const reader = stream.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        events.push(value);
+      }
+
+      // Extract tool-related events
+      const toolInputStartEvent = events.find(
+        (
+          event,
+        ): event is Extract<
+          LanguageModelV2StreamPart,
+          { type: "tool-input-start" }
+        > => event.type === "tool-input-start",
+      );
+      const toolInputDeltaEvents = events.filter(
+        (
+          event,
+        ): event is Extract<
+          LanguageModelV2StreamPart,
+          { type: "tool-input-delta" }
+        > => event.type === "tool-input-delta",
+      );
+      const toolInputEndEvent = events.find(
+        (
+          event,
+        ): event is Extract<
+          LanguageModelV2StreamPart,
+          { type: "tool-input-end" }
+        > => event.type === "tool-input-end",
+      );
+      const toolCallEvent = events.find(
+        (
+          event,
+        ): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
+          event.type === "tool-call",
+      );
+
+      // Verify all events exist
+      expect(toolInputStartEvent).toBeDefined();
+      expect(toolInputDeltaEvents.length).toBeGreaterThan(0);
+      expect(toolInputEndEvent).toBeDefined();
+      expect(toolCallEvent).toBeDefined();
+
+      // CRITICAL: All events must use the SAME tool call ID
+      const toolCallId = toolInputStartEvent!.id;
+      expect(toolCallId).toBeTruthy();
+
+      // Verify tool-input-delta events all use the same ID
+      for (const deltaEvent of toolInputDeltaEvents) {
+        expect(deltaEvent.id).toBe(toolCallId);
+      }
+
+      // Verify tool-input-end uses the same ID
+      expect(toolInputEndEvent!.id).toBe(toolCallId);
+
+      // Verify tool-call uses the same ID
+      expect(toolCallEvent!.toolCallId).toBe(toolCallId);
+
+      // Additional verification: ensure we don't have multiple different tool call IDs
+      const allToolCallIds = new Set([
+        toolInputStartEvent!.id,
+        ...toolInputDeltaEvents.map((e) => e.id),
+        toolInputEndEvent!.id,
+        toolCallEvent!.toolCallId,
+      ]);
+
+      expect(allToolCallIds.size).toBe(1); // All IDs should be identical
     });
   });
 

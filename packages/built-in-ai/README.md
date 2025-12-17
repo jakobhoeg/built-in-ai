@@ -172,7 +172,45 @@ for await (const chunk of result.textStream) {
 }
 ```
 
-## Generating structured data
+## Tool Calling (with support for multiple steps)
+
+The `builtInAI` model supports tool calling, allowing the AI to use external functions and APIs. This is particularly useful for building AI agents that can perform actions or retrieve data:
+
+```typescript
+import { streamText, stepCountIs } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+import { z } from "zod";
+
+const result = await streamText({
+  model: builtInAI(),
+  messages: [{ role: "user", content: "What's the weather in San Francisco?" }],
+  tools: {
+    search: {
+      description: "Search the web for information",
+      parameters: z.object({
+        query: z.string(),
+      }),
+      execute: async ({ query }) => {
+        // Search implementation
+        return { results: [{ title: "...", url: "..." }] };
+      },
+    },
+    fetchContent: {
+      description: "Fetch the content of a URL",
+      parameters: z.object({
+        url: z.string(),
+      }),
+      execute: async ({ url }) => {
+        // Fetch implementation
+        return { content: "Article content..." };
+      },
+    },
+  },
+  stopWhen: stepCountIs(5), // allow multiple steps
+});
+```
+
+## Generating Structured Data
 
 The `builtInAI` model also allows using the AI SDK `generateObject` and `streamObject`:
 
@@ -221,11 +259,11 @@ const { object } = await generateObject({
 - [x] **Multimodal functionality** (image and audio support)\*
 - [x] **Temperature control**
 - [x] **Response format constraints** (JSON `generateObject()/streamObject()`)
+- [x] **Tool calling** - Full support for function calling with JSON format
 - [x] **Abort signals**
 
 ### Planned (when implemented in the Prompt API)
 
-- [ ] **Tool calling**
 - [ ] **Token counting**
 - [ ] **Custom stop sequences**
 - [ ] **Presence/frequency penalties**
