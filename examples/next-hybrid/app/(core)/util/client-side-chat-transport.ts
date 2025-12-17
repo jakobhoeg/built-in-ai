@@ -76,8 +76,8 @@ export const createTools = () => ({
  * @implements {ChatTransport<BuiltInAIUIMessage>}
  */
 export class ClientSideChatTransport
-  implements ChatTransport<BuiltInAIUIMessage> {
-
+  implements ChatTransport<BuiltInAIUIMessage>
+{
   private tools: ReturnType<typeof createTools>;
 
   constructor() {

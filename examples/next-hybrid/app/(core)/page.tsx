@@ -76,8 +76,8 @@ export default function Chat() {
       transport: doesBrowserSupportModel
         ? new ClientSideChatTransport()
         : new DefaultChatTransport<UIMessage>({
-          api: "/api/chat",
-        }),
+            api: "/api/chat",
+          }),
       onError(error) {
         toast.error(error.message);
       },
