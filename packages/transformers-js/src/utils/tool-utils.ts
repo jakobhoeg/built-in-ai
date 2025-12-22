@@ -3,8 +3,8 @@
  */
 
 import type {
-  LanguageModelV2FunctionTool,
-  LanguageModelV2ProviderDefinedTool,
+  LanguageModelV3FunctionTool,
+  LanguageModelV3ProviderTool,
 } from "@ai-sdk/provider";
 
 /**
@@ -14,7 +14,7 @@ import type {
  * @returns true if the tool is a LanguageModelV2FunctionTool
  */
 export function isFunctionTool(
-  tool: LanguageModelV2FunctionTool | LanguageModelV2ProviderDefinedTool,
-): tool is LanguageModelV2FunctionTool {
+  tool: LanguageModelV3FunctionTool | LanguageModelV3ProviderTool,
+): tool is LanguageModelV3FunctionTool {
   return tool.type === "function";
 }
