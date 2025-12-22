@@ -1,6 +1,6 @@
 import type {
   JSONSchema7,
-  LanguageModelV2FunctionTool,
+  LanguageModelV3FunctionTool,
 } from "@ai-sdk/provider";
 import type { ToolDefinition } from "./types";
 
@@ -15,7 +15,7 @@ import type { ToolDefinition } from "./types";
  */
 export function buildJsonToolSystemPrompt(
   originalSystemPrompt: string | undefined,
-  tools: Array<ToolDefinition | LanguageModelV2FunctionTool>,
+  tools: Array<ToolDefinition | LanguageModelV3FunctionTool>,
   options?: { allowParallelToolCalls?: boolean },
 ): string {
   if (!tools || tools.length === 0) {
@@ -77,7 +77,7 @@ Important:
  * @returns The JSON Schema for the tool's parameters, or undefined if not present
  */
 function getParameters(
-  tool: ToolDefinition | LanguageModelV2FunctionTool,
+  tool: ToolDefinition | LanguageModelV3FunctionTool,
 ): JSONSchema7 | undefined {
   if ("parameters" in tool) {
     return tool.parameters;

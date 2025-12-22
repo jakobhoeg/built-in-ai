@@ -1,7 +1,9 @@
 import {
-  EmbeddingModelV2,
+  EmbeddingModelV3,
   TooManyEmbeddingValuesForCallError,
   LoadSettingError,
+  EmbeddingModelV3CallOptions,
+  EmbeddingModelV3Result,
 } from "@ai-sdk/provider";
 import {
   pipeline,
@@ -56,8 +58,8 @@ export interface TransformersJSEmbeddingSettings
   maxTokens?: number;
 }
 
-export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
-  readonly specificationVersion = "v2";
+export class TransformersJSEmbeddingModel implements EmbeddingModelV3 {
+  readonly specificationVersion = "v3";
   readonly provider = "transformers-js";
   readonly modelId: TransformersJSEmbeddingModelId;
   readonly maxEmbeddingsPerCall = 100; // Reasonable limit for browser
@@ -292,13 +294,9 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
     return this;
   }
 
-  async doEmbed(options: {
-    values: string[];
-    headers?: Record<string, string | undefined>;
-  }): Promise<{
-    embeddings: number[][];
-    usage?: { tokens: number };
-  }> {
+  async doEmbed(
+    options: EmbeddingModelV3CallOptions,
+  ): Promise<EmbeddingModelV3Result> {
     const { values } = options;
 
     if (values.length > this.maxEmbeddingsPerCall) {
@@ -429,6 +427,7 @@ export class TransformersJSEmbeddingModel implements EmbeddingModelV2<string> {
     return {
       embeddings: embeddings.map(({ embedding }) => embedding),
       usage: { tokens: totalTokens },
+      warnings: [],
     };
   }
 }
