@@ -1,9 +1,9 @@
 import {
-  EmbeddingModelV2,
-  LanguageModelV2,
+  EmbeddingModelV3,
+  LanguageModelV3,
   NoSuchModelError,
-  ProviderV2,
-  TranscriptionModelV2,
+  ProviderV3,
+  TranscriptionModelV3,
 } from "@ai-sdk/provider";
 import {
   TransformersJSLanguageModel,
@@ -22,7 +22,7 @@ import {
   TransformersJSTranscriptionSettings,
 } from "./transcription/transformers-js-transcription-model";
 
-export interface TransformersJSProvider extends ProviderV2 {
+export interface TransformersJSProvider extends ProviderV3 {
   (
     modelId: TransformersJSModelId,
     settings?: TransformersJSModelSettings,
@@ -47,22 +47,22 @@ export interface TransformersJSProvider extends ProviderV2 {
   textEmbedding(
     modelId: TransformersJSEmbeddingModelId,
     settings?: TransformersJSEmbeddingSettings,
-  ): EmbeddingModelV2<string>;
+  ): EmbeddingModelV3;
 
   textEmbeddingModel: (
     modelId: TransformersJSEmbeddingModelId,
     settings?: TransformersJSEmbeddingSettings,
-  ) => EmbeddingModelV2<string>;
+  ) => EmbeddingModelV3;
 
   transcription(
     modelId: TransformersJSTranscriptionModelId,
     settings?: TransformersJSTranscriptionSettings,
-  ): TranscriptionModelV2;
+  ): TranscriptionModelV3;
 
   transcriptionModel: (
     modelId: TransformersJSTranscriptionModelId,
     settings?: TransformersJSTranscriptionSettings,
-  ) => TranscriptionModelV2;
+  ) => TranscriptionModelV3;
 }
 
 export interface TransformersJSProviderSettings {
@@ -138,12 +138,14 @@ export function createTransformersJS(
     return createChatModel(modelId, settings);
   };
 
+  provider.specificationVersion = "v3" as const;
   provider.languageModel = createChatModel;
   provider.chat = createChatModel;
   provider.textEmbedding = createEmbeddingModel;
   provider.textEmbeddingModel = createEmbeddingModel;
   provider.transcription = createTranscriptionModel;
   provider.transcriptionModel = createTranscriptionModel;
+  provider.embeddingModel = createEmbeddingModel;
 
   provider.imageModel = (modelId: string) => {
     throw new NoSuchModelError({ modelId, modelType: "imageModel" });
