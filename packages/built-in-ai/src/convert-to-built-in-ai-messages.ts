@@ -1,8 +1,8 @@
 import {
-  LanguageModelV2Prompt,
-  LanguageModelV2ToolCallPart,
-  LanguageModelV2ToolResultPart,
-  LanguageModelV2ToolResultOutput,
+  LanguageModelV3Prompt,
+  LanguageModelV3ToolCallPart,
+  LanguageModelV3ToolResultPart,
+  LanguageModelV3ToolResultOutput,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import { formatToolResults } from "./tool-calling/format-tool-results";
@@ -74,7 +74,7 @@ function normalizeToolArguments(input: unknown): unknown {
   return input ?? {};
 }
 
-function formatToolCallsJson(parts: LanguageModelV2ToolCallPart[]): string {
+function formatToolCallsJson(parts: LanguageModelV3ToolCallPart[]): string {
   if (!parts.length) {
     return "";
   }
@@ -97,7 +97,7 @@ ${payloads.join("\n")}
 \`\`\``;
 }
 
-function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
+function convertToolResultOutput(output: LanguageModelV3ToolResultOutput): {
   value: unknown;
   isError: boolean;
 } {
@@ -112,6 +112,8 @@ function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
       return { value: output.value, isError: true };
     case "content":
       return { value: output.value, isError: false };
+    case "execution-denied":
+      return { value: output.reason, isError: true };
     default: {
       const exhaustiveCheck: never = output;
       return { value: exhaustiveCheck, isError: false };
@@ -119,7 +121,7 @@ function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
   }
 }
 
-function toToolResult(part: LanguageModelV2ToolResultPart): ToolResult {
+function toToolResult(part: LanguageModelV3ToolResultPart): ToolResult {
   const { value, isError } = convertToolResultOutput(part.output);
   return {
     toolCallId: part.toolCallId,
@@ -134,7 +136,7 @@ function toToolResult(part: LanguageModelV2ToolResultPart): ToolResult {
  * Returns system message (for initialPrompts) and regular messages (for prompt method)
  */
 export function convertToBuiltInAIMessages(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
 ): ConvertedMessages {
   const normalizedPrompt = prompt.slice();
 
@@ -199,7 +201,7 @@ export function convertToBuiltInAIMessages(
 
       case "assistant": {
         let text = "";
-        const toolCallParts: LanguageModelV2ToolCallPart[] = [];
+        const toolCallParts: LanguageModelV3ToolCallPart[] = [];
 
         for (const part of message.content) {
           switch (part.type) {
@@ -260,7 +262,7 @@ export function convertToBuiltInAIMessages(
       }
 
       case "tool": {
-        const toolParts = message.content as LanguageModelV2ToolResultPart[];
+        const toolParts = message.content as LanguageModelV3ToolResultPart[];
         const results: ToolResult[] = toolParts.map(toToolResult);
         const toolResultsJson = formatToolResults(results);
 

@@ -3,8 +3,8 @@
  */
 
 import type {
-  LanguageModelV2CallWarning,
-  LanguageModelV2ProviderDefinedTool,
+  SharedV3Warning,
+  LanguageModelV3ProviderTool,
 } from "@ai-sdk/provider";
 
 /**
@@ -23,12 +23,12 @@ import type {
  * ```
  */
 export function createUnsupportedSettingWarning(
-  setting: string,
+  feature: string,
   details: string,
-): LanguageModelV2CallWarning {
+): SharedV3Warning {
   return {
-    type: "unsupported-setting",
-    setting,
+    type: "unsupported",
+    feature,
     details,
   };
 }
@@ -49,12 +49,12 @@ export function createUnsupportedSettingWarning(
  * ```
  */
 export function createUnsupportedToolWarning(
-  tool: LanguageModelV2ProviderDefinedTool,
+  tool: LanguageModelV3ProviderTool,
   details: string,
-): LanguageModelV2CallWarning {
+): SharedV3Warning {
   return {
-    type: "unsupported-tool",
-    tool,
+    type: "unsupported",
+    feature: `tool:${tool.name}`,
     details,
   };
 }
@@ -83,8 +83,8 @@ export function gatherUnsupportedSettingWarnings(options: {
   frequencyPenalty?: number;
   seed?: number;
   toolChoice?: unknown;
-}): LanguageModelV2CallWarning[] {
-  const warnings: LanguageModelV2CallWarning[] = [];
+}): SharedV3Warning[] {
+  const warnings: SharedV3Warning[] = [];
 
   if (options.maxOutputTokens != null) {
     warnings.push(
