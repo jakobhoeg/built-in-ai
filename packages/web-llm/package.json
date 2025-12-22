@@ -52,7 +52,7 @@
   "license": "Apache License",
   "peerDependencies": {
     "@mlc-ai/web-llm": "^0.2.79",
-    "ai": ">=5.0.0"
+    "ai": ">=6.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
