@@ -447,7 +447,7 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
 
         return {
           content: parts,
-          finishReason: { unified: "tool-calls", raw: choice.finish_reason },
+          finishReason: { unified: "tool-calls", raw: "tool-calls" },
           usage: {
             inputTokens: {
               total: response.usage?.prompt_tokens,
