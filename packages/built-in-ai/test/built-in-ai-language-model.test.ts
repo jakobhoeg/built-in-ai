@@ -5,7 +5,7 @@ import {
 } from "../src/built-in-ai-language-model";
 
 import { generateText, streamText, generateObject, streamObject } from "ai";
-import { LanguageModelV2StreamPart, LoadSettingError } from "@ai-sdk/provider";
+import { LanguageModelV3StreamPart, LoadSettingError } from "@ai-sdk/provider";
 import { z } from "zod";
 
 describe("BuiltInAIChatLanguageModel", () => {
@@ -42,7 +42,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     expect(model).toBeInstanceOf(BuiltInAIChatLanguageModel);
     expect(model.modelId).toBe("text");
     expect(model.provider).toBe("browser-ai");
-    expect(model.specificationVersion).toBe("v2");
+    expect(model.specificationVersion).toBe("v3");
   });
   it("should throw when LanguageModel is not available", async () => {
     vi.stubGlobal("LanguageModel", undefined);
@@ -486,7 +486,10 @@ Running the tool now.`);
         ],
       });
 
-      expect(response.finishReason).toBe("tool-calls");
+      expect(response.finishReason).toMatchObject({
+        raw: "tool-calls",
+        unified: "tool-calls",
+      });
       expect(response.content).toEqual([
         { type: "text", text: "Checking the weather.\nRunning the tool now." },
         {
@@ -606,7 +609,7 @@ Running the tool now.`;
         ],
       });
 
-      const events: LanguageModelV2StreamPart[] = [];
+      const events: LanguageModelV3StreamPart[] = [];
       const reader = stream.getReader();
       while (true) {
         const { done, value } = await reader.read();
@@ -622,7 +625,7 @@ Running the tool now.`;
           (
             event,
           ): event is Extract<
-            LanguageModelV2StreamPart,
+            LanguageModelV3StreamPart,
             { type: "text-delta" }
           > => event.type === "text-delta",
         )
@@ -635,7 +638,7 @@ Running the tool now.`;
       const toolEvent = events.find(
         (
           event,
-        ): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
+        ): event is Extract<LanguageModelV3StreamPart, { type: "tool-call" }> =>
           event.type === "tool-call",
       );
 
@@ -648,11 +651,13 @@ Running the tool now.`;
       const finishEvent = events.find(
         (
           event,
-        ): event is Extract<LanguageModelV2StreamPart, { type: "finish" }> =>
+        ): event is Extract<LanguageModelV3StreamPart, { type: "finish" }> =>
           event.type === "finish",
       );
 
-      expect(finishEvent).toMatchObject({ finishReason: "tool-calls" });
+      expect(finishEvent).toMatchObject({
+        finishReason: { raw: "tool-calls", unified: "tool-calls" },
+      });
 
       const promptCallArgs = mockPromptStreaming.mock.calls[0][0];
       const firstContentPart = promptCallArgs[0].content[0];
@@ -714,7 +719,7 @@ Running the tool now.`;
         ],
       });
 
-      const events: LanguageModelV2StreamPart[] = [];
+      const events: LanguageModelV3StreamPart[] = [];
       const reader = stream.getReader();
       while (true) {
         const { done, value } = await reader.read();
@@ -731,7 +736,9 @@ Running the tool now.`;
       });
 
       const finishEvent = events.find((event) => event.type === "finish");
-      expect(finishEvent).toMatchObject({ finishReason: "tool-calls" });
+      expect(finishEvent).toMatchObject({
+        finishReason: { raw: "tool-calls", unified: "tool-calls" },
+      });
     });
 
     it("should use consistent tool call ID across all streaming events", async () => {
@@ -775,7 +782,7 @@ Running the tool now.`;
         ],
       });
 
-      const events: LanguageModelV2StreamPart[] = [];
+      const events: LanguageModelV3StreamPart[] = [];
       const reader = stream.getReader();
       while (true) {
         const { done, value } = await reader.read();
@@ -788,7 +795,7 @@ Running the tool now.`;
         (
           event,
         ): event is Extract<
-          LanguageModelV2StreamPart,
+          LanguageModelV3StreamPart,
           { type: "tool-input-start" }
         > => event.type === "tool-input-start",
       );
@@ -796,7 +803,7 @@ Running the tool now.`;
         (
           event,
         ): event is Extract<
-          LanguageModelV2StreamPart,
+          LanguageModelV3StreamPart,
           { type: "tool-input-delta" }
         > => event.type === "tool-input-delta",
       );
@@ -804,14 +811,14 @@ Running the tool now.`;
         (
           event,
         ): event is Extract<
-          LanguageModelV2StreamPart,
+          LanguageModelV3StreamPart,
           { type: "tool-input-end" }
         > => event.type === "tool-input-end",
       );
       const toolCallEvent = events.find(
         (
           event,
-        ): event is Extract<LanguageModelV2StreamPart, { type: "tool-call" }> =>
+        ): event is Extract<LanguageModelV3StreamPart, { type: "tool-call" }> =>
           event.type === "tool-call",
       );
 
