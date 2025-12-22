@@ -1,5 +1,5 @@
 import {
-  LanguageModelV2Prompt,
+  LanguageModelV3Prompt,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 
@@ -106,7 +106,7 @@ function processVisionContent(
 }
 
 export function convertToTransformersMessages(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
   isVisionModel: boolean = false,
 ): TransformersMessage[] {
   return prompt.map((message) => {
@@ -163,7 +163,20 @@ export function convertToTransformersMessages(
                 part.output.type === "error-text" ||
                 part.output.type === "error-json";
 
-              resultValue = part.output.value;
+              switch (part.output.type) {
+                case "text":
+                case "json":
+                case "error-text":
+                case "error-json":
+                case "content":
+                  resultValue = part.output.value;
+                  break;
+                case "execution-denied":
+                  resultValue = {
+                    reason: part.output.reason ?? "execution denied",
+                  };
+                  break;
+              }
 
               return `\`\`\`tool_result\n${JSON.stringify({
                 id: part.toolCallId,
