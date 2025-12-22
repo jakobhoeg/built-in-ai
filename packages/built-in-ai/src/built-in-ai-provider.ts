@@ -1,7 +1,7 @@
 import {
-  EmbeddingModelV2,
+  EmbeddingModelV3,
   NoSuchModelError,
-  ProviderV2,
+  ProviderV3,
 } from "@ai-sdk/provider";
 import {
   BuiltInAIChatLanguageModel,
@@ -13,7 +13,7 @@ import {
   BuiltInAIEmbeddingModelSettings,
 } from "./built-in-ai-embedding-model";
 
-export interface BuiltInAIProvider extends ProviderV2 {
+export interface BuiltInAIProvider extends ProviderV3 {
   (
     modelId?: BuiltInAIChatModelId,
     settings?: BuiltInAIChatSettings,
@@ -38,12 +38,12 @@ export interface BuiltInAIProvider extends ProviderV2 {
   textEmbedding(
     modelId: "embedding",
     settings?: BuiltInAIEmbeddingModelSettings,
-  ): EmbeddingModelV2<string>;
+  ): EmbeddingModelV3;
 
   textEmbeddingModel: (
     modelId: "embedding",
     settings?: BuiltInAIEmbeddingModelSettings,
-  ) => EmbeddingModelV2<string>;
+  ) => EmbeddingModelV3;
 
   // Not implemented
   imageModel(modelId: string): never;
@@ -89,10 +89,12 @@ export function createBuiltInAI(
     return createChatModel(modelId, settings);
   };
 
+  provider.specificationVersion = "v3" as const;
   provider.languageModel = createChatModel;
   provider.chat = createChatModel;
   provider.textEmbedding = createEmbeddingModel;
   provider.textEmbeddingModel = createEmbeddingModel;
+  provider.embeddingModel = createEmbeddingModel;
 
   provider.imageModel = (modelId: string) => {
     throw new NoSuchModelError({ modelId, modelType: "imageModel" });

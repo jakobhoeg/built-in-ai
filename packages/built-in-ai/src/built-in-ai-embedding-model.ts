@@ -1,4 +1,8 @@
-import { EmbeddingModelV3, EmbeddingModelV3CallOptions, EmbeddingModelV3Result } from "@ai-sdk/provider";
+import {
+  EmbeddingModelV3,
+  EmbeddingModelV3CallOptions,
+  EmbeddingModelV3Result,
+} from "@ai-sdk/provider";
 import { TextEmbedder } from "@mediapipe/tasks-text";
 
 export interface BuiltInAIEmbeddingModelSettings {
@@ -88,7 +92,9 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV3 {
     );
   };
 
-  public doEmbed = async (options: EmbeddingModelV3CallOptions): Promise<EmbeddingModelV3Result> => {
+  public doEmbed = async (
+    options: EmbeddingModelV3CallOptions,
+  ): Promise<EmbeddingModelV3Result> => {
     // Note: abortSignal is not supported by MediaPipe TextEmbedder
     if (options.abortSignal?.aborted) {
       throw new Error("Operation was aborted");
