@@ -1,17 +1,18 @@
 import {
-  LanguageModelV2Prompt,
-  LanguageModelV2ToolResultPart,
-  LanguageModelV2ToolResultOutput,
+  LanguageModelV3Prompt,
+  LanguageModelV3ToolResultPart,
+  LanguageModelV3ToolResultOutput,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 import * as webllm from "@mlc-ai/web-llm";
 import { formatToolResults } from "./tool-calling";
 import type { ToolResult } from "./tool-calling";
+import { ca } from "zod/v4/locales";
 
 /**
  * Converts the AI SDK ToolResultOutput format to a simple value + error flag
  */
-function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
+function convertToolResultOutput(output: LanguageModelV3ToolResultOutput): {
   value: unknown;
   isError: boolean;
 } {
@@ -26,6 +27,8 @@ function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
       return { value: output.value, isError: true };
     case "content":
       return { value: output.value, isError: false };
+    case "execution-denied":
+      return { value: output.reason, isError: true };
     default: {
       const exhaustiveCheck: never = output;
       return { value: exhaustiveCheck, isError: false };
@@ -36,7 +39,7 @@ function convertToolResultOutput(output: LanguageModelV2ToolResultOutput): {
 /**
  * Converts a ToolResultPart to our internal ToolResult format
  */
-function toToolResult(part: LanguageModelV2ToolResultPart): ToolResult {
+function toToolResult(part: LanguageModelV3ToolResultPart): ToolResult {
   const { value, isError } = convertToolResultOutput(part.output);
   return {
     toolCallId: part.toolCallId,
@@ -93,7 +96,7 @@ function convertDataToURL(
 }
 
 export function convertToWebLLMMessages(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
 ): webllm.ChatCompletionMessageParam[] {
   const messages: webllm.ChatCompletionMessageParam[] = [];
 
@@ -178,7 +181,11 @@ export function convertToWebLLMMessages(
 
       case "tool":
         // Collect tool results and format them
-        const toolResults: ToolResult[] = message.content.map(toToolResult);
+        // filter for tool-result parts only
+        // not sure how to support tool-approval-response parts yet
+        const toolResults: ToolResult[] = message.content
+          .filter((part) => part.type === "tool-result")
+          .map(toToolResult);
 
         // Format tool results as user message with JSON fence format
         const formattedResults = formatToolResults(toolResults);
