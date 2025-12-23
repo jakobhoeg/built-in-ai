@@ -71,7 +71,7 @@ Important:
 
 /**
  * Extracts the parameters/input schema from a tool definition.
- * Handles both ToolDefinition (parameters field) and LanguageModelV2FunctionTool (inputSchema field).
+ * Handles both ToolDefinition (parameters field) and LanguageModelV3FunctionTool (inputSchema field).
  *
  * @param tool
  * @returns The JSON Schema for the tool's parameters, or undefined if not present

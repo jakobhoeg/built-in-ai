@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { convertToTransformersMessages } from "../src/chat/convert-to-transformers-message";
 import {
   UnsupportedFunctionalityError,
-  type LanguageModelV2Prompt,
+  type LanguageModelV3Prompt,
 } from "@ai-sdk/provider";
 
 describe("convertToTransformersMessages", () => {
   it("converts simple text user message", () => {
-    const prompt: LanguageModelV2Prompt = [
+    const prompt: LanguageModelV3Prompt = [
       { role: "user", content: [{ type: "text", text: "Hello" }] },
     ];
 
@@ -16,7 +16,7 @@ describe("convertToTransformersMessages", () => {
   });
 
   it("converts assistant text message", () => {
-    const prompt: LanguageModelV2Prompt = [
+    const prompt: LanguageModelV3Prompt = [
       { role: "assistant", content: [{ type: "text", text: "Hi" }] },
     ];
 
@@ -25,7 +25,7 @@ describe("convertToTransformersMessages", () => {
   });
 
   it("keeps system content as-is", () => {
-    const prompt: LanguageModelV2Prompt = [
+    const prompt: LanguageModelV3Prompt = [
       { role: "system", content: "You are helpful." },
     ];
 
@@ -34,7 +34,7 @@ describe("convertToTransformersMessages", () => {
   });
 
   it("throws for non-vision file input in user message", () => {
-    const prompt: LanguageModelV2Prompt = [
+    const prompt: LanguageModelV3Prompt = [
       {
         role: "user",
         content: [
@@ -50,7 +50,7 @@ describe("convertToTransformersMessages", () => {
 
   it("converts image content when isVisionModel=true", () => {
     const base64 = "SGVsbG8="; // Hello
-    const prompt: LanguageModelV2Prompt = [
+    const prompt: LanguageModelV3Prompt = [
       {
         role: "user",
         content: [
@@ -99,7 +99,7 @@ describe("convertToTransformersMessages", () => {
   });
 
   it("converts assistant tool-call content to fence format", () => {
-    const prompt: LanguageModelV2Prompt = [
+    const prompt: LanguageModelV3Prompt = [
       {
         role: "assistant",
         content: [
