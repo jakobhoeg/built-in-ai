@@ -104,7 +104,7 @@ export class TransformersChatTransport
     const { chatId, messages, abortSignal, trigger, messageId, ...rest } =
       options;
 
-    const prompt = convertToModelMessages(messages);
+    const prompt = await convertToModelMessages(messages);
     const model = this.model;
 
     // Check if model is already available to skip progress tracking

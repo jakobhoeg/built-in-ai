@@ -21,7 +21,7 @@ export class SimpleClientSideChatTransport implements ChatTransport<UIMessage> {
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
-    const prompt = convertToModelMessages(options.messages);
+    const prompt = await convertToModelMessages(options.messages);
 
     const result = streamText({
       model: builtInAI(),

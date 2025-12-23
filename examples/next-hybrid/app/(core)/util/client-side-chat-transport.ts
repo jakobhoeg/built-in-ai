@@ -97,7 +97,7 @@ export class ClientSideChatTransport
     const { chatId, messages, abortSignal, trigger, messageId, ...rest } =
       options;
 
-    const prompt = convertToModelMessages(messages);
+    const prompt = await convertToModelMessages(messages);
     const model = builtInAI();
 
     // Check if model is already available to skip progress tracking
