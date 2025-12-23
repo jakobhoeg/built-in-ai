@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { isFunctionTool } from "../src/utils/tool-utils";
 import type {
-  LanguageModelV2FunctionTool,
-  LanguageModelV2ProviderDefinedTool,
+  LanguageModelV3FunctionTool,
+  LanguageModelV3ProviderTool,
 } from "@ai-sdk/provider";
 
 describe("tool-utils", () => {
   describe("isFunctionTool", () => {
     it("returns true for function tools", () => {
-      const tool: LanguageModelV2FunctionTool = {
+      const tool: LanguageModelV3FunctionTool = {
         type: "function",
         name: "testFunction",
         inputSchema: {
@@ -19,9 +19,9 @@ describe("tool-utils", () => {
       expect(isFunctionTool(tool)).toBe(true);
     });
 
-    it("returns false for provider-defined tools", () => {
-      const tool: LanguageModelV2ProviderDefinedTool = {
-        type: "provider-defined",
+    it("returns false for provider tools", () => {
+      const tool: LanguageModelV3ProviderTool = {
+        type: "provider",
         id: "custom.tool",
         name: "customTool",
         args: {},
@@ -30,9 +30,7 @@ describe("tool-utils", () => {
     });
 
     it("correctly narrows type when true", () => {
-      const tool:
-        | LanguageModelV2FunctionTool
-        | LanguageModelV2ProviderDefinedTool = {
+      const tool: LanguageModelV3FunctionTool | LanguageModelV3ProviderTool = {
         type: "function",
         name: "test",
         inputSchema: {
@@ -49,17 +47,15 @@ describe("tool-utils", () => {
     });
 
     it("correctly narrows type when false", () => {
-      const tool:
-        | LanguageModelV2FunctionTool
-        | LanguageModelV2ProviderDefinedTool = {
-        type: "provider-defined",
+      const tool: LanguageModelV3FunctionTool | LanguageModelV3ProviderTool = {
+        type: "provider",
         id: "test.tool",
         name: "test",
         args: {},
       };
 
       if (!isFunctionTool(tool)) {
-        // TypeScript should know this is a ProviderDefinedTool now
+        // TypeScript should know this is a ProviderTool now
         expect(tool.id).toBe("test.tool");
       }
     });

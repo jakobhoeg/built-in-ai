@@ -50,15 +50,6 @@ export function doesBrowserSupportBuiltInAI(): boolean {
   return typeof LanguageModel !== "undefined";
 }
 
-/**
- * Check if the Prompt API is available
- * @deprecated Use `doesBrowserSupportBuiltInAI()` instead for clearer naming
- * @returns true if the browser supports the built-in AI API, false otherwise
- */
-export function isBuiltInAIModelAvailable(): boolean {
-  return typeof LanguageModel !== "undefined";
-}
-
 type BuiltInAIConfig = {
   provider: string;
   modelId: BuiltInAIChatModelId;
