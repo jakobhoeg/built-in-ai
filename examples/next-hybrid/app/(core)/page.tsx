@@ -8,6 +8,15 @@ import {
   MessageContent,
 } from "@/components/ai-elements/message";
 import {
+  Confirmation,
+  ConfirmationTitle,
+  ConfirmationRequest,
+  ConfirmationAccepted,
+  ConfirmationRejected,
+  ConfirmationActions,
+  ConfirmationAction,
+} from "@/components/ai-elements/confirmation";
+import {
   PromptInput,
   PromptInputButton,
   PromptInputSubmit,
@@ -30,6 +39,8 @@ import {
   RefreshCcw,
   Copy,
   X,
+  CheckIcon,
+  XIcon,
 } from "lucide-react";
 import {
   Tool,
@@ -41,7 +52,11 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
-import { DefaultChatTransport, UIMessage } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  UIMessage,
+} from "ai";
 import { toast } from "sonner";
 import { BuiltInAIUIMessage } from "@built-in-ai/core";
 import Image from "next/image";
@@ -71,31 +86,39 @@ export default function Chat() {
     setBrowserSupportsModel(doesBrowserSupportBuiltInAI());
   }, []);
 
-  const { error, status, sendMessage, messages, regenerate, stop } =
-    useChat<BuiltInAIUIMessage>({
-      transport: doesBrowserSupportModel
-        ? new ClientSideChatTransport()
-        : new DefaultChatTransport<UIMessage>({
-            api: "/api/chat",
-          }),
-      onError(error) {
-        toast.error(error.message);
-      },
-      onData: (dataPart) => {
-        // Handle transient notifications
-        // we can also access the date-modelDownloadProgress here
-        if (dataPart.type === "data-notification") {
-          if (dataPart.data.level === "error") {
-            toast.error(dataPart.data.message);
-          } else if (dataPart.data.level === "warning") {
-            toast.warning(dataPart.data.message);
-          } else {
-            toast.info(dataPart.data.message);
-          }
+  const {
+    error,
+    status,
+    sendMessage,
+    messages,
+    regenerate,
+    stop,
+    addToolApprovalResponse,
+  } = useChat<BuiltInAIUIMessage>({
+    transport: doesBrowserSupportModel
+      ? new ClientSideChatTransport()
+      : new DefaultChatTransport<UIMessage>({
+          api: "/api/chat",
+        }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    onError(error) {
+      toast.error(error.message);
+    },
+    onData: (dataPart) => {
+      // Handle transient notifications
+      // we can also access the date-modelDownloadProgress here
+      if (dataPart.type === "data-notification") {
+        if (dataPart.data.level === "error") {
+          toast.error(dataPart.data.message);
+        } else if (dataPart.data.level === "warning") {
+          toast.warning(dataPart.data.message);
+        } else {
+          toast.info(dataPart.data.message);
         }
-      },
-      experimental_throttle: 75,
-    });
+      }
+    },
+    experimental_throttle: 75,
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,6 +280,73 @@ export default function Chat() {
                     // Type guard to ensure part is a ToolUIPart
                     if (!("state" in part)) return null;
 
+                    // Handle tool states that need confirmation UI
+                    const needsConfirmation =
+                      part.state === "approval-requested" ||
+                      part.state === "approval-responded" ||
+                      part.state === "output-denied";
+
+                    if (needsConfirmation && "approval" in part) {
+                      const toolName = part.type.replace("tool-", "");
+                      return (
+                        <Tool key={partIndex}>
+                          <ToolHeader
+                            type={part.type as any}
+                            state={part.state}
+                          />
+                          <ToolContent>
+                            {"input" in part && part.input !== undefined && (
+                              <ToolInput input={part.input} />
+                            )}
+                            <Confirmation
+                              approval={part.approval ?? null}
+                              state={part.state}
+                            >
+                              <ConfirmationTitle>
+                                <ConfirmationRequest>
+                                  Allow {toolName} to execute with these
+                                  parameters?
+                                </ConfirmationRequest>
+                                <ConfirmationAccepted>
+                                  <CheckIcon className="size-4 text-green-600 dark:text-green-400" />
+                                  <span>Accepted</span>
+                                </ConfirmationAccepted>
+                                <ConfirmationRejected>
+                                  <XIcon className="size-4 text-destructive" />
+                                  <span>Rejected</span>
+                                </ConfirmationRejected>
+                              </ConfirmationTitle>
+                              <ConfirmationActions>
+                                <ConfirmationAction
+                                  onClick={() =>
+                                    addToolApprovalResponse({
+                                      id: part.approval!.id,
+                                      approved: false,
+                                      reason: "User denied tool execution",
+                                    })
+                                  }
+                                  variant="outline"
+                                >
+                                  Reject
+                                </ConfirmationAction>
+                                <ConfirmationAction
+                                  onClick={() =>
+                                    addToolApprovalResponse({
+                                      id: part.approval!.id,
+                                      approved: true,
+                                    })
+                                  }
+                                  variant="default"
+                                >
+                                  Accept
+                                </ConfirmationAction>
+                              </ConfirmationActions>
+                            </Confirmation>
+                          </ToolContent>
+                        </Tool>
+                      );
+                    }
+
                     // Map state values to the expected type
                     const toolState =
                       part.state === "streaming" || part.state === "done"
@@ -312,6 +402,22 @@ export default function Chat() {
                   return null;
                 })}
 
+                {/* Loading state when tool approval was sent and we're waiting for response */}
+                {(m.role === "assistant" || m.role === "system") &&
+                  index === messages.length - 1 &&
+                  status === "submitted" &&
+                  m.parts.some(
+                    (part) =>
+                      part.type.startsWith("tool-") &&
+                      "state" in part &&
+                      part.state === "approval-responded",
+                  ) && (
+                    <div className="flex gap-1 items-center text-gray-500 mt-2">
+                      <Loader className="size-4" />
+                      Thinking...
+                    </div>
+                  )}
+
                 {/* Action buttons for assistant messages */}
                 {(m.role === "assistant" || m.role === "system") &&
                   index === messages.length - 1 &&
@@ -342,18 +448,29 @@ export default function Chat() {
             </Message>
           ))}
 
-          {/* Loading state */}
-          {status === "submitted" && (
-            <Message from="assistant">
-              <MessageContent>
-                <div className="flex gap-1 items-center text-gray-500">
-                  <Loader className="size-4" />
-                  Thinking...
-                </div>
-              </MessageContent>
-              <MessageAvatar name="assistant" src="" />
-            </Message>
-          )}
+          {/* Loading state - only show as separate message if not after tool approval */}
+          {status === "submitted" &&
+            !messages.some(
+              (m, index) =>
+                index === messages.length - 1 &&
+                (m.role === "assistant" || m.role === "system") &&
+                m.parts.some(
+                  (part) =>
+                    part.type.startsWith("tool-") &&
+                    "state" in part &&
+                    part.state === "approval-responded",
+                ),
+            ) && (
+              <Message from="assistant">
+                <MessageContent>
+                  <div className="flex gap-1 items-center text-gray-500">
+                    <Loader className="size-4" />
+                    Thinking...
+                  </div>
+                </MessageContent>
+                <MessageAvatar name="assistant" src="" />
+              </Message>
+            )}
 
           {/* Error state */}
           {error && (

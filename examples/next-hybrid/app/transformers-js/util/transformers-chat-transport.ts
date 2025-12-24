@@ -25,6 +25,7 @@ export const createTools = () => ({
         .string()
         .describe("The search query to find information on the web"),
     }),
+    needsApproval: true,
     execute: async ({ query }) => {
       try {
         // Call the API route instead of Exa directly
