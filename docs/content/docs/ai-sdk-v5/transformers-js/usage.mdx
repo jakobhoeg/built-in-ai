@@ -1,0 +1,284 @@
+---
+title: Usage
+description: Features and usage examples for @built-in-ai/transformers-js
+---
+
+## Basic Text Generation
+
+### Streaming Text
+
+```typescript
+import { streamText } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+const result = streamText({
+  model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
+  messages: [{ role: "user", content: "Hello, how are you?" }],
+});
+
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
+```
+
+## Web Worker Usage
+
+For optimal performance, run models off the main thread using Web Workers:
+
+### 1. Create worker.ts
+
+```typescript title="worker.ts"
+import { TransformersJSWorkerHandler } from "@built-in-ai/transformers-js";
+
+const handler = new TransformersJSWorkerHandler();
+self.onmessage = (msg: MessageEvent) => {
+  handler.onmessage(msg);
+};
+```
+
+### 2. Use the Worker
+
+```typescript
+import { streamText } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
+  worker: new Worker(new URL("./worker.ts", import.meta.url), {
+    type: "module",
+  }),
+  device: "webgpu",
+});
+
+const result = streamText({
+  model,
+  messages: [{ role: "user", content: "Explain Web Workers briefly." }],
+});
+
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
+```
+
+## Tool Calling
+
+<Callout type="warn">
+  Some models might struggle with tool calling. For best results, use a reasoning model like Qwen3.
+</Callout>
+
+```typescript
+import { streamText, stepCountIs, tool } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+import { z } from "zod";
+
+const result = streamText({
+  model: transformersJS("onnx-community/Qwen3-0.6B-ONNX"),
+  tools: {
+    weather: tool({
+      description: "Get the weather in a location",
+      parameters: z.object({
+        location: z.string().describe("The location to get the weather for"),
+      }),
+      execute: async ({ location }) => ({
+        location,
+        temperature: 72 + Math.floor(Math.random() * 21) - 10,
+      }),
+    }),
+  },
+  stopWhen: stepCountIs(5),
+  prompt: "What is the weather in San Francisco?",
+});
+```
+
+When using with `useChat`, set `sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls`.
+
+## Server-side Inference
+
+Transformers.js works on both client and server:
+
+```typescript title="app/api/chat/route.ts"
+import { streamText } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const model = transformersJS("HuggingFaceTB/SmolLM2-135M-Instruct");
+
+  const result = streamText({
+    model,
+    messages,
+    temperature: 0.7,
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+## Vision Models
+
+Process images with vision-capable models:
+
+```typescript
+import { streamText } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+const model = transformersJS("HuggingFaceTB/SmolVLM-256M-Instruct", {
+  isVisionModel: true,
+  device: "webgpu",
+});
+
+const result = streamText({
+  model,
+  messages: [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "Describe this image" },
+        { type: "image", image: someImageBlobOrUrl },
+      ],
+    },
+  ],
+});
+```
+
+## Embeddings
+
+Generate text embeddings with proper type safety:
+
+### Basic Usage
+
+```typescript
+import { embed, embedMany } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+// Single embedding
+const { embedding } = await embed({
+  model: transformersJS.textEmbedding("Supabase/gte-small"),
+  value: "sunny day at the beach",
+});
+
+console.log(`Dimensions: ${embedding.length}`); // 384 for gte-small
+
+// Multiple embeddings
+const { embeddings } = await embedMany({
+  model: transformersJS.textEmbedding("Supabase/gte-small"),
+  values: [
+    "sunny day at the beach",
+    "rainy afternoon in the city",
+    "snowy night in the mountains",
+  ],
+});
+```
+
+### Advanced Configuration
+
+```typescript
+const embeddingModel = transformersJS.textEmbedding("Supabase/gte-small", {
+  device: "webgpu",
+  dtype: "q8",
+  normalize: true,
+  pooling: "mean",
+  maxTokens: 512,
+});
+```
+
+## Transcription
+
+Transcribe audio using Whisper models:
+
+### Basic Usage
+
+```typescript
+import { experimental_transcribe as transcribe } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+const transcript = await transcribe({
+  model: transformersJS.transcription("Xenova/whisper-base"),
+  audio: audioFile,
+});
+
+console.log(transcript.text);
+console.log(transcript.segments);
+console.log(transcript.language);
+```
+
+### With Web Worker
+
+**1. Create worker.ts:**
+
+```typescript title="whisper-worker.ts"
+import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
+
+const handler = new TransformersJSTranscriptionWorkerHandler();
+self.onmessage = (msg: MessageEvent) => {
+  handler.onmessage(msg);
+};
+```
+
+**2. Use the worker:**
+
+```typescript
+const worker = new Worker("/whisper-worker.js", { type: "module" });
+
+const transcriptionModel = transformersJS.transcription(
+  "onnx-community/whisper-base",
+  {
+    worker: worker,
+    device: "webgpu",
+  }
+);
+
+const transcript = await transcribe({
+  model: transcriptionModel,
+  audio: audioFile,
+});
+```
+
+## Download Progress Tracking
+
+Track model download progress for better UX:
+
+```typescript
+import { streamText } from "ai";
+import { transformersJS } from "@built-in-ai/transformers-js";
+
+const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct");
+const availability = await model.availability();
+
+if (availability === "downloadable") {
+  await model.createSessionWithProgress(({ progress }) => {
+    console.log(`Download progress: ${Math.round(progress * 100)}%`);
+  });
+}
+
+const result = streamText({
+  model,
+  messages: [{ role: "user", content: "Hello!" }],
+});
+```
+
+## Hybrid Client/Server Setup
+
+Create applications that automatically choose between client and server inference:
+
+```typescript
+import {
+  transformersJS,
+  doesBrowserSupportTransformersJS,
+} from "@built-in-ai/transformers-js";
+
+const useClientSide = doesBrowserSupportTransformersJS();
+
+if (useClientSide) {
+  // Browser: Use WebGPU for fast client-side inference
+  const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
+    device: "webgpu",
+    worker: new Worker(new URL("./worker.ts", import.meta.url), {
+      type: "module",
+    }),
+  });
+} else {
+  // Fallback: Use server-side API route
+}
+```
+

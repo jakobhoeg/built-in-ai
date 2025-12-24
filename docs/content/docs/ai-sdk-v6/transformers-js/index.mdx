@@ -1,0 +1,55 @@
+---
+title: "@built-in-ai/transformers-js"
+description: Transformers.js provider for Vercel AI SDK v6 - Run Hugging Face models in the browser
+---
+
+Run popular open-source [Hugging Face Transformers](https://huggingface.co/models) models directly in the browser or server-side using [Transformers.js](https://github.com/xenova/transformers.js).
+
+<Callout type="info">
+  This library is in active development. Expect frequent updates.
+</Callout>
+
+## Overview
+
+The `@built-in-ai/transformers-js` package makes it incredibly easy to run Hugging Face models in the browser with the Vercel AI SDK v6. No complex Web Worker setup, no manual streaming—just a few lines of code.
+
+### Key Features
+
+- **Simple API**: What takes 200+ lines with raw Transformers.js takes just 15 with this package
+- **Full AI SDK integration**: Works seamlessly with `useChat`, `streamText`, and more
+- **Web Worker support**: Built-in worker handler for off-main-thread execution
+- **Progress tracking**: Automatic download progress for better UX
+- **Server-side support**: Works in Node.js too, not just browsers
+- **Agent support**: Build AI agents with tool calling (new in v6!)
+
+### What's Included
+
+- **Language Models**: Text generation with SmolLM, Qwen, Llama, and more
+- **Text Embeddings**: GTE, MiniLM, and other embedding models
+- **Vision Models**: SmolVLM and other multimodal models
+- **Transcription**: Whisper models for speech-to-text
+- **Tool Calling**: Function calling support
+- **Agents**: Multi-step autonomous workflows
+
+## Quick Links
+
+<Cards>
+  <Card title="Why?" href="/docs/ai-sdk-v6/transformers-js/why" description="See the dramatic code reduction" />
+  <Card title="Installation" href="/docs/ai-sdk-v6/transformers-js/installation" description="Setup and requirements" />
+  <Card title="Usage" href="/docs/ai-sdk-v6/transformers-js/usage" description="Features and examples" />
+  <Card title="useChat Integration" href="/docs/ai-sdk-v6/transformers-js/usechat-integration" description="React hook integration" />
+  <Card title="Agents" href="/docs/ai-sdk-v6/transformers-js/agents" description="Build autonomous AI agents" />
+  <Card title="API Reference" href="/docs/ai-sdk-v6/transformers-js/api-reference" description="Complete API documentation" />
+</Cards>
+
+## Recommended Models
+
+| Use Case | Model | Size |
+|----------|-------|------|
+| Chat (small) | `HuggingFaceTB/SmolLM2-135M-Instruct` | ~135M |
+| Chat (medium) | `HuggingFaceTB/SmolLM2-360M-Instruct` | ~360M |
+| Chat (reasoning) | `onnx-community/Qwen3-0.6B-ONNX` | ~600M |
+| Vision | `HuggingFaceTB/SmolVLM-256M-Instruct` | ~256M |
+| Embeddings | `Supabase/gte-small` | ~33M |
+| Transcription | `Xenova/whisper-base` | ~74M |
+

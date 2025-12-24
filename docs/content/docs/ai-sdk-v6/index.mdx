@@ -1,9 +1,122 @@
 ---
 title: Getting Started
-description: Introduction to using @built-in-ai with Vercel AI SDK v6
+description: Introduction to using @built-in-ai packages with Vercel AI SDK v6
 ---
 
-# AI SDK v6
+# AI SDK v6 Documentation
 
-Welcome to the AI SDK v6 documentation.
+Welcome to the @built-in-ai documentation for **Vercel AI SDK v6**.
 
+<Callout type="info">
+  This documentation covers packages compatible with AI SDK v6. For AI SDK v5 documentation, please visit the [AI SDK v5 section](/docs/ai-sdk-v5).
+</Callout>
+
+## Package Versions for AI SDK v6
+
+| Package | Version Range | Minimum v6 Compatible |
+|---------|---------------|----------------------|
+| `@built-in-ai/core` | ≥ 3.0.0 | 3.0.0 |
+| `@built-in-ai/transformers-js` | ≥ 1.0.0 | 1.0.0 |
+| `@built-in-ai/web-llm` | ≥ 1.0.0 | 1.0.0 |
+
+## Installation
+
+```bash
+# For Chrome/Edge Built-in AI (Prompt API)
+npm i @built-in-ai/core ai@^6
+
+# For Transformers.js (Hugging Face models)
+npm i @built-in-ai/transformers-js @huggingface/transformers ai@^6
+
+# For WebLLM (MLC models)
+npm i @built-in-ai/web-llm @mlc-ai/web-llm ai@^6
+```
+
+## What's New in v6
+
+The AI SDK v6 brings significant improvements and changes. Our packages have been updated to fully support these changes:
+
+- **Improved streaming**: Enhanced streaming APIs for better performance
+- **Better type safety**: Improved TypeScript types throughout
+- **Simplified APIs**: More intuitive function signatures
+- **Enhanced tool calling**: Better support for multi-step tool execution
+
+<Callout type="warn">
+  If you're migrating from v5, make sure to update your package versions and review the [AI SDK v6 migration guide](https://ai-sdk.dev/docs/migration-guide).
+</Callout>
+
+## Available Packages
+
+### @built-in-ai/core
+
+Access Chrome and Edge's built-in AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). This package provides:
+
+- **Language Models**: Text generation with Gemini Nano (Chrome) or Phi Mini (Edge)
+- **Text Embeddings**: Generate embeddings using browser-native models
+- **Multimodal Support**: Image and audio input (Chrome only)
+- **Tool Calling**: Function calling with JSON format support
+
+[View Core Documentation →](/docs/ai-sdk-v6/core)
+
+### @built-in-ai/transformers-js
+
+Run [Hugging Face Transformers](https://huggingface.co/models) models directly in the browser or server-side with WebGPU/WASM acceleration:
+
+- **Language Models**: SmolLM, Qwen, Llama, and more
+- **Text Embeddings**: GTE, MiniLM, and other embedding models
+- **Vision Models**: SmolVLM and other multimodal models
+- **Transcription**: Whisper models for speech-to-text
+- **Web Worker Support**: Off-main-thread execution
+
+[View Transformers.js Documentation →](/docs/ai-sdk-v6/transformers-js)
+
+### @built-in-ai/web-llm
+
+High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-ai/web-llm) with WebGPU:
+
+- **Language Models**: Llama, Qwen, Phi, and many more
+- **Download Progress**: Real-time model download tracking
+- **Web Worker Support**: Efficient background processing
+- **Tool Calling**: Function calling support
+
+[View Web-LLM Documentation →](/docs/ai-sdk-v6/web-llm)
+
+## Quick Start Example
+
+Here's a simple example using `@built-in-ai/core` with AI SDK v6:
+
+```typescript
+import { streamText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+const result = streamText({
+  model: builtInAI(),
+  messages: [{ role: "user", content: "Hello, how are you?" }],
+});
+
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
+```
+
+## Browser Support
+
+| Package | Chrome | Edge | Firefox | Safari |
+|---------|--------|------|---------|--------|
+| `@built-in-ai/core` | ✅ 128+ | ✅ Dev/Canary 138+ | ❌ | ❌ |
+| `@built-in-ai/transformers-js` | ✅ | ✅ | ✅ | ✅ |
+| `@built-in-ai/web-llm` | ✅ | ✅ | ⚠️ Limited | ⚠️ Limited |
+
+<Callout type="warn">
+  WebGPU is recommended for optimal performance with `transformers-js` and `web-llm`. Check [WebGPU browser support](https://caniuse.com/webgpu) for the latest compatibility information.
+</Callout>
+
+## Next Steps
+
+Choose the package that best fits your use case and explore its documentation:
+
+<Cards>
+  <Card title="Core" href="/docs/ai-sdk-v6/core" description="Browser built-in AI with Chrome & Edge" />
+  <Card title="Transformers.js" href="/docs/ai-sdk-v6/transformers-js" description="Hugging Face models in the browser" />
+  <Card title="Web-LLM" href="/docs/ai-sdk-v6/web-llm" description="High-performance WebGPU inference" />
+</Cards>

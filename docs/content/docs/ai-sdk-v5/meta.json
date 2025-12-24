@@ -1,5 +1,6 @@
 {
   "title": "AI SDK v5",
   "description": "Using @built-in-ai with Vercel AI SDK v5",
-  "root": true
+  "root": true,
+  "pages": ["index", "core", "transformers-js", "web-llm"]
 }

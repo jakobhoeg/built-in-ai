@@ -1,0 +1,201 @@
+---
+title: Usage
+description: Features and usage examples for @built-in-ai/core
+---
+
+## Basic Text Generation
+
+### Streaming Text
+
+```typescript
+import { streamText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+const result = streamText({
+  model: builtInAI(),
+  messages: [{ role: "user", content: "Hello, how are you?" }],
+});
+
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
+```
+
+### Non-streaming Text
+
+```typescript
+import { generateText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+const result = await generateText({
+  model: builtInAI(),
+  messages: [{ role: "user", content: "Write a short poem about AI" }],
+});
+
+console.log(result.text);
+```
+
+## Text Embeddings
+
+Generate text embeddings using browser-native embedding capabilities:
+
+```typescript
+import { embed, embedMany } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+// Single embedding
+const result = await embed({
+  model: builtInAI.textEmbedding("embedding"),
+  value: "Hello, world!",
+});
+
+console.log(result.embedding); // [0.1, 0.2, 0.3, ...]
+
+// Multiple embeddings
+const results = await embedMany({
+  model: builtInAI.textEmbedding("embedding"),
+  values: ["Hello", "World", "AI"],
+});
+
+console.log(results.embeddings); // [[...], [...], [...]]
+```
+
+## Download Progress Tracking
+
+When using built-in AI models for the first time, the model needs to be downloaded. Track progress to improve UX:
+
+```typescript
+import { streamText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+const model = builtInAI();
+const availability = await model.availability();
+
+if (availability === "unavailable") {
+  console.log("Browser doesn't support built-in AI");
+  return;
+}
+
+if (availability === "downloadable") {
+  await model.createSessionWithProgress((progress) => {
+    console.log(`Download progress: ${Math.round(progress * 100)}%`);
+  });
+}
+
+// Model is ready
+const result = streamText({
+  model,
+  messages: [{ role: "user", content: "Hello!" }],
+});
+```
+
+## Multimodal Support
+
+The Prompt API supports both images and audio files (Chrome only atm.):
+
+```typescript
+import { streamText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+const result = streamText({
+  model: builtInAI(),
+  messages: [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "What's in this image?" },
+        { type: "file", mediaType: "image/png", data: base64ImageData },
+      ],
+    },
+    {
+      role: "user",
+      content: [{ type: "file", mediaType: "audio/mp3", data: audioData }],
+    },
+  ],
+});
+
+for await (const chunk of result.textStream) {
+  console.log(chunk);
+}
+```
+
+## Tool Calling
+
+The `builtInAI` model supports tool calling with multi-step execution:
+
+```typescript
+import { streamText, stepCountIs } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+import { z } from "zod";
+
+const result = await streamText({
+  model: builtInAI(),
+  messages: [{ role: "user", content: "What's the weather in San Francisco?" }],
+  tools: {
+    search: {
+      description: "Search the web for information",
+      parameters: z.object({
+        query: z.string(),
+      }),
+      execute: async ({ query }) => {
+        return { results: [{ title: "Weather Report", url: "..." }] };
+      },
+    },
+    fetchContent: {
+      description: "Fetch the content of a URL",
+      parameters: z.object({
+        url: z.string(),
+      }),
+      execute: async ({ url }) => {
+        return { content: "72°F, Sunny" };
+      },
+    },
+  },
+  stopWhen: stepCountIs(5),
+});
+```
+
+## Structured Data Generation
+
+Generate structured JSON objects with schema validation:
+
+### Using streamObject
+
+```typescript
+import { streamObject } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+import { z } from "zod";
+
+const { object } = await streamObject({
+  model: builtInAI(),
+  schema: z.object({
+    recipe: z.object({
+      name: z.string(),
+      ingredients: z.array(z.object({ name: z.string(), amount: z.string() })),
+      steps: z.array(z.string()),
+    }),
+  }),
+  prompt: "Generate a lasagna recipe.",
+});
+```
+
+### Using generateObject
+
+```typescript
+import { generateObject } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+import { z } from "zod";
+
+const { object } = await generateObject({
+  model: builtInAI(),
+  schema: z.object({
+    recipe: z.object({
+      name: z.string(),
+      ingredients: z.array(z.object({ name: z.string(), amount: z.string() })),
+      steps: z.array(z.string()),
+    }),
+  }),
+  prompt: "Generate a lasagna recipe.",
+});
+```
+

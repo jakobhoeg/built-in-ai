@@ -1,0 +1,75 @@
+---
+title: Installation
+description: Setup @built-in-ai/transformers-js for AI SDK v5
+---
+
+## Package Installation
+
+```bash
+npm i @built-in-ai/transformers-js@^0.3.4 @huggingface/transformers ai@^5
+```
+
+## Version Compatibility
+
+| @built-in-ai/transformers-js | AI SDK | Notes |
+|------------------------------|--------|-------|
+| 0.3.4 and below | v5.x | Current stable for AI SDK v5 |
+| 1.0.0 and above | v6.x | Requires AI SDK v6 |
+
+<Callout type="info">
+  For AI SDK v6, please refer to the [v6 documentation](/docs/ai-sdk-v6/transformers-js/installation).
+</Callout>
+
+## Requirements
+
+### Browser (Client-side)
+
+- Modern browser with WebAssembly support
+- **WebGPU strongly recommended** for optimal performance
+- Check [WebGPU browser support](https://caniuse.com/webgpu)
+
+### Server (Node.js)
+
+- Node.js 18+ recommended
+- Automatic CPU inference
+- GPU acceleration available with appropriate hardware setup
+
+## Verifying Installation
+
+After installation, you can verify browser support:
+
+```typescript
+import { doesBrowserSupportTransformersJS } from "@built-in-ai/transformers-js";
+
+if (doesBrowserSupportTransformersJS()) {
+  console.log("Browser supports Transformers.js with WebGPU!");
+} else {
+  console.log("Consider using server-side inference");
+}
+```
+
+## Next.js Configuration
+
+If you're using Next.js, you may need to configure webpack to handle the `@huggingface/transformers` package:
+
+```javascript title="next.config.js"
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "sharp$": false,
+      "onnxruntime-node$": false,
+    };
+    return config;
+  },
+};
+
+module.exports = nextConfig;
+```
+
+## Next Steps
+
+- See [Why?](/docs/ai-sdk-v5/transformers-js/why) to understand the benefits
+- Head to [Usage](/docs/ai-sdk-v5/transformers-js/usage) to start building
+

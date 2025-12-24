@@ -1,0 +1,82 @@
+---
+title: Installation
+description: Setup @built-in-ai/core for AI SDK v6
+---
+
+## Package Installation
+
+```bash
+npm i @built-in-ai/core ai@^6
+```
+
+## Version Compatibility
+
+| @built-in-ai/core | AI SDK | Notes |
+|-------------------|--------|-------|
+| 3.0.0 and above | v6.x | Current stable for AI SDK v6 |
+| 2.1.0 and below | v5.x | Use for AI SDK v5 |
+
+<Callout type="info">
+  For AI SDK v5, please refer to the [v5 documentation](/docs/ai-sdk-v5/core/installation).
+</Callout>
+
+## Browser Requirements
+
+<Callout type="warn">
+  The Prompt API is currently experimental and might change as it matures.
+</Callout>
+
+### Chrome Setup
+
+1. Use Chrome version **128 or higher**
+2. Navigate to `chrome://flags/`
+3. Search for **"Prompt API for Gemini Nano with Multimodal Input"**
+4. Set it to **Enabled**
+5. Go to `chrome://components`
+6. Click **Check for Update** on **Optimization Guide On Device Model**
+7. Restart Chrome
+
+### Edge Setup
+
+1. Use Edge Dev/Canary version **138.0.3309.2 or higher**
+2. Navigate to `edge://flags/#prompt-api-for-phi-mini`
+3. Set it to **Enabled**
+4. Restart Edge
+
+For more information, check out [Chrome's official guide](https://developer.chrome.com/docs/extensions/ai/prompt-api).
+
+## Verifying Installation
+
+After installation, you can verify browser support:
+
+```typescript
+import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
+
+if (doesBrowserSupportBuiltInAI()) {
+  console.log("Browser supports built-in AI!");
+} else {
+  console.log("Built-in AI not available, use server fallback");
+}
+```
+
+## TypeScript Configuration
+
+The package includes TypeScript definitions. For proper DOM types with the experimental Prompt API, you may want to add the types package:
+
+```bash
+npm i -D @types/dom-chromium-ai
+```
+
+## What's New in v6
+
+The v6 release brings several improvements:
+
+- **Improved streaming APIs**: Enhanced performance and reliability
+- **Agent support**: Build multi-step autonomous AI workflows
+- **Better TypeScript types**: Improved type inference throughout
+- **Simplified APIs**: More intuitive function signatures
+
+## Next Steps
+
+Once installed, head to the [Functionality](/docs/ai-sdk-v6/core/functionality) guide to learn how to use the package.
+
