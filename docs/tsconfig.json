@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "baseUrl": ".",
+    "target": "ESNext",
     "lib": [
       "dom",
       "dom.iterable",
@@ -10,31 +11,27 @@
     "skipLibCheck": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "fumadocs-mdx:collections/*": [
+        ".source/*"
+      ]
+    },
     "plugins": [
       {
         "name": "next"
       }
-    ],
-    "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@component/*": [
-        "./component/*"
-      ],
-      "@util/*": [
-        "./util/*"
-      ]
-    },
-    "composite": true,
-    "noEmit": true
+    ]
   },
   "include": [
     "next-env.d.ts",
