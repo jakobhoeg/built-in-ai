@@ -101,122 +101,79 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
       messageId: string | undefined;
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
-    const { chatId, messages, abortSignal, trigger, messageId, ...rest } =
-      options;
-
+    const { messages, abortSignal } = options;
     const prompt = await convertToModelMessages(messages);
     const model = this.model;
 
-    // Check if model is already available to skip progress tracking
-    const availability = await model.availability();
-    if (availability === "available") {
-      const result = streamText({
-        model: wrapLanguageModel({
-          model,
-          middleware: extractReasoningMiddleware({
-            tagName: "think",
-          }),
-        }),
-        tools: this.tools,
-        stopWhen: stepCountIs(5),
-        messages: prompt,
-        abortSignal: abortSignal,
-      });
-      return result.toUIMessageStream();
-    }
-
-    // Handle model download with progress tracking
     return createUIMessageStream<WebLLMUIMessage>({
       execute: async ({ writer }) => {
-        try {
-          let downloadProgressId: string | undefined;
+        let downloadProgressId: string | undefined;
+        const availability = await model.availability();
 
-          // Download/prepare model with progress monitoring
-          await model.createSessionWithProgress((progress: WebLLMProgress) => {
-            const percent = Math.round(progress.progress * 100);
+        // Only track progress if model needs downloading
+        if (availability !== "available") {
+          await model.createSessionWithProgress(
+            (progress: { progress: number }) => {
+              const percent = Math.round(progress.progress * 100);
 
-            if (progress.progress >= 1) {
-              // Download complete
-              if (downloadProgressId) {
-                writer.write({
-                  type: "data-modelDownloadProgress",
-                  id: downloadProgressId,
-                  data: {
-                    status: "complete",
-                    progress: 100,
-                    message:
-                      "Model finished downloading! Getting ready for inference...",
-                  },
-                });
+              if (progress.progress >= 1) {
+                if (downloadProgressId) {
+                  writer.write({
+                    type: "data-modelDownloadProgress",
+                    id: downloadProgressId,
+                    data: {
+                      status: "complete",
+                      progress: 100,
+                      message:
+                        "Model finished downloading! Getting ready for inference...",
+                    },
+                  });
+                }
+                return;
               }
-              return;
-            }
 
-            // First progress update
-            if (!downloadProgressId) {
-              downloadProgressId = `download-${Date.now()}`;
+              if (!downloadProgressId) {
+                downloadProgressId = `download-${Date.now()}`;
+              }
+
               writer.write({
                 type: "data-modelDownloadProgress",
                 id: downloadProgressId,
                 data: {
                   status: "downloading",
                   progress: percent,
-                  message: "Downloading browser AI model...",
+                  message: `Downloading browser AI model... ${percent}%`,
                 },
-                transient: true,
+                transient: !downloadProgressId, // transient only on first write
               });
-              return;
-            }
-
-            // Ongoing progress updates
-            writer.write({
-              type: "data-modelDownloadProgress",
-              id: downloadProgressId,
-              data: {
-                status: "downloading",
-                progress: percent,
-                message: `Downloading browser AI model... ${percent}%`,
-              },
-            });
-          });
-
-          // Stream the actual text response
-          const result = streamText({
-            model: wrapLanguageModel({
-              model,
-              middleware: extractReasoningMiddleware({
-                tagName: "think",
-              }),
-            }),
-            tools: this.tools,
-            stopWhen: stepCountIs(5),
-            messages: prompt,
-            abortSignal: abortSignal,
-            onChunk(event) {
-              // Clear progress message on first text chunk
-              if (event.chunk.type === "text-delta" && downloadProgressId) {
-                writer.write({
-                  type: "data-modelDownloadProgress",
-                  id: downloadProgressId,
-                  data: { status: "complete", progress: 100, message: "" },
-                });
-                downloadProgressId = undefined;
-              }
             },
-          });
-
-          writer.merge(result.toUIMessageStream({ sendStart: false }));
-        } catch (error) {
-          writer.write({
-            type: "data-notification",
-            data: {
-              message: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
-              level: "error",
-            },
-            transient: true,
-          });
-          throw error;
+          );
         }
+
+        const result = streamText({
+          model: wrapLanguageModel({
+            model,
+            middleware: extractReasoningMiddleware({
+              tagName: "think",
+            }),
+          }),
+          tools: this.tools,
+          stopWhen: stepCountIs(5),
+          messages: prompt,
+          abortSignal,
+          onChunk: (event) => {
+            if (event.chunk.type === "text-delta" && downloadProgressId) {
+              writer.write({
+                type: "data-modelDownloadProgress",
+                id: downloadProgressId,
+                data: { status: "complete", progress: 100, message: "" },
+              });
+              downloadProgressId = undefined;
+            }
+          },
+        });
+
+        writer.merge(result.toUIMessageStream({ sendStart: false }));
       },
     });
   }
