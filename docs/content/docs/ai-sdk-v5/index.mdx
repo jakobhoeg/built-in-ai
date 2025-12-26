@@ -3,10 +3,6 @@ title: Getting Started
 description: Introduction to using @built-in-ai packages with Vercel AI SDK v5
 ---
 
-# AI SDK v5 Documentation
-
-Welcome to the @built-in-ai documentation for **Vercel AI SDK v5**.
-
 <Callout type="info">
   This documentation covers packages compatible with AI SDK v5. For AI SDK v6 documentation, please visit the [AI SDK v6 section](/docs/ai-sdk-v6).
 </Callout>
@@ -23,13 +19,13 @@ Welcome to the @built-in-ai documentation for **Vercel AI SDK v5**.
 
 ```bash
 # For Chrome/Edge Built-in AI (Prompt API)
-npm i @built-in-ai/core@^2.1.0 ai@^5
+npm i @built-in-ai/core@2.1.0
 
 # For Transformers.js (Hugging Face models)
-npm i @built-in-ai/transformers-js@^0.3.4 @huggingface/transformers ai@^5
+npm i @built-in-ai/transformers-js@0.3.4
 
 # For WebLLM (MLC models)
-npm i @built-in-ai/web-llm@^0.3.2 @mlc-ai/web-llm ai@^5
+npm i @built-in-ai/web-llm@0.3.2
 ```
 
 ## Available Packages
@@ -40,33 +36,28 @@ Access Chrome and Edge's built-in AI capabilities through the experimental [Prom
 
 - **Language Models**: Text generation with Gemini Nano (Chrome) or Phi Mini (Edge)
 - **Text Embeddings**: Generate embeddings using browser-native models
-- **Multimodal Support**: Image and audio input (Chrome only)
-- **Tool Calling**: Function calling with JSON format support
-
-[View Core Documentation →](/docs/ai-sdk-v5/core)
+- **Multimodal Support**: Image and audio input
+- **Tool Calling**: Function calling support
 
 ### @built-in-ai/transformers-js
 
-Run [Hugging Face Transformers](https://huggingface.co/models) models directly in the browser or server-side with WebGPU/WASM acceleration:
+Run [Hugging Face Transformers](https://github.com/huggingface/transformers.js) models directly in the browser or server-side:
 
-- **Language Models**: SmolLM, Qwen, Llama, and more
+- **Open-source Language Models**: SmolLM, Qwen, Llama, and more
 - **Text Embeddings**: GTE, MiniLM, and other embedding models
 - **Vision Models**: SmolVLM and other multimodal models
+- **Web Worker Support**: Efficient background processing
 - **Transcription**: Whisper models for speech-to-text
-- **Web Worker Support**: Off-main-thread execution
-
-[View Transformers.js Documentation →](/docs/ai-sdk-v5/transformers-js)
+- **Tool Calling**: Function calling support
 
 ### @built-in-ai/web-llm
 
 High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-ai/web-llm) with WebGPU:
 
-- **Language Models**: Llama, Qwen, Phi, and many more
+- **Open-source Language Models**: Llama, Qwen, Phi, and many more
 - **Download Progress**: Real-time model download tracking
 - **Web Worker Support**: Efficient background processing
 - **Tool Calling**: Function calling support
-
-[View Web-LLM Documentation →](/docs/ai-sdk-v5/web-llm)
 
 ## Quick Start Example
 
@@ -86,24 +77,6 @@ for await (const chunk of result.textStream) {
 }
 ```
 
-## Browser Support
-
-| Package | Chrome | Edge | Firefox | Safari |
-|---------|--------|------|---------|--------|
-| `@built-in-ai/core` | ✅ 128+ | ✅ Dev/Canary 138+ | ❌ | ❌ |
-| `@built-in-ai/transformers-js` | ✅ | ✅ | ✅ | ✅ |
-| `@built-in-ai/web-llm` | ✅ | ✅ | ⚠️ Limited | ⚠️ Limited |
-
 <Callout type="warn">
   WebGPU is recommended for optimal performance with `transformers-js` and `web-llm`. Check [WebGPU browser support](https://caniuse.com/webgpu) for the latest compatibility information.
 </Callout>
-
-## Next Steps
-
-Choose the package that best fits your use case and explore its documentation:
-
-<Cards>
-  <Card title="Core" href="/docs/ai-sdk-v5/core" description="Browser built-in AI with Chrome & Edge" />
-  <Card title="Transformers.js" href="/docs/ai-sdk-v5/transformers-js" description="Hugging Face models in the browser" />
-  <Card title="Web-LLM" href="/docs/ai-sdk-v5/web-llm" description="High-performance WebGPU inference" />
-</Cards>

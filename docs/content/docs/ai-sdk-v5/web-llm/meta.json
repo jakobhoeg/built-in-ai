@@ -1,7 +1,0 @@
-{
-  "title": "Web-LLM",
-  "description": "High-performance WebGPU LLM inference",
-  "icon": "Zap",
-  "pages": ["index"]
-}
-

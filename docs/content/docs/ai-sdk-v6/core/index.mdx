@@ -1,13 +1,7 @@
 ---
 title: "@built-in-ai/core"
-description: Browser Built-in AI API provider for Vercel AI SDK v6 (Chrome & Edge)
+description: Browser Built-in AI model provider for Vercel AI SDK v6 (Chrome & Edge)
 ---
-
-A TypeScript library that provides access to browser-based AI capabilities using Chrome and Edge's built-in AI features through the [Prompt API](https://github.com/webmachinelearning/prompt-api).
-
-<Callout type="warn">
-  This package is under constant development as the Prompt API matures, and may contain errors and incompatible changes.
-</Callout>
 
 ## Overview
 
@@ -19,7 +13,7 @@ The `@built-in-ai/core` package enables you to leverage Chrome and Edge's native
 - **Privacy-first**: Data never leaves the user's device
 - **Offline capable**: Works without internet after initial model download
 - **Seamless fallback**: Easy integration with server-side models
-- **Agent support**: Build AI agents with tool calling (new in v6!)
+- **Agent support**: Build AI agents with tool calling
 
 ### What's Included
 
@@ -49,9 +43,6 @@ The `@built-in-ai/core` package enables you to leverage Chrome and Edge's native
 | Download progress | ✅ |
 | Multimodal (image/audio) | ✅ Chrome only |
 | Temperature control | ✅ |
-| JSON response format | ✅ |
+| JSON structured output | ✅ |
 | Tool calling | ✅ |
 | Agents | ✅ New in v6! |
-| Abort signals | ✅ |
-| Token counting | ⏳ Planned |
-| Custom stop sequences | ⏳ Planned |
