@@ -1,0 +1,11 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+out
+.next
+
+# Generated
+.source
+
