@@ -13,17 +13,17 @@ export default function HomePage() {
       {/* Main content */}
       <main className="grid gap-24 pb-24 text-gray-950 sm:gap-40 md:pb-40 dark:text-white">
         <div>
-          <div className="relative flex h-16 items-end px-2 font-mono text-xs/6 whitespace-pre text-black/40 max-sm:px-4 sm:h-24 dark:text-white/40 after:absolute after:bottom-0 after:h-px after:w-[200vw] after:bg-gray-950/5 dark:after:bg-white/10 after:-left-[100vw]">
+          <div className="relative flex h-16 items-end px-2 font-mono tracking-tighter text-xs/6 whitespace-pre text-black/40 max-sm:px-4 sm:h-24 dark:text-white/40 after:absolute after:bottom-0 after:h-px after:w-[200vw] after:bg-gray-950/5 dark:after:bg-white/10 after:-left-[100vw]">
             Vercel AI SDK v5 & v6
           </div>
 
-          <div className="relative before:absolute before:top-0 before:h-px before:w-[200vw] before:-left-[100vw] after:absolute after:bottom-0 after:h-px after:w-[200vw] after:bg-gray-950/5 dark:after:bg-white/10 after:-left-[100vw] ">
+          <div className="relative before:absolute before:top-0 before:h-px before:w-[200vw] before:-left-[100vw] after:absolute after:bottom-0 after:h-px after:w-[200vw] after:bg-gray-950/5 dark:after:bg-white/10 after:-left-[100vw]">
             <h1 className="px-2 text-4xl tracking-tighter text-balance max-lg:font-medium max-sm:px-4 sm:text-5xl lg:text-6xl xl:text-8xl">
               Build local, in-browser AI applications with ease.
             </h1>
           </div>
 
-          <div className="mt-5 relative text-black/40 dark:text-white/40 px-2 max-sm:px-4 before:absolute before:top-0 before:h-px before:w-[200vw] before:-left-[100vw] after:absolute after:bottom-0 after:h-px">
+          <div className="font-mono tracking-tighter mt-5 relative text-black/40 dark:text-white/40 px-2 max-sm:px-4 before:absolute before:top-0 before:h-px before:w-[200vw] before:-left-[100vw] after:absolute after:bottom-0 after:h-px">
             Framework agnostic. Built-in state management. Tool calling. Structured output. Streaming.
           </div>
 

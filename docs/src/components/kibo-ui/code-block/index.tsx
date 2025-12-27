@@ -639,6 +639,7 @@ export const CodeBlockContent = ({
     <div
       // biome-ignore lint/security/noDangerouslySetInnerHtml: "Kinda how Shiki works"
       dangerouslySetInnerHTML={{ __html: html }}
+      className="font-mono"
       {...props}
     />
   );
