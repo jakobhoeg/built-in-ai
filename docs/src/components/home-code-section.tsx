@@ -3,6 +3,7 @@
 import { useState } from "react";
 import HomeSnippetInstall from "./home-snippet-install";
 import { HomeCodeBlock } from "./home-code-block";
+import { CornerPlus } from "./ui/corner-plus";
 
 const PACKAGES = [
   { id: "core", label: "@built-in-ai/core" },
@@ -27,7 +28,9 @@ export function HomeCodeSection() {
         </div>
 
         {/* Code block section */}
-        <div className="bg-gray-950/5 p-2 dark:bg-white/10">
+        <div className="relative bg-gray-950/5 p-2 dark:bg-white/10">
+          <CornerPlus />
+
           <HomeCodeBlock
             value={activePackage}
             onValueChange={setActivePackage}
