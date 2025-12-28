@@ -16,9 +16,9 @@ export function CornerPlus({
   const baseClass = cn(
     "absolute text-muted-foreground/50 pointer-events-none hidden sm:inline-block",
     sizeClass,
-    className
+    className,
   );
-  const offset = `-${size / 2 * 0.25}rem`;
+  const offset = `-${(size / 2) * 0.25}rem`;
 
   return (
     <>
@@ -45,4 +45,3 @@ export function CornerPlus({
     </>
   );
 }
-

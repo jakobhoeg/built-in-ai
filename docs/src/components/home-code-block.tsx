@@ -103,7 +103,11 @@ export function HomeCodeBlock({ value, onValueChange }: HomeCodeBlockProps) {
     >
       <TabsList className="w-full justify-start p-0 overflow-x-auto scrollbar-none">
         {packages.map((pkg) => (
-          <TabsTrigger key={pkg.id} value={pkg.id} className="whitespace-nowrap shrink-0">
+          <TabsTrigger
+            key={pkg.id}
+            value={pkg.id}
+            className="whitespace-nowrap shrink-0"
+          >
             {pkg.name}
           </TabsTrigger>
         ))}
@@ -122,7 +126,9 @@ export function HomeCodeBlock({ value, onValueChange }: HomeCodeBlockProps) {
               <CodeBlockBody>
                 {(item) => (
                   <CodeBlockItem key={item.language} value={item.language}>
-                    <CodeBlockContent language={item.language as BundledLanguage}>
+                    <CodeBlockContent
+                      language={item.language as BundledLanguage}
+                    >
                       {item.code}
                     </CodeBlockContent>
                   </CodeBlockItem>

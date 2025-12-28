@@ -16,7 +16,9 @@ export function TweetGrid({
 }) {
   const [showAll, setShowAll] = useState(false);
   const hasMore = totalCount > DEFAULT_VISIBLE;
-  const visibleChildren = showAll ? children : children.slice(0, DEFAULT_VISIBLE);
+  const visibleChildren = showAll
+    ? children
+    : children.slice(0, DEFAULT_VISIBLE);
 
   return (
     <>
@@ -27,10 +29,7 @@ export function TweetGrid({
       </div>
       {hasMore && (
         <div className="mt-2 flex justify-center">
-          <Button
-            onClick={() => setShowAll(!showAll)}
-            variant="ghost"
-          >
+          <Button onClick={() => setShowAll(!showAll)} variant="ghost">
             {showAll ? (
               <>
                 Show less <ChevronUp className="size-4" />

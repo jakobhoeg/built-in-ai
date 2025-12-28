@@ -13,7 +13,7 @@ const tweetIds = [
   "1980646442441285656",
   "1957752385272738170",
   "1957771454839238912",
-  "1957762133787082766"
+  "1957762133787082766",
 ];
 
 export default function HomePage() {
@@ -36,7 +36,8 @@ export default function HomePage() {
           </div>
 
           <div className="mt-5 font-mono tracking-tighter relative text-black/40 dark:text-white/40 px-2 max-sm:px-4 before:absolute before:top-0 before:h-px before:w-[200vw] before:-left-[100vw] after:absolute after:bottom-0 after:h-px">
-            Framework agnostic. Built-in state management. Tool calling. Structured output. Streaming.
+            Framework agnostic. Built-in state management. Tool calling.
+            Structured output. Streaming.
           </div>
 
           <Separator />
@@ -46,14 +47,18 @@ export default function HomePage() {
               <Link href="/docs">Get started building</Link>
             </Button>
 
-            <Button variant="secondary" className="tracking-tight text-balance flex gap-2">
-              <Link href="https://ai-sdk.dev/docs/introduction">Vercel AI SDK</Link>
+            <Button
+              variant="secondary"
+              className="tracking-tight text-balance flex gap-2"
+            >
+              <Link href="https://ai-sdk.dev/docs/introduction">
+                Vercel AI SDK
+              </Link>
               <MoveUpRight className="size-3.5" />
             </Button>
           </div>
 
           <HomeCodeSection />
-
         </div>
 
         {/* Testimonials */}
@@ -88,7 +93,7 @@ function Separator({ className }: { className?: string }) {
         "bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)] bg-[size:10px_10px] bg-fixed [--pattern-fg:var(--color-black)]/5 dark:[--pattern-fg:var(--color-white)]/10",
         "before:absolute before:-z-1 before:h-7 lg:before:h-10 before:w-[100vw] before:right-[calc(100%+var(--gutter-width))] before:border-y before:border-edge",
         "after:absolute after:-z-1 after:h-7 lg:after:h-10 after:w-[100vw] after:left-[calc(100%+var(--gutter-width))] after:border-y after:border-edge",
-        className
+        className,
       )}
     />
   );
@@ -99,7 +104,7 @@ function VerticalSeparatorRight({ className }: { className?: string }) {
     <div
       className={cn(
         "row-span-full row-start-1 hidden border-x border-x-(--pattern-fg) bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)] bg-[size:10px_10px] bg-fixed [--pattern-fg:var(--color-black)]/7 md:col-start-3 md:block dark:[--pattern-fg:var(--color-white)]/8",
-        className
+        className,
       )}
     />
   );
@@ -110,7 +115,7 @@ function VerticalSeparatorLeft({ className }: { className?: string }) {
     <div
       className={cn(
         "col-start-1 row-span-full row-start-1 hidden border-x border-x-(--pattern-fg) bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)] bg-[size:10px_10px] bg-fixed [--pattern-fg:var(--color-black)]/7 md:block dark:[--pattern-fg:var(--color-white)]/8",
-        className
+        className,
       )}
     />
   );

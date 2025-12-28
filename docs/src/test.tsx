@@ -15,7 +15,7 @@ function Separator({ className }: { className?: string }) {
         "after:absolute after:-z-1 after:h-10 after:w-[100vw] after:left-full",
         "after:bg-[image:repeating-linear-gradient(315deg,_var(--pattern-fg)_0,_var(--pattern-fg)_1px,_transparent_0,_transparent_50%)] after:bg-[size:10px_10px] after:bg-fixed",
         "md:after:left-[calc(100%+var(--gutter-width))]",
-        className
+        className,
       )}
     />
   );
@@ -31,7 +31,7 @@ function VerticalSeparatorRight({ className }: { className?: string }) {
         // Mask to create transparent gap where horizontal separator is
         "[mask-image:linear-gradient(to_bottom,black_4rem,transparent_4rem,transparent_calc(4rem+2.5rem),black_calc(4rem+2.5rem))]",
         "sm:[mask-image:linear-gradient(to_bottom,black_6rem,transparent_6rem,transparent_calc(6rem+2.5rem),black_calc(6rem+2.5rem))]",
-        className
+        className,
       )}
     />
   );
@@ -47,7 +47,7 @@ function VerticalSeparatorLeft({ className }: { className?: string }) {
         // Mask to create transparent gap where horizontal separator is
         "[mask-image:linear-gradient(to_bottom,black_4rem,transparent_4rem,transparent_calc(4rem+2.5rem),black_calc(4rem+2.5rem))]",
         "sm:[mask-image:linear-gradient(to_bottom,black_6rem,transparent_6rem,transparent_calc(6rem+2.5rem),black_calc(6rem+2.5rem))]",
-        className
+        className,
       )}
     />
   );

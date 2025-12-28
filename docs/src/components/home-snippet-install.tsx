@@ -34,14 +34,14 @@ interface HomeSnippetInstallProps {
   onValueChange: (value: PackageId) => void;
 }
 
-const HomeSnippetInstall = ({ value, onValueChange }: HomeSnippetInstallProps) => {
+const HomeSnippetInstall = ({
+  value,
+  onValueChange,
+}: HomeSnippetInstallProps) => {
   const activeCommand = commands.find((command) => command.id === value);
 
   return (
-    <Snippet
-      onValueChange={(v) => onValueChange(v as PackageId)}
-      value={value}
-    >
+    <Snippet onValueChange={(v) => onValueChange(v as PackageId)} value={value}>
       <SnippetHeader className="overflow-hidden">
         <SnippetTabsList className="w-full justify-start p-0 overflow-x-auto scrollbar-none">
           {commands.map((command) => (
@@ -52,7 +52,11 @@ const HomeSnippetInstall = ({ value, onValueChange }: HomeSnippetInstallProps) =
         </SnippetTabsList>
       </SnippetHeader>
       {commands.map((command) => (
-        <SnippetTabsContent className="flex justify-between items-center" key={command.id} value={command.id}>
+        <SnippetTabsContent
+          className="flex justify-between items-center"
+          key={command.id}
+          value={command.id}
+        >
           {command.code}
           {activeCommand && (
             <SnippetCopyButton
@@ -61,7 +65,7 @@ const HomeSnippetInstall = ({ value, onValueChange }: HomeSnippetInstallProps) =
               }
               onError={() =>
                 console.error(
-                  `Failed to copy "${activeCommand.code}" to clipboard`
+                  `Failed to copy "${activeCommand.code}" to clipboard`,
                 )
               }
               value={activeCommand.code}

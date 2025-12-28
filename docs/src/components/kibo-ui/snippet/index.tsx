@@ -18,7 +18,7 @@ export const Snippet = ({ className, ...props }: SnippetProps) => (
   <Tabs
     className={cn(
       "group w-full gap-0 overflow-hidden rounded-md border",
-      className
+      className,
     )}
     {...props}
   />
@@ -30,7 +30,7 @@ export const SnippetHeader = ({ className, ...props }: SnippetHeaderProps) => (
   <div
     className={cn(
       "flex flex-row items-center justify-between border-b bg-secondary p-1",
-      className
+      className,
     )}
     {...props}
   />
@@ -115,7 +115,10 @@ export const SnippetTabsContent = ({
 }: SnippetTabsContentProps) => (
   <TabsContent
     asChild
-    className={cn("mt-0 bg-background p-4 text-sm font-mono tracking-tighter", className)}
+    className={cn(
+      "mt-0 bg-background p-4 text-sm font-mono tracking-tighter",
+      className,
+    )}
     {...props}
   >
     <pre className="truncate">{children}</pre>
