@@ -1,0 +1,229 @@
+---
+title: useChat Integration
+description: Integrate @built-in-ai/core with the useChat hook in AI SDK v6
+---
+
+## Overview
+
+When using this library with the `useChat` hook, you'll need to create a [custom transport](https://ai-sdk.dev/docs/ai-sdk-ui/transport) implementation to handle client-side AI with download progress. 
+This is not required, but it makes it easier for you to build better user experiences. 
+
+## Complete Transport Example
+
+```ts
+import {
+  ChatTransport,
+  UIMessageChunk,
+  streamText,
+  convertToModelMessages,
+  ChatRequestOptions,
+  createUIMessageStream,
+  tool,
+  stepCountIs,
+} from "ai";
+import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
+import z from "zod";
+
+export const createTools = () => ({
+  webSearch: tool({
+    description:
+      "Search the web for information when you need up-to-date information or facts not in your knowledge base. Use this when the user asks about current events, recent developments, or specific factual information you're unsure about.",
+    inputSchema: z.object({
+      query: z
+        .string()
+        .describe("The search query to find information on the web"),
+    }),
+    needsApproval: true,
+    execute: async ({ query }) => {
+      // ...
+    },
+  }),
+});
+
+/**
+ * Client-side chat transport AI SDK implementation that handles AI model communication
+ * with in-browser AI capabilities.
+ *
+ * @implements {ChatTransport<BuiltInAIUIMessage>}
+ */
+export class ClientSideChatTransport
+  implements ChatTransport<BuiltInAIUIMessage>
+{
+  private tools: ReturnType<typeof createTools>;
+
+  constructor() {
+    this.tools = createTools();
+  }
+
+  async sendMessages(
+    options: {
+      chatId: string;
+      messages: BuiltInAIUIMessage[];
+      abortSignal: AbortSignal | undefined;
+    } & {
+      trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
+      messageId: string | undefined;
+    } & ChatRequestOptions,
+  ): Promise<ReadableStream<UIMessageChunk>> {
+    const { messages, abortSignal } = options;
+    const prompt = await convertToModelMessages(messages);
+    const model = builtInAI();
+
+    return createUIMessageStream<BuiltInAIUIMessage>({
+      execute: async ({ writer }) => {
+        let downloadProgressId: string | undefined;
+        const availability = await model.availability();
+
+        // Only track progress if model needs downloading
+        if (availability !== "available") {
+          await model.createSessionWithProgress((progress: number) => {
+            const percent = Math.round(progress * 100);
+
+            if (progress >= 1) {
+              if (downloadProgressId) {
+                writer.write({
+                  type: "data-modelDownloadProgress",
+                  id: downloadProgressId,
+                  data: {
+                    status: "complete",
+                    progress: 100,
+                    message:
+                      "Model finished downloading! Getting ready for inference...",
+                  },
+                });
+              }
+              return;
+            }
+
+            if (!downloadProgressId) {
+              downloadProgressId = `download-${Date.now()}`;
+            }
+
+            writer.write({
+              type: "data-modelDownloadProgress",
+              id: downloadProgressId,
+              data: {
+                status: "downloading",
+                progress: percent,
+                message: `Downloading browser AI model... ${percent}%`,
+              },
+              transient: !downloadProgressId, // transient only on first write
+            });
+          });
+        }
+
+        const result = streamText({
+          model,
+          tools: this.tools,
+          stopWhen: stepCountIs(5),
+          messages: prompt,
+          abortSignal,
+          onChunk: (event) => {
+            if (event.chunk.type === "text-delta" && downloadProgressId) {
+              writer.write({
+                type: "data-modelDownloadProgress",
+                id: downloadProgressId,
+                data: { status: "complete", progress: 100, message: "" },
+              });
+              downloadProgressId = undefined;
+            }
+          },
+        });
+
+        writer.merge(result.toUIMessageStream({ sendStart: false }));
+      },
+    });
+  }
+
+  async reconnectToStream(
+    options: {
+      chatId: string;
+    } & ChatRequestOptions,
+  ): Promise<ReadableStream<UIMessageChunk> | null> {
+    // Client-side AI doesn't support stream reconnection
+    return null;
+  }
+}
+```
+
+## Basic Transport Structure
+
+Here's a simplified example of how to structure a custom transport:
+
+```typescript
+import {
+  ChatTransport,
+  UIMessage,
+  UIMessageChunk,
+  streamText,
+  convertToModelMessages,
+  ChatRequestOptions,
+} from "ai";
+import { builtInAI } from "@built-in-ai/core";
+
+// This class won't stream back data parts with the download progress if
+// the Prompt API model hasn't yet been downloaded
+export class SimpleClientSideChatTransport implements ChatTransport<UIMessage> {
+  async sendMessages(
+    options: {
+      chatId: string;
+      messages: UIMessage[];
+      abortSignal: AbortSignal | undefined;
+    } & {
+      trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
+      messageId: string | undefined;
+    } & ChatRequestOptions,
+  ): Promise<ReadableStream<UIMessageChunk>> {
+    const prompt = await convertToModelMessages(options.messages);
+
+    const result = streamText({
+      model: builtInAI(),
+      messages: prompt,
+      abortSignal: options.abortSignal,
+    });
+
+    return result.toUIMessageStream();
+  }
+
+  async reconnectToStream(
+    options: {
+      chatId: string;
+    } & ChatRequestOptions,
+  ): Promise<ReadableStream<UIMessageChunk> | null> {
+    // Client-side AI doesn't support stream reconnection
+    return null;
+  }
+}
+```
+
+You can then use the `useChat()` hook in your components:
+
+```ts
+const {
+    sendMessage,
+    messages,
+    stop,
+    addToolApprovalResponse,
+  } = useChat<BuiltInAIUIMessage>({
+    transport: new ClientSideChatTransport(), // Pass custom transport
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+```
+
+In case the device is incompatible with local in-browser LLMs, and we want to use a server-side AI model, we can simply use the utility function from the package first:
+
+```ts
+import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
+
+const {
+  sendMessage,
+    messages,
+    stop,
+    addToolApprovalResponse,
+  } = useChat<BuiltInAIUIMessage>({
+    transport: doesBrowserSupportBuiltInAI() // check for device compatibility
+      ? new ClientSideChatTransport()
+      : new DefaultChatTransport<UIMessage>({ 
+          api: "/api/chat",
+        }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+```

@@ -1,0 +1,36 @@
+---
+title: Installation
+description: Setup @built-in-ai/transformers-js for AI SDK v6
+---
+
+## Package Installation
+
+```bash
+npm i @built-in-ai/transformers-js
+```
+
+## Version Compatibility
+
+| @built-in-ai/transformers-js | AI SDK | Notes |
+|------------------------------|--------|-------|
+| v1.0.0 and above | v6.x | Current stable for AI SDK v6 |
+| v0.3.4 and below | v5.x | Use for AI SDK v5 |
+
+<Callout type="info">
+  For AI SDK v5, please refer to the [v5 documentation](/docs/ai-sdk-v5/transformers-js/installation).
+</Callout>
+
+## Verifying Installation
+
+After installation, you can verify browser support:
+
+```typescript
+import { doesBrowserSupportTransformersJS } from "@built-in-ai/transformers-js";
+
+if (doesBrowserSupportTransformersJS()) {
+  console.log("Browser supports Transformers.js with WebGPU!");
+} else {
+  console.log("WebGPU not available, falling back to WASM or server");
+}
+```
+

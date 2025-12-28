@@ -1,0 +1,14 @@
+{
+  "title": "@built-in-ai/transformers-js",
+  "description": "Hugging Face Transformers models in the browser",
+  "icon": "Sparkles",
+  "pages": [
+    "index",
+    "why",
+    "installation",
+    "usage",
+    "usechat-integration",
+    "agents",
+    "api-reference"
+  ]
+}

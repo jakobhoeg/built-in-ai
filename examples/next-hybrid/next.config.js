@@ -1,8 +1,15 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // (Optional) Export as a static site
   // See https://nextjs.org/docs/pages/building-your-application/deploying/static-exports#configuration
   output: 'export', // Feel free to modify/remove this option
+
+  // Next.js 16 uses Turbopack by default
+  turbopack: {
+    root: path.resolve(__dirname, '../..'),
+  },
 
   // Override the default webpack configuration
   webpack: (config) => {
