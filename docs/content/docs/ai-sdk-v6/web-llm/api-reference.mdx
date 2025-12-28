@@ -1,0 +1,135 @@
+---
+title: API Reference
+description: Complete API documentation for @built-in-ai/web-llm with AI SDK v6
+---
+
+## Provider Functions
+
+### `webLLM(modelId, settings?)`
+
+Creates a WebLLM model instance.
+
+**Parameters:**
+- `modelId`: The model identifier from the [supported list of models](https://github.com/mlc-ai/web-llm/blob/main/src/config.ts)
+- `settings` (optional): Configuration options
+  - `appConfig?: AppConfig` - Custom app configuration for WebLLM
+  - `initProgressCallback?: (progress: WebLLMProgress) => void` - Progress callback for model initialization
+  - `engineConfig?: MLCEngineConfig` - Engine configuration options
+  - `worker?: Worker` - A web worker instance to run the model in for better performance
+
+**Returns:** `WebLLMLanguageModel`
+
+---
+
+## Utility Functions
+
+### `doesBrowserSupportWebLLM()`
+
+Quick check if the browser supports WebLLM. Useful for component-level decisions and feature flags.
+
+**Returns:** `boolean` - `true` if browser supports WebGPU, `false` otherwise
+
+---
+
+## Model Methods
+
+### `WebLLMLanguageModel.availability()`
+
+Checks the current availability status of the WebLLM model.
+
+**Returns:** `Promise<"unavailable" | "downloadable" | "available">`
+
+| Status | Description |
+|--------|-------------|
+| `"unavailable"` | Model is not supported in the browser (no WebGPU) |
+| `"downloadable"` | Model is supported but needs to be downloaded first |
+| `"available"` | Model is ready to use |
+
+### `WebLLMLanguageModel.createSessionWithProgress(onProgress?)`
+
+Creates a language model session with optional download progress monitoring.
+
+**Parameters:**
+- `onProgress?: (progress: WebLLMProgress) => void` - Optional callback that receives progress reports during model download
+
+**Returns:** `Promise<MLCEngineInterface>` - The configured language model session
+
+### `WebLLMLanguageModel.isModelInitialized`
+
+Property that indicates if the model is initialized and ready to use.
+
+**Returns:** `boolean`
+
+---
+
+## Worker Handler
+
+### `WebWorkerMLCEngineHandler`
+
+Re-exported from `@mlc-ai/web-llm` for Web Worker usage.
+
+```typescript
+import { WebWorkerMLCEngineHandler } from "@built-in-ai/web-llm";
+
+const handler = new WebWorkerMLCEngineHandler();
+self.onmessage = (msg: MessageEvent) => handler.onmessage(msg);
+```
+
+---
+
+## Types
+
+### `WebLLMUIMessage`
+
+Extended UI message type for use with the `useChat` hook that includes custom data parts for WebLLM functionality.
+
+```typescript
+type WebLLMUIMessage = UIMessage<
+  never,
+  {
+    modelDownloadProgress: {
+      status: "downloading" | "complete" | "error";
+      progress?: number;
+      message: string;
+    };
+    notification: {
+      message: string;
+      level: "info" | "warning" | "error";
+    };
+  }
+>;
+```
+
+### `WebLLMProgress`
+
+The progress report type returned during model initialization.
+
+```typescript
+interface WebLLMProgress {
+  progress: number; // 0-1
+  timeElapsed: number; // in ms
+  text: string; // progress text
+}
+```
+
+### `WebLLMModelId`
+
+Type alias for model identifiers.
+
+```typescript
+type WebLLMModelId = string;
+```
+
+### `WebLLMSettings`
+
+Configuration options for the WebLLM model.
+
+```typescript
+interface WebLLMSettings {
+  appConfig?: AppConfig;
+  initProgressCallback?: (progress: WebLLMProgress) => void;
+  engineConfig?: MLCEngineConfig;
+  worker?: Worker;
+}
+```
+

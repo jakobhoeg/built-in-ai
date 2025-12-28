@@ -3,6 +3,46 @@ title: Getting Started
 description: Introduction to using @built-in-ai packages with Vercel AI SDK v6
 ---
 
+## The Challenge with In-Browser LLMs
+
+If you've been experimenting with running local language models directly in the browser using Transformers.js, WebLLM, or the new Prompt API in Chrome/Edge, you're likely familiar with the challenges:
+
+- **Custom hooks and UI components**: Each framework requires its own integration patterns
+- **Fallback complexity**: Building robust integration layers to automatically fall back to server-side models when client-side compatibility is an issue
+- **API fragmentation**: Significant differences in API specifications across different in-browser LLM frameworks
+
+### The API Fragmentation Problem
+
+The main issue is that the ways of using in-browser LLMs are fundamentally different:
+
+- **Transformers.js** introduces its own [`pipeline`](https://huggingface.co/docs/transformers.js/en/pipelines) API, supporting a range of NLP, Computer Vision, Audio, and Multimodal tasks by leveraging ONNX Runtime
+- **WebLLM** provides an OpenAI-style API and leverages their own [MLCEngine](https://llm.mlc.ai/), WebGPU and WebAssembly for model execution
+- **The Prompt API** (utilizing Gemini Nano and Phi4-mini) offers native browser integration via the JavaScript `LanguageModel` namespace
+
+Besides these API differences, it's also tricky to easily fall back to server-side models when the client device can't run local models due to hardware limitations (e.g., insufficient VRAM) or browser compatibility issues (e.g., WebGPU still not being implemented in some browsers).
+
+## The Solution
+
+The `@built-in-ai` packages solve this by providing unified [Vercel AI SDK](https://ai-sdk.dev/) providers for in-browser AI capabilities. This architecture allows applications to:
+
+- **Prioritize local inference** when browser capabilities and hardware support are detected
+- **Automatically fall back** to cloud-based models when local conditions aren't met
+- **Switch providers** by changing just **one line of code**
+
+```typescript
+import { streamText } from "ai";
+import { builtInAI } from "@built-in-ai/core";
+// or: import { transformersJS } from "@built-in-ai/transformers-js";
+// or: import { webLLM } from "@built-in-ai/web-llm";
+
+const result = streamText({
+  model: builtInAI(), // change model provider here
+  prompt: "Why is the sky blue?",
+});
+```
+
+---
+
 ## Package Versions for AI SDK v6
 
 | Package | Version Range | Minimum v6 Compatible |
@@ -28,7 +68,7 @@ npm i @built-in-ai/web-llm
 
 ### @built-in-ai/core
 
-Access Chrome and Edge's built-in AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). This package provides:
+Access Chrome and Edge's built-in AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). The provider will automatically work in all browsers that support the Prompt API since the browser handles model orchestration. For instance, if your client uses Edge, it will use [Phi4-mini](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api#the-phi-4-mini-model), and for Chrome it will use [Gemini Nano](https://developer.chrome.com/docs/ai/prompt-api#model_download).
 
 - **Language Models**: Text generation with Gemini Nano (Chrome) or Phi Mini (Edge)
 - **Text Embeddings**: Generate embeddings using browser-native models
@@ -53,7 +93,7 @@ Run [Hugging Face Transformers](https://huggingface.co/models) models directly i
 
 ### @built-in-ai/web-llm
 
-High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-ai/web-llm) with WebGPU:
+High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-ai/web-llm) with WebGPU. Allows using a ton of popular open-source models such as **Llama3** and **Qwen3**:
 
 - **Open-source Language Models**: Llama, Qwen, Phi, and many more
 - **Download Progress**: Real-time model download tracking
@@ -62,20 +102,17 @@ High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-
 
 [View Web-LLM Documentation →](/docs/ai-sdk-v6/web-llm)
 
-## Quick Start Example
+## Easy Server Fallback
 
-Here's a simple example using `@built-in-ai/core` with AI SDK v6:
+One of the biggest advantages is the ability to seamlessly fall back to server-side models:
 
 ```typescript
-import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI, doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
 
-const result = streamText({
-  model: builtInAI(),
-  messages: [{ role: "user", content: "Hello, how are you?" }],
+// Prioritize local inference, fall back to cloud when needed
+const { messages, sendMessage } = useChat({
+  transport: doesBrowserSupportBuiltInAI()
+    ? new ClientSideChatTransport(builtInAI())
+    : new DefaultChatTransport({ api: "/api/chat" }),
 });
-
-for await (const chunk of result.textStream) {
-  console.log(chunk);
-}
 ```
