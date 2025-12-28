@@ -18,10 +18,10 @@ description: Introduction to using @built-in-ai packages with Vercel AI SDK v6
 npm i @built-in-ai/core
 
 # For Transformers.js (Hugging Face models)
-npm i @built-in-ai/transformers-js @huggingface/transformers
+npm i @built-in-ai/transformers-js
 
 # For WebLLM (MLC models)
-npm i @built-in-ai/web-llm @mlc-ai/web-llm
+npm i @built-in-ai/web-llm
 ```
 
 ## Available Packages
@@ -33,6 +33,7 @@ Access Chrome and Edge's built-in AI capabilities through the experimental [Prom
 - **Language Models**: Text generation with Gemini Nano (Chrome) or Phi Mini (Edge)
 - **Text Embeddings**: Generate embeddings using browser-native models
 - **Multimodal Support**: Image and audio input
+- **Structured Data**: Generate structured data
 - **Tool Calling**: Function calling with JSON format support
 
 [View Core Documentation →](/docs/ai-sdk-v6/core)
@@ -78,13 +79,3 @@ for await (const chunk of result.textStream) {
   console.log(chunk);
 }
 ```
-
-## Next Steps
-
-Choose the package that best fits your use case and explore its documentation:
-
-<Cards>
-  <Card title="Core" href="/docs/ai-sdk-v6/core" description="Browser built-in AI with Chrome & Edge" />
-  <Card title="Transformers.js" href="/docs/ai-sdk-v6/transformers-js" description="Hugging Face models in the browser" />
-  <Card title="Web-LLM" href="/docs/ai-sdk-v6/web-llm" description="High-performance WebGPU inference" />
-</Cards>

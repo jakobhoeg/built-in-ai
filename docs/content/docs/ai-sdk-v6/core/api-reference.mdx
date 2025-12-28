@@ -17,21 +17,6 @@ Creates a browser AI model instance for chat.
 
 **Returns:** `BuiltInAIChatLanguageModel`
 
-**Example:**
-
-```typescript
-import { builtInAI } from "@built-in-ai/core";
-
-// Default configuration
-const model = builtInAI();
-
-// With custom settings
-const modelWithSettings = builtInAI("text", {
-  temperature: 0.7,
-  topK: 40,
-});
-```
-
 ### `builtInAI.textEmbedding(modelId, settings?)`
 
 Creates an embedding model instance.
@@ -48,23 +33,6 @@ Creates an embedding model instance.
 
 **Returns:** `BuiltInAIEmbeddingModel`
 
-**Example:**
-
-```typescript
-import { builtInAI } from "@built-in-ai/core";
-import { embed } from "ai";
-
-const embeddingModel = builtInAI.textEmbedding("embedding", {
-  l2Normalize: true,
-  delegate: "GPU",
-});
-
-const { embedding } = await embed({
-  model: embeddingModel,
-  value: "Hello, world!",
-});
-```
-
 ---
 
 ## Utility Functions
@@ -74,18 +42,6 @@ const { embedding } = await embed({
 Quick check if the browser supports the built-in AI API. Useful for component-level decisions and feature flags.
 
 **Returns:** `boolean` - `true` if browser supports the Prompt API, `false` otherwise
-
-**Example:**
-
-```typescript
-import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
-
-if (doesBrowserSupportBuiltInAI()) {
-  // Show built-in AI option in UI
-} else {
-  // Show server-side option only
-}
-```
 
 ---
 
@@ -104,28 +60,6 @@ Checks the current availability status of the built-in AI model.
 | `"downloading"` | Model is currently being downloaded |
 | `"available"` | Model is ready to use |
 
-**Example:**
-
-```typescript
-const model = builtInAI();
-const status = await model.availability();
-
-switch (status) {
-  case "unavailable":
-    console.log("Use server-side model instead");
-    break;
-  case "downloadable":
-    console.log("Model needs to be downloaded");
-    break;
-  case "downloading":
-    console.log("Download in progress...");
-    break;
-  case "available":
-    console.log("Ready to use!");
-    break;
-}
-```
-
 ### `BuiltInAIChatLanguageModel.createSessionWithProgress(onProgress?)`
 
 Creates a language model session with optional download progress monitoring.
@@ -134,19 +68,6 @@ Creates a language model session with optional download progress monitoring.
 - `onDownloadProgress?: (progress: number) => void` - Optional callback that receives progress values from 0 to 1 during model download
 
 **Returns:** `Promise<LanguageModel>` - The configured language model session
-
-**Example:**
-
-```typescript
-const model = builtInAI();
-
-await model.createSessionWithProgress((progress) => {
-  console.log(`Download: ${Math.round(progress * 100)}%`);
-  // Update UI progress bar
-});
-
-// Model is now ready for use
-```
 
 ---
 
@@ -171,23 +92,5 @@ type BuiltInAIUIMessage = UIMessage<
     };
   }
 >;
-```
-
-**Data Parts:**
-
-| Part | Description |
-|------|-------------|
-| `modelDownloadProgress` | Tracks browser AI model download status and progress |
-| `notification` | Displays temporary messages and alerts to users |
-
-**Usage:**
-
-```typescript
-import type { BuiltInAIUIMessage } from "@built-in-ai/core";
-
-// Use with useChat for proper typing
-const { messages } = useChat<BuiltInAIUIMessage>({
-  // ...
-});
 ```
 

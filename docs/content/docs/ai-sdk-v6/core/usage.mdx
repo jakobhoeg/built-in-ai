@@ -11,9 +11,9 @@ description: Features and usage examples for @built-in-ai/core with AI SDK v6
 import { streamText } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 
-const { text } = streamText({
+const result = streamText({
   model: builtInAI(),
-  messages: [{ role: "user", content: "Hello, how are you?" }],
+  prompt: 'Invent a new holiday and describe its traditions.',
 });
 
 for await (const textPart of result.textStream) {
@@ -27,9 +27,9 @@ for await (const textPart of result.textStream) {
 import { generateText } from "ai";
 import { builtInAI } from "@built-in-ai/core";
 
-const { text } = await generateText({
+const result = await generateText({
   model: builtInAI(),
-  messages: [{ role: "user", content: "Write a short poem about AI" }],
+  prompt: 'Invent a new holiday and describe its traditions.',
 });
 
 console.log(result.text);
@@ -139,11 +139,11 @@ const result = await streamText({
       }),
     }),
   },
-  stopWhen: stepCountIs(5),
+  stopWhen: stepCountIs(5), // multiple steps
 });
 ```
 
-It also supports [tool execution approval (`needsApproval`)](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling#tool-execution-approval)
+It also supports [tool execution approval (`needsApproval`)](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling#tool-execution-approval).
 
 ## Tool Calling with Structured Output
 

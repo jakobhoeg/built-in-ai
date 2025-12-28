@@ -2,5 +2,12 @@
   "title": "@built-in-ai/core",
   "description": "Browser Built-in AI provider (Chrome & Edge)",
   "icon": "Cpu",
-  "pages": ["index", "installation", "usage", "usechat-integration", "agents", "api-reference"]
+  "pages": [
+    "index",
+    "installation",
+    "usage",
+    "usechat-integration",
+    "agents",
+    "api-reference"
+  ]
 }

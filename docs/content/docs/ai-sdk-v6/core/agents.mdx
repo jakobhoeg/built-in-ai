@@ -3,321 +3,50 @@ title: Agents
 description: Build autonomous AI agents with @built-in-ai/core and AI SDK v6
 ---
 
-## Overview
-
-AI SDK v6 introduces enhanced support for building AI agents—autonomous workflows where the model can use tools, make decisions, and complete multi-step tasks. With `@built-in-ai/core`, you can run these agents entirely in the browser.
-
-<Callout type="info">
-  Agents are a new feature in AI SDK v6. For AI SDK v5, use the basic [tool calling](/docs/ai-sdk-v5/core/functionality) approach with `stopWhen: stepCountIs()`.
-</Callout>
-
-## What are Agents?
-
-Agents are AI systems that can:
-- **Plan**: Break down complex tasks into steps
-- **Execute**: Use tools to accomplish goals
-- **Reason**: Make decisions based on tool results
-- **Iterate**: Continue until the task is complete
-
 ## Basic Agent Example
 
 Create an agent that can search the web and analyze content:
 
 ```typescript
-import { streamText, stepCountIs, tool } from "ai";
+import { ToolLoopAgent, stepCountIs, tool } from 'ai';
 import { builtInAI } from "@built-in-ai/core";
-import { z } from "zod";
+import { z } from 'zod';
 
-const result = await streamText({
+const weatherAgent = new ToolLoopAgent({
   model: builtInAI(),
-  system: `You are a helpful research assistant. Use the available tools to find and analyze information.`,
-  messages: [
-    { 
-      role: "user", 
-      content: "Research the latest developments in WebGPU and summarize the key features." 
-    }
-  ],
+  instructions: 'You are a weather assistant.',
   tools: {
-    search: tool({
-      description: "Search the web for information",
-      parameters: z.object({
-        query: z.string().describe("The search query"),
+    weather: tool({
+      description: 'Get the weather in a location (in Fahrenheit)',
+      inputSchema: z.object({
+        location: z.string().describe('The location to get the weather for'),
       }),
-      execute: async ({ query }) => {
-        // Implement your search logic
-        return {
-          results: [
-            { title: "WebGPU Overview", snippet: "WebGPU is a modern graphics API..." },
-            { title: "WebGPU Features", snippet: "Key features include..." },
-          ],
-        };
-      },
+      execute: async ({ location }) => ({
+        location,
+        temperature: 72 + Math.floor(Math.random() * 21) - 10,
+      }),
     }),
-    readArticle: tool({
-      description: "Read and extract content from a URL",
-      parameters: z.object({
-        url: z.string().describe("The URL to read"),
+    convertFahrenheitToCelsius: tool({
+      description: 'Convert temperature from Fahrenheit to Celsius',
+      inputSchema: z.object({
+        temperature: z.number().describe('Temperature in Fahrenheit'),
       }),
-      execute: async ({ url }) => {
-        // Implement your content extraction
-        return { content: "Article content here..." };
-      },
-    }),
-    takeNotes: tool({
-      description: "Save important notes for later reference",
-      parameters: z.object({
-        note: z.string().describe("The note to save"),
-        topic: z.string().describe("The topic this note relates to"),
-      }),
-      execute: async ({ note, topic }) => {
-        console.log(`Note saved: [${topic}] ${note}`);
-        return { saved: true };
+      execute: async ({ temperature }) => {
+        const celsius = Math.round((temperature - 32) * (5 / 9));
+        return { celsius };
       },
     }),
   },
-  stopWhen: stepCountIs(10),
+  // Agent's default behavior is to stop after a maximum of 20 steps
+  // stopWhen: stepCountIs(20),
 });
 
-for await (const chunk of result.textStream) {
-  process.stdout.write(chunk);
-}
-```
-
-## Agent with Memory
-
-Build agents that maintain context across interactions:
-
-```typescript
-import { streamText, stepCountIs, tool } from "ai";
-import { builtInAI } from "@built-in-ai/core";
-import { z } from "zod";
-
-// Simple in-memory store
-const memory = new Map<string, string>();
-
-const result = await streamText({
-  model: builtInAI(),
-  system: `You are a personal assistant with access to a memory system. 
-           Use the remember and recall tools to maintain context across our conversation.`,
-  messages: [
-    { role: "user", content: "Remember that my favorite color is blue." },
-  ],
-  tools: {
-    remember: tool({
-      description: "Store information for later recall",
-      parameters: z.object({
-        key: z.string().describe("A short key to identify this memory"),
-        value: z.string().describe("The information to remember"),
-      }),
-      execute: async ({ key, value }) => {
-        memory.set(key, value);
-        return { success: true, message: `Remembered: ${key}` };
-      },
-    }),
-    recall: tool({
-      description: "Recall previously stored information",
-      parameters: z.object({
-        key: z.string().describe("The key to look up"),
-      }),
-      execute: async ({ key }) => {
-        const value = memory.get(key);
-        if (value) {
-          return { found: true, value };
-        }
-        return { found: false, message: "No memory found for that key" };
-      },
-    }),
-  },
-  stopWhen: stepCountIs(5),
+const result = await weatherAgent.generate({
+  prompt: 'What is the weather in San Francisco in celsius?',
 });
+
+console.log(result.text); // agent's final answer
+console.log(result.steps); // steps taken by the agent
 ```
 
-## Multi-Tool Workflow Agent
-
-Create agents that coordinate multiple tools for complex workflows:
-
-```typescript
-import { streamText, stepCountIs, tool } from "ai";
-import { builtInAI } from "@built-in-ai/core";
-import { z } from "zod";
-
-const result = await streamText({
-  model: builtInAI(),
-  system: `You are a data analyst assistant. Help users analyze and visualize data.`,
-  messages: [
-    { 
-      role: "user", 
-      content: "Analyze the sales data and create a summary report" 
-    }
-  ],
-  tools: {
-    fetchData: tool({
-      description: "Fetch data from a data source",
-      parameters: z.object({
-        source: z.string().describe("The data source to fetch from"),
-        filters: z.object({
-          startDate: z.string().optional(),
-          endDate: z.string().optional(),
-          category: z.string().optional(),
-        }).optional(),
-      }),
-      execute: async ({ source, filters }) => {
-        // Fetch data from your source
-        return {
-          data: [
-            { month: "Jan", sales: 1200 },
-            { month: "Feb", sales: 1500 },
-            { month: "Mar", sales: 1800 },
-          ],
-        };
-      },
-    }),
-    analyze: tool({
-      description: "Perform statistical analysis on data",
-      parameters: z.object({
-        data: z.array(z.any()).describe("The data to analyze"),
-        analysisType: z.enum(["summary", "trend", "comparison"]),
-      }),
-      execute: async ({ data, analysisType }) => {
-        // Perform analysis
-        return {
-          summary: {
-            total: 4500,
-            average: 1500,
-            trend: "increasing",
-          },
-        };
-      },
-    }),
-    generateReport: tool({
-      description: "Generate a formatted report",
-      parameters: z.object({
-        title: z.string(),
-        sections: z.array(z.object({
-          heading: z.string(),
-          content: z.string(),
-        })),
-      }),
-      execute: async ({ title, sections }) => {
-        return {
-          report: `# ${title}\n\n${sections.map(s => `## ${s.heading}\n${s.content}`).join("\n\n")}`,
-        };
-      },
-    }),
-  },
-  stopWhen: stepCountIs(8),
-});
-```
-
-## Handling Tool Results in UI
-
-When building agents with `useChat`, you can display tool execution progress:
-
-```typescript
-import { useChat } from "ai/react";
-import type { BuiltInAIUIMessage } from "@built-in-ai/core";
-
-function AgentChat() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
-    // Your transport configuration
-  });
-
-  return (
-    <div>
-      {messages.map((message) => (
-        <div key={message.id}>
-          {message.role === "assistant" && (
-            <>
-              {/* Show tool calls */}
-              {message.parts?.map((part, index) => {
-                if (part.type === "tool-invocation") {
-                  return (
-                    <div key={index} className="tool-call">
-                      <span>🔧 Using: {part.toolName}</span>
-                      {part.state === "result" && (
-                        <span>✓ Complete</span>
-                      )}
-                    </div>
-                  );
-                }
-                if (part.type === "text") {
-                  return <p key={index}>{part.text}</p>;
-                }
-                return null;
-              })}
-            </>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
-## Best Practices
-
-### 1. Set Reasonable Step Limits
-
-Always set a `stopWhen` condition to prevent infinite loops:
-
-```typescript
-stopWhen: stepCountIs(10) // Adjust based on task complexity
-```
-
-### 2. Provide Clear Tool Descriptions
-
-The model relies on descriptions to choose tools:
-
-```typescript
-search: tool({
-  description: "Search the web for current information. Use this when the user asks about recent events or needs up-to-date data.",
-  // ...
-})
-```
-
-### 3. Handle Errors Gracefully
-
-Return informative errors that help the model recover:
-
-```typescript
-execute: async ({ url }) => {
-  try {
-    const content = await fetchUrl(url);
-    return { success: true, content };
-  } catch (error) {
-    return { 
-      success: false, 
-      error: "Failed to fetch URL. The page may be unavailable." 
-    };
-  }
-}
-```
-
-### 4. Use Structured Return Types
-
-Consistent return types help the model understand results:
-
-```typescript
-execute: async ({ query }) => {
-  return {
-    success: true,
-    resultCount: results.length,
-    results: results.slice(0, 5),
-    hasMore: results.length > 5,
-  };
-}
-```
-
-## Limitations
-
-<Callout type="warn">
-  Keep in mind the following limitations when building agents with browser-based models:
-</Callout>
-
-- **Model size**: Browser models are smaller and may struggle with complex reasoning
-- **Context length**: Limited context window compared to server-side models
-- **Tool complexity**: Keep tool descriptions concise for better tool selection
-- **Processing time**: Complex agent workflows may take longer in the browser
-
-For complex agent workflows, consider using a hybrid approach where simple tasks run in the browser and complex tasks fall back to server-side models.
-
+Check the [Vercel documentation](https://ai-sdk.dev/docs/agents/overview) for more information.
