@@ -43,7 +43,7 @@ import { builtInAI } from "@built-in-ai/core";
 
 const result = streamText({
   model: builtInAI(),
-  messages: [{ role: "user", content: "Hello!" }],
+  prompt: 'Hello, how are you',
 });
 
 for await (const chunk of result.textStream) {
@@ -60,7 +60,7 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 
 const result = streamText({
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
-  messages: [{ role: "user", content: "Hello!" }],
+  prompt: 'Hello, how are you',
 });
 
 for await (const chunk of result.textStream) {
@@ -76,8 +76,8 @@ for await (const chunk of result.textStream) {
 import { webLLM } from "@built-in-ai/web-llm";
 
 const result = streamText({
-  model: webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC"),
-  messages: [{ role: "user", content: "Hello!" }],
+  model: webLLM("Qwen3-0.6B-q0f16-MLC"),
+  prompt: 'Hello, how are you',
 });
 
 for await (const chunk of result.textStream) {
