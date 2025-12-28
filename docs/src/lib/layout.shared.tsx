@@ -7,13 +7,13 @@ export function baseOptions(): BaseLayoutProps {
       title: "@built-in-ai",
     },
     githubUrl: "https://github.com/jakobhoeg/built-in-ai",
-    links: [
-      {
-        type: 'custom',
-        children: (
-          <GithubInfo owner="jakobhoeg" repo="built-in-ai" />
-        ),
-      },
-    ],
+    // links: [
+    //   {
+    //     type: 'custom',
+    //     children: (
+    //       <GithubInfo owner="jakobhoeg" repo="built-in-ai" />
+    //     ),
+    //   },
+    // ],
   };
 }

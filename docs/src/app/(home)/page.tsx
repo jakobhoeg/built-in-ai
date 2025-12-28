@@ -1,8 +1,20 @@
 import { HomeCodeSection } from "@/components/home-code-section";
+import { TweetCard } from "@/components/tweet-card";
+import { TweetGrid } from "@/components/tweet-grid";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MoveUpRight } from "lucide-react";
 import Link from "next/link";
+
+const tweetIds = [
+  "1995030252259774593",
+  "1980659099445653624",
+  "1981060426315288776",
+  "1980646442441285656",
+  "1957752385272738170",
+  "1957771454839238912",
+  "1957762133787082766"
+];
 
 export default function HomePage() {
   return (
@@ -42,6 +54,23 @@ export default function HomePage() {
 
           <HomeCodeSection />
 
+        </div>
+
+        {/* Testimonials */}
+        <div className="relative max-w-full">
+          <div className="h-4 items-end px-2 font-mono text-xs/6 whitespace-pre text-black/20 max-sm:px-4 flex dark:text-white/25">
+            Testimonials
+          </div>
+          <div className="relative before:absolute before:top-0 before:h-px before:w-[200vw] before:bg-gray-950/5 dark:before:bg-white/10 before:-left-[100vw] after:absolute after:bottom-0 after:h-px">
+            <h2 className="max-w-2xl px-2 text-4xl font-medium tracking-tighter text-balance max-sm:px-4">
+              What developers are saying
+            </h2>
+          </div>
+          <TweetGrid totalCount={tweetIds.length}>
+            {tweetIds.map((id) => (
+              <TweetCard key={id} id={id} />
+            ))}
+          </TweetGrid>
         </div>
       </main>
 
