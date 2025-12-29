@@ -22,11 +22,15 @@ For detailed documentation, browser requirements and advanced usage, refer to th
 
 ### Package Versions
 
+<div align="center">
+
 | Package                      | AI SDK v6 | AI SDK v5 |
 | ---------------------------- | :-------: | :-------: |
 | @built-in-ai/core            | ✓ ≥ 3.0.0 | ✓ ≤ 2.1.0 |
 | @built-in-ai/transformers-js | ✓ ≥ 1.0.0 | ✓ ≤ 0.3.4 |
 | @built-in-ai/web-llm         | ✓ ≥ 1.0.0 | ✓ ≤ 0.3.2 |
+
+</div>
 
 ```bash
 # For Chrome/Edge built-in AI models
