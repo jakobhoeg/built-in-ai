@@ -22,11 +22,11 @@ For detailed documentation, browser requirements and advanced usage, refer to th
 
 ### Package Versions
 
-| Package | AI SDK v6 | AI SDK v5 |
-| ------- | :-------: | :-------: |
-| @built-in-ai/core | ✓ ≥ 3.0.0 | ✓ ≤ 2.1.0 |
+| Package                      | AI SDK v6 | AI SDK v5 |
+| ---------------------------- | :-------: | :-------: |
+| @built-in-ai/core            | ✓ ≥ 3.0.0 | ✓ ≤ 2.1.0 |
 | @built-in-ai/transformers-js | ✓ ≥ 1.0.0 | ✓ ≤ 0.3.4 |
-| @built-in-ai/web-llm | ✓ ≥ 1.0.0 | ✓ ≤ 0.3.2 |
+| @built-in-ai/web-llm         | ✓ ≥ 1.0.0 | ✓ ≤ 0.3.2 |
 
 ```bash
 # For Chrome/Edge built-in AI models
@@ -47,7 +47,7 @@ import { builtInAI } from "@built-in-ai/core";
 
 const result = streamText({
   model: builtInAI(),
-  prompt: 'Invent a new holiday and describe its traditions.',
+  prompt: "Invent a new holiday and describe its traditions.",
 });
 
 for await (const chunk of result.textStream) {
@@ -63,7 +63,7 @@ import { webLLM } from "@built-in-ai/web-llm";
 
 const result = streamText({
   model: webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC"),
-  prompt: 'Invent a new holiday and describe its traditions.',
+  prompt: "Invent a new holiday and describe its traditions.",
 });
 
 for await (const chunk of result.textStream) {
@@ -79,7 +79,7 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 
 const result = streamText({
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
-  prompt: 'Invent a new holiday and describe its traditions.',
+  prompt: "Invent a new holiday and describe its traditions.",
 });
 
 for await (const chunk of result.textStream) {
