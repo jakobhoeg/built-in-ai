@@ -14,13 +14,19 @@
 
 </div>
 
-TypeScript libraries that provide access to in-browser AI models with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/).
+TypeScript libraries that provide access to in-browser AI model providers with seamless fallback to using server-side models.
 
-- [`@built-in-ai/core`](/packages/built-in-ai/README.md) package is the AI SDK model provider for your Chrome and Edge browser's [built-in AI models](https://developer.chrome.com/docs/ai/built-in).
-- [`@built-in-ai/web-llm`](/packages/web-llm/README.md) package is the AI SDK model provider for open-source models (using [WebLLM](https://github.com/mlc-ai/web-llm)) running directly in the browser.
-- [`@built-in-ai/transformers-js`](/packages/transformers-js/README.md) package is the AI SDK model provider for [Transformers.js](https://github.com/xenova/transformers.js) that runs both in the browser and on the server.
+## Documentation
 
-## Quick start
+For detailed documentation, browser requirements and advanced usage, refer to the [official documentation](https://built-in-ai.dev/docs).
+
+### Package Versions
+
+| Package                      | AI SDK v6 | AI SDK v5 |
+| ---------------------------- | :-------: | :-------: |
+| @built-in-ai/core            | ✓ ≥ 3.0.0 | ✓ ≤ 2.1.0 |
+| @built-in-ai/transformers-js | ✓ ≥ 1.0.0 | ✓ ≤ 0.3.4 |
+| @built-in-ai/web-llm         | ✓ ≥ 1.0.0 | ✓ ≤ 0.3.2 |
 
 ```bash
 # For Chrome/Edge built-in AI models
@@ -41,7 +47,7 @@ import { builtInAI } from "@built-in-ai/core";
 
 const result = streamText({
   model: builtInAI(),
-  messages: [{ role: "user", content: "Hello, how are you?" }],
+  prompt: "Invent a new holiday and describe its traditions.",
 });
 
 for await (const chunk of result.textStream) {
@@ -57,7 +63,7 @@ import { webLLM } from "@built-in-ai/web-llm";
 
 const result = streamText({
   model: webLLM("Llama-3.2-3B-Instruct-q4f16_1-MLC"),
-  messages: [{ role: "user", content: "Hello, how are you?" }],
+  prompt: "Invent a new holiday and describe its traditions.",
 });
 
 for await (const chunk of result.textStream) {
@@ -73,21 +79,13 @@ import { transformersJS } from "@built-in-ai/transformers-js";
 
 const result = streamText({
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
-  messages: [{ role: "user", content: "Hello, how are you?" }],
+  prompt: "Invent a new holiday and describe its traditions.",
 });
 
 for await (const chunk of result.textStream) {
   console.log(chunk);
 }
 ```
-
-## Documentation
-
-For detailed documentation, browser requirements and advanced usage:
-
-- [@built-in-ai/core](/packages/built-in-ai/README.md) documentation
-- [@built-in-ai/web-llm](/packages/web-llm/README.md) documentation
-- [@built-in-ai/transformers-js](/packages/transformers-js/README.md) documentation
 
 ## Contributing
 
@@ -97,9 +95,8 @@ Contributions are more than welcome! However, please make sure to check out the 
 
 If you've ever built apps with local language models, you're likely familiar with the challenges: creating custom hooks, UI components and state management (lots of it), while also building complex integration layers to fall back to server-side models when compatibility is an issue.
 
-This library bridges this gap by providing a unified solution that lets you:
+Read more about this [here](https://www.built-in-ai.dev/docs/ai-sdk-v6).
 
-- Experiment with in-browser AI models using familiar patterns
-- Seamlessly fall back to server-side models when needed
-- Use the same Vercel AI SDK eco system you already know
-- Avoid building complex integration layers from scratch
+## Author
+
+2025 © Jakob Hoeg Mørk

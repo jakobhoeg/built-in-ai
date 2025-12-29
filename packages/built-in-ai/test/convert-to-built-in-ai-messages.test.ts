@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { convertToBuiltInAIMessages } from "../src/convert-to-built-in-ai-messages";
 import {
-  LanguageModelV2Prompt,
-  LanguageModelV2Message,
+  LanguageModelV3Prompt,
+  LanguageModelV3Message,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 
 describe("convertToBuiltInAIMessages", () => {
   describe("text messages", () => {
     it("should convert simple text user message", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [{ type: "text", text: "Hello, world!" }],
@@ -28,7 +28,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should extract system message", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "system",
           content: "You are a helpful assistant.",
@@ -51,7 +51,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should convert assistant messages", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [{ type: "text", text: "Hello!" }],
@@ -80,7 +80,7 @@ describe("convertToBuiltInAIMessages", () => {
   describe("image file conversion", () => {
     it("should convert base64 image data to Uint8Array", () => {
       const base64Data = "SGVsbG8gV29ybGQ="; // "Hello World" in base64
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -116,7 +116,7 @@ describe("convertToBuiltInAIMessages", () => {
 
     it("should handle Uint8Array image data directly", () => {
       const uint8Data = new Uint8Array([1, 2, 3, 4]);
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -139,7 +139,7 @@ describe("convertToBuiltInAIMessages", () => {
 
     it("should handle URL image data", () => {
       const imageUrl = new URL("https://example.com/image.png");
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -164,7 +164,7 @@ describe("convertToBuiltInAIMessages", () => {
   describe("audio file conversion", () => {
     it("should convert base64 audio data to Uint8Array", () => {
       const base64Data = "UklGRnQAAABXQVZF"; // Valid WAV header start in base64
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -188,7 +188,7 @@ describe("convertToBuiltInAIMessages", () => {
 
     it("should handle Uint8Array audio data directly", () => {
       const audioData = new Uint8Array([82, 73, 70, 70]); // "RIFF" header
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -212,7 +212,7 @@ describe("convertToBuiltInAIMessages", () => {
 
   describe("mixed content", () => {
     it("should handle mixed text, image, and audio content", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -256,7 +256,7 @@ describe("convertToBuiltInAIMessages", () => {
 
   describe("tool support", () => {
     it("should convert assistant tool calls into toolCall fences", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "assistant",
           content: [
@@ -268,11 +268,11 @@ describe("convertToBuiltInAIMessages", () => {
               input: { location: "Seattle" },
             },
           ],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
         {
           role: "user",
           content: [{ type: "text", text: "Thanks!" }],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
       ];
 
       const result = convertToBuiltInAIMessages(prompt);
@@ -289,7 +289,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should serialize scalar tool inputs as JSON strings", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "assistant",
           content: [
@@ -300,11 +300,11 @@ describe("convertToBuiltInAIMessages", () => {
               input: "Zurich",
             },
           ],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
         {
           role: "user",
           content: [{ type: "text", text: "Appreciate it." }],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
       ];
 
       const result = convertToBuiltInAIMessages(prompt);
@@ -321,7 +321,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should handle parameter names with special characters", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "assistant",
           content: [
@@ -332,11 +332,11 @@ describe("convertToBuiltInAIMessages", () => {
               input: { "123-name": "Alice" },
             },
           ],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
         {
           role: "user",
           content: [{ type: "text", text: "Continue." }],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
       ];
 
       const result = convertToBuiltInAIMessages(prompt);
@@ -346,7 +346,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should deserialize JSON-stringified tool inputs", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "assistant",
           content: [
@@ -357,7 +357,7 @@ describe("convertToBuiltInAIMessages", () => {
               input: JSON.stringify({ query: "status:open", limit: 5 }),
             },
           ],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
       ];
 
       const result = convertToBuiltInAIMessages(prompt);
@@ -369,7 +369,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should serialize multiple tool calls within a single fence", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "assistant",
           content: [
@@ -386,7 +386,7 @@ describe("convertToBuiltInAIMessages", () => {
               input: { value: 2 },
             },
           ],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
       ];
 
       const result = convertToBuiltInAIMessages(prompt);
@@ -400,7 +400,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should retain a trailing assistant tool call message", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "assistant",
           content: [
@@ -412,7 +412,7 @@ describe("convertToBuiltInAIMessages", () => {
               input: { location: "Seattle" },
             },
           ],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
       ];
 
       const result = convertToBuiltInAIMessages(prompt);
@@ -426,7 +426,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should convert tool results into user tool_result blocks", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "tool",
           content: [
@@ -440,7 +440,7 @@ describe("convertToBuiltInAIMessages", () => {
               },
             },
           ],
-        } as LanguageModelV2Message,
+        } as LanguageModelV3Message,
       ];
 
       const result = convertToBuiltInAIMessages(prompt);
@@ -457,7 +457,7 @@ describe("convertToBuiltInAIMessages", () => {
 
   describe("error handling", () => {
     it("should throw for unsupported file types", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -486,7 +486,7 @@ describe("convertToBuiltInAIMessages", () => {
             },
           ],
         },
-      ] as LanguageModelV2Prompt;
+      ] as LanguageModelV3Prompt;
 
       expect(() => convertToBuiltInAIMessages(prompt)).toThrow(
         UnsupportedFunctionalityError,
@@ -494,7 +494,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should throw for invalid base64 data", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -520,7 +520,7 @@ describe("convertToBuiltInAIMessages", () => {
     });
 
     it("should handle empty content arrays", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [],

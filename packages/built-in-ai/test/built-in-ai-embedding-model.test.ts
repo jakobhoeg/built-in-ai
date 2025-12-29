@@ -60,7 +60,7 @@ describe("BuiltInAIEmbeddingModel", () => {
       expect(model).toBeInstanceOf(BuiltInAIEmbeddingModel);
       expect(model.modelId).toBe("embedding");
       expect(model.provider).toBe("google-mediapipe");
-      expect(model.specificationVersion).toBe("v2");
+      expect(model.specificationVersion).toBe("v3");
       expect(model.supportsParallelCalls).toBe(true);
       expect(model.maxEmbeddingsPerCall).toBeUndefined();
     });
@@ -90,7 +90,7 @@ describe("BuiltInAIEmbeddingModel", () => {
 
       expect(result.embeddings).toHaveLength(1);
       expect(result.embeddings[0]).toEqual([0.1, 0.2, 0.3, 0.4, 0.5]);
-      expect(result.rawResponse).toEqual({
+      expect(result.providerMetadata?.mediapipe).toEqual({
         model: "universal_sentence_encoder",
         provider: "google-mediapipe",
         processed_texts: 1,
@@ -129,7 +129,7 @@ describe("BuiltInAIEmbeddingModel", () => {
       expect(result.embeddings).toHaveLength(2);
       expect(result.embeddings[0]).toEqual([0.1, 0.2, 0.3]);
       expect(result.embeddings[1]).toEqual([0.4, 0.5, 0.6]);
-      expect(result.rawResponse?.processed_texts).toBe(2);
+      expect(result.providerMetadata?.mediapipe.processed_texts).toBe(2);
       expect(mockTextEmbedder.embed).toHaveBeenCalledTimes(2);
     });
 
@@ -156,7 +156,7 @@ describe("BuiltInAIEmbeddingModel", () => {
       });
 
       expect(result.embeddings).toHaveLength(0);
-      expect(result.rawResponse?.processed_texts).toBe(0);
+      expect(result.providerMetadata?.mediapipe.processed_texts).toBe(0);
       expect(mockTextEmbedder.embed).not.toHaveBeenCalled();
     });
   });

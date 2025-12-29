@@ -2,7 +2,7 @@
  * Utilities for prompt processing and transformation
  */
 
-import type { LanguageModelV2Prompt } from "@ai-sdk/provider";
+import type { LanguageModelV3Prompt } from "@ai-sdk/provider";
 
 /**
  * Detect if the prompt contains multimodal content (images, audio)
@@ -10,7 +10,7 @@ import type { LanguageModelV2Prompt } from "@ai-sdk/provider";
  * @param prompt - The prompt to check
  * @returns true if the prompt contains any file content
  */
-export function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
+export function hasMultimodalContent(prompt: LanguageModelV3Prompt): boolean {
   for (const message of prompt) {
     if (message.role === "user") {
       for (const part of message.content) {
@@ -38,7 +38,7 @@ export function hasMultimodalContent(prompt: LanguageModelV2Prompt): boolean {
  * ```
  */
 export function getExpectedInputs(
-  prompt: LanguageModelV2Prompt,
+  prompt: LanguageModelV3Prompt,
 ): Array<{ type: "text" | "image" | "audio" }> {
   const inputs = new Set<"text" | "image" | "audio">();
   // Don't add text by default - it's assumed by the Prompt API

@@ -52,7 +52,7 @@
   "license": "Apache-2.0",
   "peerDependencies": {
     "@huggingface/transformers": "^3.7.0",
-    "ai": ">=5.0.0"
+    "ai": "^6.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

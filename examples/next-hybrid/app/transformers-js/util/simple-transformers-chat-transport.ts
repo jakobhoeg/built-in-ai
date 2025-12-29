@@ -32,7 +32,7 @@ export class SimpleTransformersChatTransport
     const { chatId, messages, abortSignal, trigger, messageId, ...rest } =
       options;
 
-    const prompt = convertToModelMessages(messages);
+    const prompt = await convertToModelMessages(messages);
     const model = this.model;
 
     const result = streamText({

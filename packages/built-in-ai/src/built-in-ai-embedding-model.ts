@@ -1,4 +1,8 @@
-import { EmbeddingModelV2, EmbeddingModelV2Embedding } from "@ai-sdk/provider";
+import {
+  EmbeddingModelV3,
+  EmbeddingModelV3CallOptions,
+  EmbeddingModelV3Result,
+} from "@ai-sdk/provider";
 import { TextEmbedder } from "@mediapipe/tasks-text";
 
 export interface BuiltInAIEmbeddingModelSettings {
@@ -43,8 +47,8 @@ export interface BuiltInAIEmbeddingModelSettings {
 // See more:
 // - https://github.com/google-ai-edge/mediapipe
 // - https://ai.google.dev/edge/mediapipe/solutions/text/text_embedder/web_js
-export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
-  readonly specificationVersion = "v2";
+export class BuiltInAIEmbeddingModel implements EmbeddingModelV3 {
+  readonly specificationVersion = "v3";
   readonly provider = "google-mediapipe";
   readonly modelId: string = "embedding";
   readonly supportsParallelCalls = true;
@@ -88,13 +92,9 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
     );
   };
 
-  public doEmbed = async (options: {
-    values: string[];
-    abortSignal?: AbortSignal;
-  }): Promise<{
-    embeddings: Array<EmbeddingModelV2Embedding>;
-    rawResponse?: Record<PropertyKey, any>;
-  }> => {
+  public doEmbed = async (
+    options: EmbeddingModelV3CallOptions,
+  ): Promise<EmbeddingModelV3Result> => {
     // Note: abortSignal is not supported by MediaPipe TextEmbedder
     if (options.abortSignal?.aborted) {
       throw new Error("Operation was aborted");
@@ -109,11 +109,14 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV2<string> {
 
     return {
       embeddings,
-      rawResponse: {
-        model: "universal_sentence_encoder",
-        provider: "google-mediapipe",
-        processed_texts: options.values.length,
+      providerMetadata: {
+        mediapipe: {
+          model: "universal_sentence_encoder",
+          provider: "google-mediapipe",
+          processed_texts: options.values.length,
+        },
       },
+      warnings: [],
     };
   };
 }

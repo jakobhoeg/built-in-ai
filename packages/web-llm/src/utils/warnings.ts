@@ -1,12 +1,12 @@
 import type {
-  LanguageModelV2CallWarning,
-  LanguageModelV2ProviderDefinedTool,
+  SharedV3Warning,
+  LanguageModelV3ProviderTool,
 } from "@ai-sdk/provider";
 
 /**
- * Creates a warning for an unsupported setting
+ * Creates a warning for an unsupported feature
  *
- * @param setting - Name of the setting that is not supported
+ * @param feature - Name of the feature that is not supported
  * @param details - Additional details about why it's not supported
  * @returns A call warning object
  *
@@ -19,12 +19,12 @@ import type {
  * ```
  */
 export function createUnsupportedSettingWarning(
-  setting: string,
+  feature: string,
   details: string,
-): LanguageModelV2CallWarning {
+): SharedV3Warning {
   return {
-    type: "unsupported-setting",
-    setting,
+    type: "unsupported",
+    feature,
     details,
   };
 }
@@ -45,12 +45,12 @@ export function createUnsupportedSettingWarning(
  * ```
  */
 export function createUnsupportedToolWarning(
-  tool: LanguageModelV2ProviderDefinedTool,
+  tool: LanguageModelV3ProviderTool,
   details: string,
-): LanguageModelV2CallWarning {
+): SharedV3Warning {
   return {
-    type: "unsupported-tool",
-    tool,
+    type: "unsupported",
+    feature: `tool:${tool.name}`,
     details,
   };
 }

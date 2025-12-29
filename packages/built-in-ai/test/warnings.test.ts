@@ -4,7 +4,7 @@ import {
   createUnsupportedToolWarning,
   gatherUnsupportedSettingWarnings,
 } from "../src/utils/warnings";
-import type { LanguageModelV2ProviderDefinedTool } from "@ai-sdk/provider";
+import type { LanguageModelV3ProviderTool } from "@ai-sdk/provider";
 
 describe("warnings", () => {
   describe("createUnsupportedSettingWarning", () => {
@@ -15,8 +15,8 @@ describe("warnings", () => {
       );
 
       expect(warning).toEqual({
-        type: "unsupported-setting",
-        setting: "maxOutputTokens",
+        type: "unsupported",
+        feature: "maxOutputTokens",
         details: "maxOutputTokens is not supported by Prompt API",
       });
     });
@@ -27,18 +27,21 @@ describe("warnings", () => {
         "topP is not supported",
       );
 
-      expect(warning.type).toBe("unsupported-setting");
-      expect(warning.setting).toBe("topP");
-      expect(warning.details).toBe("topP is not supported");
+      expect(warning).toMatchObject({
+        type: "unsupported",
+        feature: "topP",
+        details: "topP is not supported",
+      });
     });
   });
 
   describe("createUnsupportedToolWarning", () => {
     it("should create a warning with tool information", () => {
-      const mockTool: LanguageModelV2ProviderDefinedTool = {
-        type: "provider-defined",
-        id: "test-tool",
+      const mockTool: LanguageModelV3ProviderTool = {
+        type: "provider",
+        id: "test.tool",
         name: "testTool",
+        args: {},
       };
 
       const warning = createUnsupportedToolWarning(
@@ -47,8 +50,8 @@ describe("warnings", () => {
       );
 
       expect(warning).toEqual({
-        type: "unsupported-tool",
-        tool: mockTool,
+        type: "unsupported",
+        feature: "tool:testTool",
         details: "Only function tools are supported by the Prompt API polyfill",
       });
     });
@@ -67,8 +70,8 @@ describe("warnings", () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toEqual({
-        type: "unsupported-setting",
-        setting: "maxOutputTokens",
+        type: "unsupported",
+        feature: "maxOutputTokens",
         details: "maxOutputTokens is not supported by Prompt API",
       });
     });
@@ -80,8 +83,8 @@ describe("warnings", () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toEqual({
-        type: "unsupported-setting",
-        setting: "stopSequences",
+        type: "unsupported",
+        feature: "stopSequences",
         details: "stopSequences is not supported by Prompt API",
       });
     });
@@ -93,8 +96,8 @@ describe("warnings", () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toEqual({
-        type: "unsupported-setting",
-        setting: "topP",
+        type: "unsupported",
+        feature: "topP",
         details: "topP is not supported by Prompt API",
       });
     });
@@ -106,8 +109,8 @@ describe("warnings", () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toEqual({
-        type: "unsupported-setting",
-        setting: "presencePenalty",
+        type: "unsupported",
+        feature: "presencePenalty",
         details: "presencePenalty is not supported by Prompt API",
       });
     });
@@ -119,8 +122,8 @@ describe("warnings", () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toEqual({
-        type: "unsupported-setting",
-        setting: "frequencyPenalty",
+        type: "unsupported",
+        feature: "frequencyPenalty",
         details: "frequencyPenalty is not supported by Prompt API",
       });
     });
@@ -132,8 +135,8 @@ describe("warnings", () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toEqual({
-        type: "unsupported-setting",
-        setting: "seed",
+        type: "unsupported",
+        feature: "seed",
         details: "seed is not supported by Prompt API",
       });
     });
@@ -145,8 +148,8 @@ describe("warnings", () => {
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toEqual({
-        type: "unsupported-setting",
-        setting: "toolChoice",
+        type: "unsupported",
+        feature: "toolChoice",
         details: "toolChoice is not supported by Prompt API",
       });
     });
@@ -160,12 +163,9 @@ describe("warnings", () => {
       });
 
       expect(warnings).toHaveLength(4);
-      expect(warnings.map((w) => w.setting)).toEqual([
-        "maxOutputTokens",
-        "topP",
-        "presencePenalty",
-        "seed",
-      ]);
+      expect(
+        warnings.filter((w) => w.type === "unsupported").map((w) => w.feature),
+      ).toEqual(["maxOutputTokens", "topP", "presencePenalty", "seed"]);
     });
 
     it("should not warn about undefined options", () => {

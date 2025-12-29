@@ -4,19 +4,19 @@ import {
   getExpectedInputs,
   prependSystemPromptToMessages,
 } from "../src/utils/prompt-utils";
-import type { LanguageModelV2Prompt } from "@ai-sdk/provider";
+import type { LanguageModelV3Prompt } from "@ai-sdk/provider";
 
 describe("prompt-utils", () => {
   describe("hasMultimodalContent", () => {
     it("returns false for text-only prompt", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         { role: "user", content: [{ type: "text", text: "Hello" }] },
       ];
       expect(hasMultimodalContent(prompt)).toBe(false);
     });
 
     it("returns true when prompt contains image file", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -33,7 +33,7 @@ describe("prompt-utils", () => {
     });
 
     it("returns true when prompt contains audio file", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -49,7 +49,7 @@ describe("prompt-utils", () => {
     });
 
     it("returns false when assistant has file (only checks user messages)", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         { role: "user", content: [{ type: "text", text: "Hello" }] },
         {
           role: "assistant",
@@ -68,14 +68,14 @@ describe("prompt-utils", () => {
 
   describe("getExpectedInputs", () => {
     it("returns empty array for text-only prompt", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         { role: "user", content: [{ type: "text", text: "Hello" }] },
       ];
       expect(getExpectedInputs(prompt)).toEqual([]);
     });
 
     it("returns image for image file", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -91,7 +91,7 @@ describe("prompt-utils", () => {
     });
 
     it("returns audio for audio file", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -107,7 +107,7 @@ describe("prompt-utils", () => {
     });
 
     it("returns both image and audio when both present", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -131,7 +131,7 @@ describe("prompt-utils", () => {
     });
 
     it("deduplicates multiple images", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [
@@ -152,7 +152,7 @@ describe("prompt-utils", () => {
     });
 
     it("ignores files with unknown media types", () => {
-      const prompt: LanguageModelV2Prompt = [
+      const prompt: LanguageModelV3Prompt = [
         {
           role: "user",
           content: [

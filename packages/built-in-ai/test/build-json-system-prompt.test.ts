@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildJsonToolSystemPrompt } from "../src/tool-calling/build-json-system-prompt";
-import type { LanguageModelV2FunctionTool } from "@ai-sdk/provider";
+import type { LanguageModelV3FunctionTool } from "@ai-sdk/provider";
 import { z } from "zod";
 
 describe("buildJsonToolSystemPrompt", () => {
@@ -23,7 +23,7 @@ describe("buildJsonToolSystemPrompt", () => {
   });
 
   describe("with tools", () => {
-    const mockTool: LanguageModelV2FunctionTool = {
+    const mockTool: LanguageModelV3FunctionTool = {
       type: "function",
       name: "getWeather",
       description: "Get the weather for a location",
@@ -70,7 +70,7 @@ describe("buildJsonToolSystemPrompt", () => {
     });
 
     it("should handle tools without description", () => {
-      const toolWithoutDescription: LanguageModelV2FunctionTool = {
+      const toolWithoutDescription: LanguageModelV3FunctionTool = {
         type: "function",
         name: "testTool",
         inputSchema: {
@@ -88,7 +88,7 @@ describe("buildJsonToolSystemPrompt", () => {
     });
 
     it("should handle multiple tools", () => {
-      const tool1: LanguageModelV2FunctionTool = {
+      const tool1: LanguageModelV3FunctionTool = {
         type: "function",
         name: "search",
         description: "Search the web",
@@ -100,7 +100,7 @@ describe("buildJsonToolSystemPrompt", () => {
         } as any,
       };
 
-      const tool2: LanguageModelV2FunctionTool = {
+      const tool2: LanguageModelV3FunctionTool = {
         type: "function",
         name: "calculate",
         description: "Perform calculations",
@@ -122,7 +122,7 @@ describe("buildJsonToolSystemPrompt", () => {
   });
 
   describe("tool result format", () => {
-    const mockTool: LanguageModelV2FunctionTool = {
+    const mockTool: LanguageModelV3FunctionTool = {
       type: "function",
       name: "test",
       inputSchema: { type: "object", properties: {} } as any,
@@ -148,7 +148,7 @@ describe("buildJsonToolSystemPrompt", () => {
   });
 
   describe("important instructions", () => {
-    const mockTool: LanguageModelV2FunctionTool = {
+    const mockTool: LanguageModelV3FunctionTool = {
       type: "function",
       name: "test",
       inputSchema: { type: "object", properties: {} } as any,
@@ -167,7 +167,7 @@ describe("buildJsonToolSystemPrompt", () => {
 
   describe("tool schema formatting", () => {
     it("should format complex schemas correctly", () => {
-      const complexTool: LanguageModelV2FunctionTool = {
+      const complexTool: LanguageModelV3FunctionTool = {
         type: "function",
         name: "complexTool",
         description: "A complex tool",
@@ -208,7 +208,7 @@ describe("buildJsonToolSystemPrompt", () => {
     });
 
     it("should handle tool with empty parameters", () => {
-      const emptyTool: LanguageModelV2FunctionTool = {
+      const emptyTool: LanguageModelV3FunctionTool = {
         type: "function",
         name: "noParams",
         description: "Tool with no parameters",
@@ -225,7 +225,7 @@ describe("buildJsonToolSystemPrompt", () => {
     });
 
     it("should handle tool without inputSchema", () => {
-      const noSchemaTool: LanguageModelV2FunctionTool = {
+      const noSchemaTool: LanguageModelV3FunctionTool = {
         type: "function",
         name: "noSchema",
         description: "Tool without schema",
@@ -241,7 +241,7 @@ describe("buildJsonToolSystemPrompt", () => {
   describe("prompt trimming", () => {
     it("should trim whitespace from original prompt", () => {
       const promptWithWhitespace = "  Test prompt  \n\n";
-      const mockTool: LanguageModelV2FunctionTool = {
+      const mockTool: LanguageModelV3FunctionTool = {
         type: "function",
         name: "test",
         inputSchema: { type: "object", properties: {} } as any,
@@ -257,7 +257,7 @@ describe("buildJsonToolSystemPrompt", () => {
     });
 
     it("should handle empty string prompt", () => {
-      const mockTool: LanguageModelV2FunctionTool = {
+      const mockTool: LanguageModelV3FunctionTool = {
         type: "function",
         name: "test",
         inputSchema: { type: "object", properties: {} } as any,
@@ -271,7 +271,7 @@ describe("buildJsonToolSystemPrompt", () => {
     });
 
     it("should handle whitespace-only prompt", () => {
-      const mockTool: LanguageModelV2FunctionTool = {
+      const mockTool: LanguageModelV3FunctionTool = {
         type: "function",
         name: "test",
         inputSchema: { type: "object", properties: {} } as any,

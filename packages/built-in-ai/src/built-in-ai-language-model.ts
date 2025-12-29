@@ -1,14 +1,15 @@
 import {
-  LanguageModelV2,
-  LanguageModelV2CallOptions,
-  LanguageModelV2CallWarning,
-  LanguageModelV2Content,
-  LanguageModelV2FinishReason,
-  LanguageModelV2ProviderDefinedTool,
-  LanguageModelV2StreamPart,
-  LanguageModelV2ToolCall,
-  LoadSettingError,
+  LanguageModelV3,
+  LanguageModelV3CallOptions,
+  SharedV3Warning,
+  LanguageModelV3Content,
+  LanguageModelV3FinishReason,
+  LanguageModelV3ProviderTool,
+  LanguageModelV3StreamPart,
+  LanguageModelV3ToolCall,
   JSONValue,
+  LanguageModelV3GenerateResult,
+  LanguageModelV3StreamResult,
 } from "@ai-sdk/provider";
 import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
 import {
@@ -46,15 +47,6 @@ export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
  * @returns true if the browser supports the built-in AI API, false otherwise
  */
 export function doesBrowserSupportBuiltInAI(): boolean {
-  return typeof LanguageModel !== "undefined";
-}
-
-/**
- * Check if the Prompt API is available
- * @deprecated Use `doesBrowserSupportBuiltInAI()` instead for clearer naming
- * @returns true if the browser supports the built-in AI API, false otherwise
- */
-export function isBuiltInAIModelAvailable(): boolean {
   return typeof LanguageModel !== "undefined";
 }
 
@@ -141,8 +133,8 @@ function extractArgumentsContent(content: string): string {
   return result;
 }
 
-export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
-  readonly specificationVersion = "v2";
+export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
+  readonly specificationVersion = "v3";
   readonly modelId: BuiltInAIChatModelId;
   readonly provider = "browser-ai";
 
@@ -186,7 +178,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     });
   }
 
-  private getArgs(callOptions: Parameters<LanguageModelV2["doGenerate"]>[0]) {
+  private getArgs(callOptions: Parameters<LanguageModelV3["doGenerate"]>[0]) {
     const {
       prompt,
       maxOutputTokens,
@@ -202,7 +194,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
       toolChoice,
       providerOptions,
     } = callOptions;
-    const warnings: LanguageModelV2CallWarning[] = [];
+    const warnings: SharedV3Warning[] = [];
 
     // Gather warnings for unsupported settings
     warnings.push(
@@ -221,8 +213,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     const functionTools = (tools ?? []).filter(isFunctionTool);
 
     const unsupportedTools = (tools ?? []).filter(
-      (tool): tool is LanguageModelV2ProviderDefinedTool =>
-        !isFunctionTool(tool),
+      (tool): tool is LanguageModelV3ProviderTool => !isFunctionTool(tool),
     );
 
     for (const tool of unsupportedTools) {
@@ -279,7 +270,9 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
-  public async doGenerate(options: LanguageModelV2CallOptions) {
+  public async doGenerate(
+    options: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3GenerateResult> {
     const converted = this.getArgs(options);
     const {
       systemMessage,
@@ -313,7 +306,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     if (toolCalls.length > 0) {
       const toolCallsToEmit = toolCalls.slice(0, 1);
 
-      const parts: LanguageModelV2Content[] = [];
+      const parts: LanguageModelV3Content[] = [];
 
       if (textContent) {
         parts.push({
@@ -328,23 +321,31 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
           toolCallId: call.toolCallId,
           toolName: call.toolName,
           input: JSON.stringify(call.args ?? {}),
-        } satisfies LanguageModelV2ToolCall);
+        } satisfies LanguageModelV3ToolCall);
       }
 
       return {
         content: parts,
-        finishReason: "tool-calls" as LanguageModelV2FinishReason,
+        finishReason: { unified: "tool-calls", raw: "tool-calls" },
         usage: {
-          inputTokens: undefined,
-          outputTokens: undefined,
-          totalTokens: undefined,
+          inputTokens: {
+            total: undefined,
+            noCache: undefined,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            total: undefined,
+            text: undefined,
+            reasoning: undefined,
+          },
         },
         request: { body: { messages: promptMessages, options: promptOptions } },
         warnings,
       };
     }
 
-    const content: LanguageModelV2Content[] = [
+    const content: LanguageModelV3Content[] = [
       {
         type: "text",
         text: textContent || rawResponse,
@@ -353,11 +354,19 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
 
     return {
       content,
-      finishReason: "stop" as LanguageModelV2FinishReason,
+      finishReason: { unified: "stop", raw: "stop" },
       usage: {
-        inputTokens: undefined,
-        outputTokens: undefined,
-        totalTokens: undefined,
+        inputTokens: {
+          total: undefined,
+          noCache: undefined,
+          cacheRead: undefined,
+          cacheWrite: undefined,
+        },
+        outputTokens: {
+          total: undefined,
+          text: undefined,
+          reasoning: undefined,
+        },
       },
       request: { body: { messages: promptMessages, options: promptOptions } },
       warnings,
@@ -401,7 +410,9 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
    * @throws {LoadSettingError} When the Prompt API is not available or model needs to be downloaded
    * @throws {UnsupportedFunctionalityError} When unsupported features like file input are used
    */
-  public async doStream(options: LanguageModelV2CallOptions) {
+  public async doStream(
+    options: LanguageModelV3CallOptions,
+  ): Promise<LanguageModelV3StreamResult> {
     const converted = this.getArgs(options);
     const {
       systemMessage,
@@ -435,7 +446,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
     const conversationHistory = [...promptMessages];
     const textId = "text-0";
 
-    const stream = new ReadableStream<LanguageModelV2StreamPart>({
+    const stream = new ReadableStream<LanguageModelV3StreamPart>({
       start: async (controller) => {
         controller.enqueue({
           type: "stream-start",
@@ -476,7 +487,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
           textStarted = false;
         };
 
-        const finishStream = (finishReason: LanguageModelV2FinishReason) => {
+        const finishStream = (finishReason: LanguageModelV3FinishReason) => {
           if (finished) return;
           finished = true;
           emitTextEndIfNeeded();
@@ -484,9 +495,17 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
             type: "finish",
             finishReason,
             usage: {
-              inputTokens: session.inputUsage,
-              outputTokens: undefined,
-              totalTokens: undefined,
+              inputTokens: {
+                total: session.inputUsage,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: undefined,
+                text: undefined,
+                reasoning: undefined,
+              },
             },
           });
           controller.close();
@@ -500,7 +519,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
           if (currentReader) {
             currentReader.cancel().catch(() => undefined);
           }
-          finishStream("stop");
+          finishStream({ unified: "stop", raw: "aborted" });
         };
 
         if (options.abortSignal) {
@@ -765,7 +784,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
             }
 
             if (!toolBlockDetected || toolCalls.length === 0) {
-              finishStream("stop");
+              finishStream({ unified: "stop", raw: "stop" });
               return;
             }
 
@@ -773,12 +792,12 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV2 {
               emitTextDelta(trailingTextAfterBlock);
             }
 
-            finishStream("tool-calls");
+            finishStream({ unified: "tool-calls", raw: "tool-calls" });
             return;
           }
 
           if (!finished && !aborted) {
-            finishStream("other");
+            finishStream({ unified: "other", raw: "other" });
           }
         } catch (error) {
           controller.enqueue({ type: "error", error });

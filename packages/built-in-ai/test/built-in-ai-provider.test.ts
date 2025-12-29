@@ -24,8 +24,8 @@ describe("BuiltInAI Provider", () => {
       expect(provider).toBeInstanceOf(Function);
       expect(provider.languageModel).toBeInstanceOf(Function);
       expect(provider.chat).toBeInstanceOf(Function);
-      expect(provider.textEmbedding).toBeInstanceOf(Function);
-      expect(provider.textEmbeddingModel).toBeInstanceOf(Function);
+      expect(provider.embedding).toBeInstanceOf(Function);
+      expect(provider.embeddingModel).toBeInstanceOf(Function);
       expect(provider.imageModel).toBeInstanceOf(Function);
       expect(provider.speechModel).toBeInstanceOf(Function);
       expect(provider.transcriptionModel).toBeInstanceOf(Function);
@@ -92,18 +92,18 @@ describe("BuiltInAI Provider", () => {
   });
 
   describe("Embedding Model Creation", () => {
-    it("should create embedding model via textEmbedding method", () => {
+    it("should create embedding model via embedding method", () => {
       const provider = createBuiltInAI();
       const settings = { l2Normalize: true };
-      provider.textEmbedding("embedding", settings);
+      provider.embedding("embedding", settings);
 
       expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith(settings);
     });
 
-    it("should create embedding model via textEmbeddingModel method", () => {
+    it("should create embedding model via embeddingModel method", () => {
       const provider = createBuiltInAI();
       const settings = { quantize: true };
-      provider.textEmbeddingModel("embedding", settings);
+      provider.embeddingModel("embedding", settings);
 
       expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith(settings);
     });
@@ -132,12 +132,12 @@ describe("BuiltInAI Provider", () => {
   describe("Default Provider Instance", () => {
     it("should export a default provider instance", () => {
       expect(builtInAI).toBeInstanceOf(Function);
-      expect(builtInAI.textEmbedding).toBeInstanceOf(Function);
+      expect(builtInAI.embedding).toBeInstanceOf(Function);
       expect(builtInAI.chat).toBeInstanceOf(Function);
     });
 
     it("should work with the new API pattern", () => {
-      builtInAI.textEmbedding("embedding", { l2Normalize: true });
+      builtInAI.embedding("embedding", { l2Normalize: true });
 
       expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith({
         l2Normalize: true,

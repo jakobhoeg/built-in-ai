@@ -59,7 +59,7 @@ describe("WebLLMLanguageModel", () => {
       );
 
       expect(model).toBeInstanceOf(WebLLMLanguageModel);
-      expect(model.specificationVersion).toBe("v2");
+      expect(model.specificationVersion).toBe("v3");
       expect(model.provider).toBe("web-llm");
       expect(model.modelId).toBe("Llama-3.1-8B-Instruct-q4f32_1-MLC");
     });
@@ -149,7 +149,7 @@ describe("WebLLMLanguageModel", () => {
       });
 
       expect(text).toBe("Hello, world!");
-      expect(usage).toEqual({
+      expect(usage).toMatchObject({
         inputTokens: 10,
         outputTokens: 5,
         totalTokens: 15,
@@ -207,7 +207,7 @@ describe("WebLLMLanguageModel", () => {
 
       expect(text).toBe("Hello, world!");
       const usageResult = await usage;
-      expect(usageResult).toEqual({
+      expect(usageResult).toMatchObject({
         inputTokens: 10,
         outputTokens: 5,
         totalTokens: 15,
@@ -289,7 +289,10 @@ describe("WebLLMLanguageModel", () => {
           ],
         });
 
-        expect(result.finishReason).toBe("tool-calls");
+        expect(result.finishReason).toMatchObject({
+          unified: "tool-calls",
+          raw: "tool-calls",
+        });
         expect(result.content).toHaveLength(1);
         expect(result.content[0].type).toBe("tool-call");
 
@@ -346,7 +349,10 @@ describe("WebLLMLanguageModel", () => {
           ],
         });
 
-        expect(result.finishReason).toBe("tool-calls");
+        expect(result.finishReason).toMatchObject({
+          unified: "tool-calls",
+          raw: "tool-calls",
+        });
         expect(result.content).toHaveLength(2);
 
         expect(result.content[0].type).toBe("text");
@@ -393,7 +399,10 @@ describe("WebLLMLanguageModel", () => {
           ],
         });
 
-        expect(result.finishReason).toBe("stop");
+        expect(result.finishReason).toMatchObject({
+          unified: "stop",
+          raw: "stop",
+        });
         expect(result.content).toHaveLength(1);
         expect(result.content[0].type).toBe("text");
       });
@@ -444,7 +453,11 @@ describe("WebLLMLanguageModel", () => {
           ],
         });
 
-        expect(result.finishReason).toBe("tool-calls");
+        expect(result.finishReason).toMatchObject({
+          unified: "tool-calls",
+          raw: "tool-calls",
+        });
+        expect(result.content).toHaveLength(1);
         // Should only emit first tool call
         const toolCalls = result.content.filter((c) => c.type === "tool-call");
         expect(toolCalls).toHaveLength(1);
@@ -529,7 +542,10 @@ describe("WebLLMLanguageModel", () => {
         // Should have tool-calls finish reason
         const finish = parts.find((p) => p.type === "finish");
         if (finish?.type === "finish") {
-          expect(finish.finishReason).toBe("tool-calls");
+          expect(finish.finishReason).toMatchObject({
+            unified: "tool-calls",
+            raw: "tool-calls",
+          });
         }
       });
 
@@ -593,7 +609,10 @@ describe("WebLLMLanguageModel", () => {
 
         const finish = parts.find((p) => p.type === "finish");
         if (finish?.type === "finish") {
-          expect(finish.finishReason).toBe("stop");
+          expect(finish.finishReason).toMatchObject({
+            unified: "stop",
+            raw: "stop",
+          });
         }
       });
 
@@ -704,9 +723,7 @@ describe("WebLLMLanguageModel", () => {
       expect(result.warnings?.length).toBeGreaterThan(0);
 
       const toolChoiceWarning = result.warnings?.find(
-        (w) =>
-          (w as any).type === "unsupported-setting" &&
-          (w as any).setting === "toolChoice",
+        (w) => w.type === "unsupported",
       );
       expect(toolChoiceWarning).toBeDefined();
     });

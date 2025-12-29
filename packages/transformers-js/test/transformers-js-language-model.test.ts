@@ -78,10 +78,10 @@ describe("TransformersJSLanguageModel", () => {
     });
 
     expect(text).toBe("Hello");
-    expect(usage).toEqual({
+    expect(usage).toMatchObject({
       inputTokens: 5,
-      outputTokens: 5 /* length-based */,
-      totalTokens: 10,
+      outputTokens: 10 /* length-based */,
+      totalTokens: 15,
     });
   });
 

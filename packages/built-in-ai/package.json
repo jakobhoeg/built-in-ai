@@ -54,7 +54,7 @@
     "@mediapipe/tasks-text": "^0.10.22-rc.20250304"
   },
   "peerDependencies": {
-    "ai": ">=5.0.0"
+    "ai": "^6.0.0"
   },
   "devDependencies": {
     "@types/dom-chromium-ai": "^0.0.10",
