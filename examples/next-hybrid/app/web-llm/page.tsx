@@ -70,7 +70,7 @@ import {
 } from "@/components/ai-elements/confirmation";
 
 const MODELS = [
-  "Qwen3-0.6B-q4f16_1-MLC",
+  "Qwen3-0.6B-q0f16-MLC",
   "Qwen3-4B-q4f16_1-MLC",
   "gemma-2-2b-it-q4f16_1-MLC",
   "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC",

@@ -41,7 +41,7 @@ import { ToolCallFenceDetector } from "./streaming/tool-call-detector";
 
 declare global {
   interface Navigator {
-    gpu?: unknown;
+    gpu?: GPU;
   }
 }
 
@@ -70,8 +70,10 @@ export interface WebLLMSettings {
 }
 
 /**
- * Check if the browser supports WebLLM
- * @returns true if the browser supports WebLLM, false otherwise
+ * Quick check if the browser might support WebLLM by checking for navigator.gpu.
+ * Note: This only checks if navigator.gpu exists. For accurate mobile detection,
+ * use the async `availability()` method on the model which performs a full adapter check.
+ * @returns true if navigator.gpu exists, false otherwise
  */
 export function doesBrowserSupportWebLLM(): boolean {
   return globalThis?.navigator?.gpu !== undefined;
@@ -505,8 +507,7 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
       };
     } catch (error) {
       throw new Error(
-        `WebLLM generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     } finally {
@@ -517,16 +518,33 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
   }
 
   /**
-   * Check the availability of the WebLLM model
-   * @returns Promise resolving to "unavailable", "available", or "available-after-download"
+   * Check the availability of the WebLLM model.
+   * The actual WebGPU availability will be determined when the engine initializes in the worker.
+   * @returns Promise resolving to "unavailable", "available", or "downloadable"
    */
   public async availability(): Promise<Availability> {
-    if (!doesBrowserSupportWebLLM()) {
-      return "unavailable";
-    }
-
     if (this.isInitialized) {
       return "available";
+    }
+
+    // Let the worker initialization handle the actual GPU detection.
+    if (this.config.options.worker) {
+      return "downloadable";
+    }
+
+    try {
+      const gpu = navigator.gpu;
+      if (!gpu) {
+        console.log('No gpu')
+        return "unavailable";
+      }
+      const adapter = await gpu.requestAdapter();
+      if (!adapter) {
+        console.log('No adapter')
+        return "unavailable";
+      }
+    } catch {
+      return "unavailable";
     }
 
     return "downloadable";

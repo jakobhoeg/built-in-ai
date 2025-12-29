@@ -57,6 +57,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.0.0",
+    "@webgpu/types": "^0.1.68",
     "jsdom": "^26.1.0",
     "rimraf": "^5.0.0",
     "tsup": "^8.0.0",
