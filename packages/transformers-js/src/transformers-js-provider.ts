@@ -44,12 +44,12 @@ export interface TransformersJSProvider extends ProviderV3 {
     settings?: TransformersJSModelSettings,
   ): TransformersJSLanguageModel;
 
-  textEmbedding(
+  embedding(
     modelId: TransformersJSEmbeddingModelId,
     settings?: TransformersJSEmbeddingSettings,
   ): EmbeddingModelV3;
 
-  textEmbeddingModel: (
+  embeddingModel: (
     modelId: TransformersJSEmbeddingModelId,
     settings?: TransformersJSEmbeddingSettings,
   ) => EmbeddingModelV3;
@@ -141,11 +141,10 @@ export function createTransformersJS(
   provider.specificationVersion = "v3" as const;
   provider.languageModel = createChatModel;
   provider.chat = createChatModel;
-  provider.textEmbedding = createEmbeddingModel;
-  provider.textEmbeddingModel = createEmbeddingModel;
+  provider.embedding = createEmbeddingModel;
+  provider.embeddingModel = createEmbeddingModel;
   provider.transcription = createTranscriptionModel;
   provider.transcriptionModel = createTranscriptionModel;
-  provider.embeddingModel = createEmbeddingModel;
 
   provider.imageModel = (modelId: string) => {
     throw new NoSuchModelError({ modelId, modelType: "imageModel" });

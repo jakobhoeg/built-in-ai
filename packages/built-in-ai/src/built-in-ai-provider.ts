@@ -35,12 +35,12 @@ export interface BuiltInAIProvider extends ProviderV3 {
     settings?: BuiltInAIChatSettings,
   ): BuiltInAIChatLanguageModel;
 
-  textEmbedding(
+  embedding(
     modelId: "embedding",
     settings?: BuiltInAIEmbeddingModelSettings,
   ): EmbeddingModelV3;
 
-  textEmbeddingModel: (
+  embeddingModel: (
     modelId: "embedding",
     settings?: BuiltInAIEmbeddingModelSettings,
   ) => EmbeddingModelV3;
@@ -92,8 +92,7 @@ export function createBuiltInAI(
   provider.specificationVersion = "v3" as const;
   provider.languageModel = createChatModel;
   provider.chat = createChatModel;
-  provider.textEmbedding = createEmbeddingModel;
-  provider.textEmbeddingModel = createEmbeddingModel;
+  provider.embedding = createEmbeddingModel;
   provider.embeddingModel = createEmbeddingModel;
 
   provider.imageModel = (modelId: string) => {
