@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 1.0.0
+
+### Major Changes
+
+- 98be7a6: feat: upgrade to AI SDK v6
+
 ## 0.3.4
 
 ### Patch Changes

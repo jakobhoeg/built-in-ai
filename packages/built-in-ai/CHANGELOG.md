@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 3.0.0
+
+### Major Changes
+
+- f9105a0: feat: upgrade to AI SDK v6
+
 ## 2.1.0
 
 ### Minor Changes
