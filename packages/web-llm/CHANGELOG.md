@@ -1,5 +1,11 @@
 # @built-in-ai/web-llm
 
+## 1.0.0
+
+### Major Changes
+
+- 8e1b8b8: feat: upgrade to AI SDK v6
+
 ## 0.3.2
 
 ### Patch Changes
