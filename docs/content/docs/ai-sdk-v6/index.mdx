@@ -21,7 +21,14 @@ Besides these API differences, it's also tricky to easily fall back to server-si
 
 ## Solution
 
-The `@built-in-ai` packages solve this by providing unified [Vercel AI SDK](https://ai-sdk.dev/) model providers for all of the above solutions. This architecture allows you to build local in-browser AI applications with the same developer experience.
+The `@built-in-ai` library bridges this gap by providing a unified solution that lets you:
+
+- Experiment with in-browser AI models using familiar patterns
+- Seamlessly fall back to server-side models when needed
+- Use the same Vercel AI SDK eco system you already know
+- Avoid building complex integration layers from scratch
+
+Use the different engines in the same reliable way:
 
 ```typescript
 import { streamText } from "ai";
