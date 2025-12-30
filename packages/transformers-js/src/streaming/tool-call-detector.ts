@@ -44,7 +44,11 @@ export class ToolCallFenceDetector {
   private readonly FENCE_PATTERNS: FencePattern[] = [
     { start: "```tool_call", end: "```", reconstructStart: "```tool_call\n" },
     { start: "```tool-call", end: "```", reconstructStart: "```tool-call\n" },
-    { start: "<tool_call>", end: "</tool_call>", reconstructStart: "<tool_call>" },
+    {
+      start: "<tool_call>",
+      end: "</tool_call>",
+      reconstructStart: "<tool_call>",
+    },
   ];
   // Python-style pattern: [functionName(args)]
   private readonly PYTHON_STYLE_REGEX = /\[(\w+)\(/g;
@@ -72,9 +76,11 @@ export class ToolCallFenceDetector {
    * @returns Detection result with fence info and safe text
    */
   detectFence(): FenceDetectionResult {
-    const { index: startIdx, prefix: matchedPrefix, pattern } = this.findFenceStart(
-      this.buffer,
-    );
+    const {
+      index: startIdx,
+      prefix: matchedPrefix,
+      pattern,
+    } = this.findFenceStart(this.buffer);
 
     // No fence start found
     if (startIdx === -1) {
@@ -218,9 +224,11 @@ export class ToolCallFenceDetector {
   detectStreamingFence(): StreamingFenceResult {
     if (!this.inFence) {
       // Look for fence start
-      const { index: startIdx, prefix: matchedPrefix, pattern } = this.findFenceStart(
-        this.buffer,
-      );
+      const {
+        index: startIdx,
+        prefix: matchedPrefix,
+        pattern,
+      } = this.findFenceStart(this.buffer);
 
       if (startIdx === -1) {
         // No fence start found - emit safe text
@@ -248,7 +256,11 @@ export class ToolCallFenceDetector {
       // Move buffer past the fence start marker
       this.buffer = this.buffer.slice(startIdx + fenceStartLength);
 
-      if (pattern && pattern.start.startsWith("```") && this.buffer.startsWith("\n")) {
+      if (
+        pattern &&
+        pattern.start.startsWith("```") &&
+        this.buffer.startsWith("\n")
+      ) {
         this.buffer = this.buffer.slice(1);
       }
 
@@ -300,13 +312,12 @@ export class ToolCallFenceDetector {
     this.fenceStartBuffer += fenceContent;
 
     // Reconstruct complete fence using the current pattern
-    const reconstructStart = this.currentFencePattern?.reconstructStart ?? "```tool_call\n";
+    const reconstructStart =
+      this.currentFencePattern?.reconstructStart ?? "```tool_call\n";
     const completeFence = `${reconstructStart}${this.fenceStartBuffer}${fenceEnd}`;
 
     // Get text after fence
-    const textAfterFence = this.buffer.slice(
-      closingIdx + fenceEnd.length,
-    );
+    const textAfterFence = this.buffer.slice(closingIdx + fenceEnd.length);
 
     // Reset state
     this.inFence = false;

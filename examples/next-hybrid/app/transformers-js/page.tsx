@@ -92,8 +92,8 @@ function TransformersJSChat({
         ...modelOptions,
         worker: supportsWorker
           ? new Worker(new URL("./util/worker.ts", import.meta.url), {
-            type: "module",
-          })
+              type: "module",
+            })
           : undefined,
       });
       return new TransformersChatTransport(model); // Client side chat transport

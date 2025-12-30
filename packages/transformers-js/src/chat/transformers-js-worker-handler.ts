@@ -53,17 +53,17 @@ class ModelManager {
 
     const instancePromise = isVisionModel
       ? this.createVisionModel(modelId, {
-        dtype,
-        device,
-        use_external_data_format,
-        progressCallback,
-      })
+          dtype,
+          device,
+          use_external_data_format,
+          progressCallback,
+        })
       : this.createTextModel(modelId, {
-        dtype,
-        device,
-        use_external_data_format,
-        progressCallback,
-      });
+          dtype,
+          device,
+          use_external_data_format,
+          progressCallback,
+        });
 
     this.instances.set(key, instancePromise);
     return instancePromise;
@@ -146,7 +146,9 @@ export class TransformersJSWorkerHandler {
     const isVision = this.isVisionModel;
 
     const hfTools =
-      tools && tools.length > 0 ? convertToolsToHuggingFaceFormat(tools) : undefined;
+      tools && tools.length > 0
+        ? convertToolsToHuggingFaceFormat(tools)
+        : undefined;
 
     const processedMessages = messages;
 
@@ -231,16 +233,16 @@ export class TransformersJSWorkerHandler {
     // Merge user generation options with defaults based on model type
     const defaultOptions = isVision
       ? {
-        do_sample: false,
-        repetition_penalty: 1.1,
-        max_new_tokens: 1024,
-      }
+          do_sample: false,
+          repetition_penalty: 1.1,
+          max_new_tokens: 1024,
+        }
       : {
-        do_sample: true,
-        top_k: 3,
-        temperature: 0.7,
-        max_new_tokens: 512,
-      };
+          do_sample: true,
+          top_k: 3,
+          temperature: 0.7,
+          max_new_tokens: 512,
+        };
 
     const generationOptions = {
       ...defaultOptions,

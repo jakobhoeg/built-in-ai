@@ -6,7 +6,8 @@ import type { ParsedResponse, ParsedToolCall } from "./types";
  * 2. XML-style tags: <tool_call>...</tool_call>
  * 3. Python-style: [functionName(arg="value")]
  */
-const JSON_TOOL_CALL_FENCE_REGEX = /```tool[_-]?call\s*([\s\S]*?)```|<tool_call>\s*([\s\S]*?)\s*<\/tool_call>|\[(\w+)\(([^)]*)\)\]/gi;
+const JSON_TOOL_CALL_FENCE_REGEX =
+  /```tool[_-]?call\s*([\s\S]*?)```|<tool_call>\s*([\s\S]*?)\s*<\/tool_call>|\[(\w+)\(([^)]*)\)\]/gi;
 
 function generateToolCallId(): string {
   return `call_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;

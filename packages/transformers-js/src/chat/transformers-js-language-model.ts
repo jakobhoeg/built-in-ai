@@ -698,31 +698,31 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
           usage: isVision
             ? {
-              inputTokens: {
-                total: undefined,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: undefined,
-                text: undefined,
-                reasoning: undefined,
-              },
-            }
+                inputTokens: {
+                  total: undefined,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: undefined,
+                  text: undefined,
+                  reasoning: undefined,
+                },
+              }
             : {
-              inputTokens: {
-                total: inputLength,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
+                inputTokens: {
+                  total: inputLength,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: inputLength + generatedText.length,
+                  text: generatedText.length,
+                  reasoning: undefined,
+                },
               },
-              outputTokens: {
-                total: inputLength + generatedText.length,
-                text: generatedText.length,
-                reasoning: undefined,
-              },
-            },
           request: { body: { messages: promptMessages, ...generationOptions } },
           warnings,
         };
@@ -740,37 +740,38 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         finishReason: { unified: "stop", raw: "stop" },
         usage: isVision
           ? {
-            inputTokens: {
-              total: undefined,
-              noCache: undefined,
-              cacheRead: undefined,
-              cacheWrite: undefined,
-            },
-            outputTokens: {
-              total: undefined,
-              text: undefined,
-              reasoning: undefined,
-            },
-          }
+              inputTokens: {
+                total: undefined,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: undefined,
+                text: undefined,
+                reasoning: undefined,
+              },
+            }
           : {
-            inputTokens: {
-              total: inputLength,
-              noCache: undefined,
-              cacheRead: undefined,
-              cacheWrite: undefined,
+              inputTokens: {
+                total: inputLength,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: inputLength + generatedText.length,
+                text: generatedText.length,
+                reasoning: undefined,
+              },
             },
-            outputTokens: {
-              total: inputLength + generatedText.length,
-              text: generatedText.length,
-              reasoning: undefined,
-            },
-          },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }

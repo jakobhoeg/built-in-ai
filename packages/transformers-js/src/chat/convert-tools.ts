@@ -1,4 +1,7 @@
-import type { JSONSchema7, LanguageModelV3FunctionTool } from "@ai-sdk/provider";
+import type {
+  JSONSchema7,
+  LanguageModelV3FunctionTool,
+} from "@ai-sdk/provider";
 import type { ToolDefinition } from "../tool-calling/types";
 
 /**
