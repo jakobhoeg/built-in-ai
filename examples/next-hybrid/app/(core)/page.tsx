@@ -67,6 +67,7 @@ import { ModelSelector } from "@/components/model-selector";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import Link from "next/link";
 import { BrowserSupportInstructions } from "@/components/browser-support-instructions";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
 
@@ -79,6 +80,7 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<FileList | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [quotaOverflow, setQuotaOverflow] = useState(false);
 
   // Check browser support only on client side
   useEffect(() => {
@@ -96,7 +98,9 @@ export default function Chat() {
     addToolApprovalResponse,
   } = useChat<BuiltInAIUIMessage>({
     transport: doesBrowserSupportModel
-      ? new ClientSideChatTransport()
+      ? new ClientSideChatTransport({
+          onQuotaOverflow: () => setQuotaOverflow(true),
+        })
       : new DefaultChatTransport<UIMessage>({
           api: "/api/chat",
         }),
@@ -122,6 +126,7 @@ export default function Chat() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (quotaOverflow) return;
     if ((input.trim() || files) && status === "ready") {
       sendMessage({
         text: input,
@@ -194,6 +199,14 @@ export default function Chat() {
           </div>
         </div>
       </header>
+      {quotaOverflow && (
+        <Alert variant="destructive" className="mx-4 mt-4">
+          <AlertTitle>Model quota exceeded</AlertTitle>
+          <AlertDescription>
+            Start a new chat by refreshing the page.
+          </AlertDescription>
+        </Alert>
+      )}
       {messages.length === 0 && (
         <>
           {browserSupportsModel ? (
@@ -502,6 +515,7 @@ export default function Chat() {
             minHeight={48}
             maxHeight={164}
             className="bg-accent dark:bg-card"
+            disabled={quotaOverflow}
           />
           <PromptInputToolbar>
             <PromptInputTools>
@@ -531,9 +545,10 @@ export default function Chat() {
               </Kbd>
               <PromptInputSubmit
                 disabled={
-                  status === "ready" &&
-                  !input.trim() &&
-                  (!files || files.length === 0)
+                  quotaOverflow ||
+                  (status === "ready" &&
+                    !input.trim() &&
+                    (!files || files.length === 0))
                 }
                 status={status}
                 onClick={

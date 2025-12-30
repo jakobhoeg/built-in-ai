@@ -8,7 +8,11 @@ import {
   tool,
   stepCountIs,
 } from "ai";
-import { builtInAI, BuiltInAIUIMessage } from "@built-in-ai/core";
+import {
+  builtInAI,
+  BuiltInAIChatLanguageModel,
+  BuiltInAIUIMessage,
+} from "@built-in-ai/core";
 import z from "zod";
 
 export const createTools = () => ({
@@ -71,6 +75,17 @@ export const createTools = () => ({
 });
 
 /**
+ * Options for configuring the ClientSideChatTransport
+ */
+export interface ClientSideChatTransportOptions {
+  /**
+   * Callback invoked when the model quota is exceeded.
+   * @param event
+   */
+  onQuotaOverflow?: (event: Event) => void;
+}
+
+/**
  * Client-side chat transport AI SDK implementation that handles AI model communication
  * with in-browser AI capabilities.
  *
@@ -80,9 +95,16 @@ export class ClientSideChatTransport
   implements ChatTransport<BuiltInAIUIMessage>
 {
   private tools: ReturnType<typeof createTools>;
+  private onQuotaOverflow?: (event: Event) => void;
+  private model: BuiltInAIChatLanguageModel;
 
-  constructor() {
+  constructor(options: ClientSideChatTransportOptions = {}) {
     this.tools = createTools();
+    this.onQuotaOverflow = options.onQuotaOverflow;
+    this.model = builtInAI("text", {
+      expectedInputs: [{ type: "text" }, { type: "image" }, { type: "audio" }],
+      onQuotaOverflow: this.onQuotaOverflow,
+    });
   }
 
   async sendMessages(
@@ -97,16 +119,15 @@ export class ClientSideChatTransport
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
     const prompt = await convertToModelMessages(messages);
-    const model = builtInAI();
 
     return createUIMessageStream<BuiltInAIUIMessage>({
       execute: async ({ writer }) => {
         let downloadProgressId: string | undefined;
-        const availability = await model.availability();
+        const availability = await this.model.availability();
 
         // Only track progress if model needs downloading
         if (availability !== "available") {
-          await model.createSessionWithProgress((progress: number) => {
+          await this.model.createSessionWithProgress((progress: number) => {
             const percent = Math.round(progress * 100);
 
             if (progress >= 1) {
@@ -144,7 +165,7 @@ export class ClientSideChatTransport
 
         // Single streamText call for both paths
         const result = streamText({
-          model,
+          model: this.model,
           tools: this.tools,
           stopWhen: stepCountIs(5),
           messages: prompt,
