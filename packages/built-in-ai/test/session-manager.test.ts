@@ -99,6 +99,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
 
@@ -118,6 +119,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
 
@@ -138,6 +140,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -161,6 +164,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -183,6 +187,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -204,6 +209,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -231,6 +237,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
       const progressCallback: ProgressCallback = vi.fn();
@@ -251,6 +258,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
 
@@ -276,6 +284,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
 
       vi.stubGlobal("LanguageModel", {
@@ -296,6 +305,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: mockDestroy,
+        addEventListener: vi.fn(),
       };
 
       vi.stubGlobal("LanguageModel", {
@@ -315,6 +325,7 @@ describe("SessionManager", () => {
     it("should handle session without destroy method", async () => {
       const mockSession = {
         prompt: vi.fn(),
+        addEventListener: vi.fn(),
       };
 
       vi.stubGlobal("LanguageModel", {
@@ -333,10 +344,12 @@ describe("SessionManager", () => {
       const mockSession1 = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockSession2 = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi
         .fn()

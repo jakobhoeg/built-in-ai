@@ -25,6 +25,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       promptStreaming: mockPromptStreaming,
       destroy: vi.fn(),
       inputUsage: 0,
+      addEventListener: vi.fn(),
     };
     // Mock the global LanguageModel API
     vi.stubGlobal("LanguageModel", {
