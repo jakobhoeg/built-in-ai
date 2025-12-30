@@ -41,7 +41,7 @@ import { ToolCallFenceDetector } from "./streaming/tool-call-detector";
 
 declare global {
   interface Navigator {
-    gpu?: unknown;
+    gpu?: GPU;
   }
 }
 
@@ -69,12 +69,27 @@ export interface WebLLMSettings {
   worker?: Worker;
 }
 
+function isMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  );
+}
+
+function checkWebGPU(): boolean {
+  try {
+    return !!globalThis?.navigator?.gpu;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Check if the browser supports WebLLM
- * @returns true if the browser supports WebLLM, false otherwise
+ * Check if the browser supports WebGPU (required for WebLLM).
+ * @returns boolean - true if WebGPU API is available
  */
 export function doesBrowserSupportWebLLM(): boolean {
-  return globalThis?.navigator?.gpu !== undefined;
+  return checkWebGPU();
 }
 
 function extractToolName(content: string): string | null {
@@ -517,19 +532,24 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
   }
 
   /**
-   * Check the availability of the WebLLM model
-   * @returns Promise resolving to "unavailable", "available", or "available-after-download"
+   * Check the availability of the WebLLM model.
+   * Note: On mobile devices with a worker, WebGPU detection is skipped since it
+   * can't be done reliably. The actual availability will be determined at init.
+   * @returns Promise resolving to "unavailable", "available", or "downloadable"
    */
   public async availability(): Promise<Availability> {
-    if (!doesBrowserSupportWebLLM()) {
-      return "unavailable";
-    }
-
     if (this.isInitialized) {
       return "available";
     }
 
-    return "downloadable";
+    // Skip on mobile if using a worker, since detecting GPU is unreliable.
+    // Let worker initialization handle it and return an error if unavailable.
+    if (this.config.options.worker && isMobile()) {
+      return "downloadable";
+    }
+
+    const supported = checkWebGPU();
+    return supported ? "downloadable" : "unavailable";
   }
 
   /**

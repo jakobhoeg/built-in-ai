@@ -6,6 +6,9 @@
       "DOM",
       "DOM.Iterable"
     ],
+    "types": [
+      "@webgpu/types"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
