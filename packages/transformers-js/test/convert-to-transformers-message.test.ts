@@ -76,7 +76,7 @@ describe("convertToTransformersMessages", () => {
     ]);
   });
 
-  it("converts tool role to user message with fence format", () => {
+  it("converts tool role to native HF format with role 'tool'", () => {
     const prompt = [
       {
         role: "tool",
@@ -92,13 +92,13 @@ describe("convertToTransformersMessages", () => {
     ] as any;
     const result = convertToTransformersMessages(prompt);
     expect(result).toHaveLength(1);
-    expect(result[0].role).toBe("user");
-    expect(result[0].content).toContain("```tool_result");
-    expect(result[0].content).toContain("call_123");
-    expect(result[0].content).toContain("get_weather");
+    expect(result[0].role).toBe("tool");
+    expect(result[0]).toHaveProperty("tool_call_id", "call_123");
+    expect(result[0]).toHaveProperty("name", "get_weather");
+    expect(result[0]).toHaveProperty("content", "72°F and sunny");
   });
 
-  it("converts assistant tool-call content to fence format", () => {
+  it("converts assistant tool-call content to native HF format", () => {
     const prompt: LanguageModelV3Prompt = [
       {
         role: "assistant",
@@ -115,7 +115,70 @@ describe("convertToTransformersMessages", () => {
     const result = convertToTransformersMessages(prompt);
     expect(result).toHaveLength(1);
     expect(result[0].role).toBe("assistant");
-    expect(result[0].content).toContain("```tool_call");
-    expect(result[0].content).toContain("calculate");
+    expect(result[0].content).toBe(null);
+    expect(result[0]).toHaveProperty("tool_calls");
+    expect(result[0].tool_calls).toHaveLength(1);
+    expect(result[0].tool_calls![0]).toEqual({
+      id: "call_456",
+      type: "function",
+      function: {
+        name: "calculate",
+        arguments: '{"x":5,"y":10}',
+      },
+    });
+  });
+
+  it("converts assistant with both text and tool-call", () => {
+    const prompt: LanguageModelV3Prompt = [
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "Let me calculate that for you." },
+          {
+            type: "tool-call",
+            toolCallId: "call_789",
+            toolName: "add",
+            input: { a: 2, b: 3 },
+          } as any,
+        ],
+      },
+    ];
+    const result = convertToTransformersMessages(prompt);
+    expect(result).toHaveLength(1);
+    expect(result[0].role).toBe("assistant");
+    expect(result[0].content).toBe("Let me calculate that for you.");
+    expect(result[0]).toHaveProperty("tool_calls");
+    expect(result[0].tool_calls).toHaveLength(1);
+    expect(result[0].tool_calls![0].function.name).toBe("add");
+  });
+
+  it("converts multiple tool results into separate messages", () => {
+    const prompt = [
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "call_1",
+            toolName: "get_weather",
+            output: { type: "text", value: "Sunny" },
+          },
+          {
+            type: "tool-result",
+            toolCallId: "call_2",
+            toolName: "get_time",
+            output: { type: "text", value: "12:00 PM" },
+          },
+        ],
+      },
+    ] as any;
+    const result = convertToTransformersMessages(prompt);
+    expect(result).toHaveLength(2);
+    expect(result[0].role).toBe("tool");
+    expect(result[0]).toHaveProperty("tool_call_id", "call_1");
+    expect(result[0]).toHaveProperty("name", "get_weather");
+    expect(result[1].role).toBe("tool");
+    expect(result[1]).toHaveProperty("tool_call_id", "call_2");
+    expect(result[1]).toHaveProperty("name", "get_time");
   });
 });

@@ -6,7 +6,6 @@ import {
   LanguageModelV3FinishReason,
   LanguageModelV3ProviderTool,
   LanguageModelV3StreamPart,
-  LanguageModelV3ToolCall,
   LoadSettingError,
   LanguageModelV3GenerateResult,
   LanguageModelV3StreamResult,
@@ -22,30 +21,23 @@ import {
   type PretrainedModelOptions,
   type ProgressInfo,
   type PreTrainedTokenizer,
-  type Processor,
   type Tensor,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
 import type { TransformersMessage } from "./convert-to-transformers-message";
+import { convertToolsToHuggingFaceFormat } from "./convert-tools";
 import { decodeSingleSequence } from "./decode-utils";
 import type {
   ModelInstance,
   GenerationOptions,
 } from "./transformers-js-worker-types";
-import {
-  buildJsonToolSystemPrompt,
-  parseJsonFunctionCalls,
-} from "../tool-calling";
+import { parseJsonFunctionCalls } from "../tool-calling";
 import type { ParsedToolCall, ToolDefinition } from "../tool-calling";
 import {
   createUnsupportedSettingWarning,
   createUnsupportedToolWarning,
 } from "../utils/warnings";
 import { isFunctionTool } from "../utils/tool-utils";
-import {
-  prependSystemPromptToMessages,
-  extractSystemPrompt,
-} from "../utils/prompt-utils";
 import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
 
 declare global {
@@ -604,25 +596,12 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       );
     }
 
-    // Extract system prompt from messages and build combined prompt with tool calling
-    const {
-      systemPrompt: originalSystemPrompt,
-      messages: messagesWithoutSystem,
-    } = extractSystemPrompt(messages);
+    const hfTools =
+      functionTools.length > 0
+        ? convertToolsToHuggingFaceFormat(functionTools)
+        : undefined;
 
-    const systemPrompt = buildJsonToolSystemPrompt(
-      originalSystemPrompt,
-      functionTools,
-      {
-        allowParallelToolCalls: false,
-      },
-    );
-
-    // Prepend system prompt to messages
-    const promptMessages = prependSystemPromptToMessages(
-      messagesWithoutSystem,
-      systemPrompt,
-    );
+    const promptMessages = messages;
 
     // Main thread generation (browser without worker or server environment)
     const [processor, model] = await this.getSession(
@@ -645,19 +624,18 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         const { load_image } = await import("@huggingface/transformers");
         const text = processor.apply_chat_template(promptMessages as any, {
           add_generation_prompt: true,
+          ...(hfTools ? { tools: hfTools } : {}),
         });
         const imageUrls = promptMessages
           .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
           .filter((part) => part.type === "image")
           .map((part) => part.image);
 
-        // Load images using load_image
         const images = await Promise.all(
           imageUrls.map((url) => load_image(url)),
         );
 
         inputs = await processor(text, images);
-        // Cast to any because transformers.js generate() has complex overload types
         const outputs = await (model.generate as any)({
           ...inputs,
           ...generationOptions,
@@ -669,8 +647,9 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         inputs = processor.apply_chat_template(promptMessages as any, {
           add_generation_prompt: true,
           return_dict: true,
+          ...(hfTools ? { tools: hfTools } : {}),
         }) as { input_ids: Tensor; attention_mask?: Tensor };
-        // Cast to any because transformers.js generate() has complex overload types
+
         const outputs = await (model.generate as any)({
           ...inputs,
           ...generationOptions,
@@ -691,7 +670,6 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         );
       }
 
-      // Parse JSON tool calls from response
       const { toolCalls, textContent } = parseJsonFunctionCalls(generatedText);
 
       if (toolCalls.length > 0) {
@@ -712,7 +690,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             toolCallId: call.toolCallId,
             toolName: call.toolName,
             input: JSON.stringify(call.args ?? {}),
-          } satisfies LanguageModelV3ToolCall);
+          });
         }
 
         return {
@@ -720,31 +698,31 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
           usage: isVision
             ? {
-                inputTokens: {
-                  total: undefined,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: undefined,
-                  text: undefined,
-                  reasoning: undefined,
-                },
-              }
-            : {
-                inputTokens: {
-                  total: inputLength,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: inputLength + generatedText.length,
-                  text: generatedText.length,
-                  reasoning: undefined,
-                },
+              inputTokens: {
+                total: undefined,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
               },
+              outputTokens: {
+                total: undefined,
+                text: undefined,
+                reasoning: undefined,
+              },
+            }
+            : {
+              inputTokens: {
+                total: inputLength,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: inputLength + generatedText.length,
+                text: generatedText.length,
+                reasoning: undefined,
+              },
+            },
           request: { body: { messages: promptMessages, ...generationOptions } },
           warnings,
         };
@@ -762,38 +740,37 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         finishReason: { unified: "stop", raw: "stop" },
         usage: isVision
           ? {
-              inputTokens: {
-                total: undefined,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: undefined,
-                text: undefined,
-                reasoning: undefined,
-              },
-            }
-          : {
-              inputTokens: {
-                total: inputLength,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: inputLength + generatedText.length,
-                text: generatedText.length,
-                reasoning: undefined,
-              },
+            inputTokens: {
+              total: undefined,
+              noCache: undefined,
+              cacheRead: undefined,
+              cacheWrite: undefined,
             },
+            outputTokens: {
+              total: undefined,
+              text: undefined,
+              reasoning: undefined,
+            },
+          }
+          : {
+            inputTokens: {
+              total: inputLength,
+              noCache: undefined,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: inputLength + generatedText.length,
+              text: generatedText.length,
+              reasoning: undefined,
+            },
+          },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
@@ -868,7 +845,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           toolCallId: call.toolCallId,
           toolName: call.toolName,
           input: JSON.stringify(call.args ?? {}),
-        } satisfies LanguageModelV3ToolCall);
+        });
       }
 
       return {
@@ -999,25 +976,12 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       );
     }
 
-    // Extract system prompt from messages and build combined prompt with tool calling
-    const {
-      systemPrompt: originalSystemPrompt,
-      messages: messagesWithoutSystem,
-    } = extractSystemPrompt(messages);
+    const hfTools =
+      functionTools.length > 0
+        ? convertToolsToHuggingFaceFormat(functionTools)
+        : undefined;
 
-    const systemPrompt = buildJsonToolSystemPrompt(
-      originalSystemPrompt,
-      functionTools,
-      {
-        allowParallelToolCalls: false,
-      },
-    );
-
-    // Prepend system prompt to messages
-    const promptMessages = prependSystemPromptToMessages(
-      messagesWithoutSystem,
-      systemPrompt,
-    );
+    const promptMessages = messages;
 
     const self = this;
     const textId = "text-0";
@@ -1119,6 +1083,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             const { load_image } = await import("@huggingface/transformers");
             const text = tokenizer.apply_chat_template(promptMessages as any, {
               add_generation_prompt: true,
+              ...(hfTools ? { tools: hfTools } : {}),
             });
             const imageUrls = promptMessages
               .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
@@ -1137,31 +1102,29 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             inputs = tokenizer.apply_chat_template(promptMessages as any, {
               add_generation_prompt: true,
               return_dict: true,
+              ...(hfTools ? { tools: hfTools } : {}),
             }) as { input_ids: Tensor; attention_mask?: Tensor };
           }
 
           let inputLength = isVision ? 0 : inputs.input_ids.data.length;
           let outputTokens = 0;
 
-          // Use ToolCallFenceDetector for real-time streaming
           const fenceDetector = new ToolCallFenceDetector();
           let accumulatedText = "";
 
-          // Streaming tool call state
           let currentToolCallId: string | null = null;
           let toolInputStartEmitted = false;
           let accumulatedFenceContent = "";
           let streamedArgumentsLength = 0;
           let insideFence = false;
-          let toolCallDetected = false; // Add flag to stop processing after tool call
+          let toolCallDetected = false;
 
           const streamCallback = (text: string) => {
-            if (aborted || toolCallDetected) return; // Stop if tool call detected
+            if (aborted || toolCallDetected) return;
 
             outputTokens++;
             accumulatedText += text;
 
-            // Add chunk to detector
             fenceDetector.addChunk(text);
 
             // Process buffer using streaming detection
@@ -1293,8 +1256,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                     type: "tool-call",
                     toolCallId,
                     toolName,
-                    input: argsJson,
-                    providerExecuted: false,
+                    input: JSON.stringify(call.args ?? {}),
                   });
                 }
 
@@ -1314,7 +1276,6 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                 streamedArgumentsLength = 0;
                 insideFence = false;
 
-                // Break out of the processing loop
                 break;
               }
 
@@ -1442,7 +1403,6 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             msg.status === "update" &&
             typeof msg.output === "string"
           ) {
-            // Filter out tool call fences from the text stream
             fenceDetector.addChunk(msg.output);
 
             while (fenceDetector.hasContent()) {
@@ -1512,8 +1472,7 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                   type: "tool-call",
                   toolCallId,
                   toolName,
-                  input: argsJson,
-                  providerExecuted: false,
+                  input: JSON.stringify(call.args ?? {}),
                 });
               }
             }

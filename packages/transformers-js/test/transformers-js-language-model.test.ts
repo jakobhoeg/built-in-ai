@@ -114,14 +114,13 @@ describe("TransformersJSLanguageModel", () => {
     });
 
     expect(text).toBe("I am a helpful assistant.");
-    // System message should be prepended to the first user message
+    // System message should be passed through natively
     const applyChatCall = tokenizerMock.apply_chat_template.mock.calls[0];
-    expect(applyChatCall[0]).toHaveLength(1);
-    expect(applyChatCall[0][0].role).toBe("user");
-    expect(applyChatCall[0][0].content).toContain(
-      "You are a helpful assistant.",
-    );
-    expect(applyChatCall[0][0].content).toContain("Who are you?");
+    expect(applyChatCall[0]).toHaveLength(2);
+    expect(applyChatCall[0][0].role).toBe("system");
+    expect(applyChatCall[0][0].content).toBe("You are a helpful assistant.");
+    expect(applyChatCall[0][1].role).toBe("user");
+    expect(applyChatCall[0][1].content).toBe("Who are you?");
   });
 
   it("should handle conversation history", async () => {

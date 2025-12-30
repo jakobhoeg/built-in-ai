@@ -42,13 +42,24 @@ function convertDataToURL(
 }
 
 /**
- * TransformersJS message type
- * For text models: content is a string
- * For vision models: content can be an array of text and image parts
+ * TransformersJS message type compatible with HuggingFace chat templates
  */
 export interface TransformersMessage {
   role: string;
-  content: string | Array<{ type: string; text?: string; image?: string }>;
+  content:
+  | string
+  | null
+  | Array<{ type: string; text?: string; image?: string }>;
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: {
+      name: string;
+      arguments: string;
+    };
+  }>;
+  tool_call_id?: string;
+  name?: string;
 }
 
 /**
@@ -109,7 +120,7 @@ export function convertToTransformersMessages(
   prompt: LanguageModelV3Prompt,
   isVisionModel: boolean = false,
 ): TransformersMessage[] {
-  return prompt.map((message) => {
+  return prompt.flatMap((message): TransformersMessage | TransformersMessage[] => {
     switch (message.role) {
       case "system":
         return { role: "system", content: message.content };
@@ -135,61 +146,82 @@ export function convertToTransformersMessages(
         return { role: "user", content: textContent };
 
       case "assistant":
-        const assistantContent = message.content
-          .map((part) => {
-            if (part.type === "text") return part.text;
-            if (part.type === "tool-call") {
-              // Format tool call as the expected fence format
-              // Use normalizeToolArguments to safely handle input
-              return `\`\`\`tool_call\n${JSON.stringify({
-                name: part.toolName,
-                arguments: normalizeToolArguments(part.input),
-              })}\n\`\`\``;
-            }
-            return "";
-          })
-          .filter(Boolean) // Remove empty strings
-          .join("\n");
-        return { role: "assistant", content: assistantContent };
+        const textParts = message.content
+          .filter((part) => part.type === "text")
+          .map((part) => (part as any).text);
+
+        const toolCallParts = message.content.filter(
+          (part) => part.type === "tool-call",
+        );
+
+        // If there are tool calls, format as HuggingFace expects
+        if (toolCallParts.length > 0) {
+          const tool_calls = toolCallParts.map((part) => ({
+            id: (part as any).toolCallId,
+            type: "function" as const,
+            function: {
+              name: (part as any).toolName,
+              arguments:
+                typeof (part as any).input === "string"
+                  ? (part as any).input
+                  : JSON.stringify(
+                    normalizeToolArguments((part as any).input),
+                  ),
+            },
+          }));
+
+          return {
+            role: "assistant",
+            content: textParts.length > 0 ? textParts.join("\n") : null,
+            tool_calls,
+          };
+        }
+
+        return {
+          role: "assistant",
+          content: textParts.join("\n"),
+        };
 
       case "tool":
-        // Format tool results as expected fence format
-        const toolResults = message.content
+        // Each tool result becomes a separate message with role "tool"
+        // This is the native HuggingFace format for tool results
+        return message.content
+          .filter((part) => part.type === "tool-result")
           .map((part) => {
-            if (part.type === "tool-result") {
-              // Extract the result value based on output type
-              let resultValue: unknown;
-              const isError =
-                part.output.type === "error-text" ||
-                part.output.type === "error-json";
+            const toolPart = part as any;
 
-              switch (part.output.type) {
-                case "text":
-                case "json":
-                case "error-text":
-                case "error-json":
-                case "content":
-                  resultValue = part.output.value;
-                  break;
-                case "execution-denied":
-                  resultValue = {
-                    reason: part.output.reason ?? "execution denied",
-                  };
-                  break;
-              }
-
-              return `\`\`\`tool_result\n${JSON.stringify({
-                id: part.toolCallId,
-                name: part.toolName,
-                result: resultValue,
-                error: isError,
-              })}\n\`\`\``;
+            let resultValue: unknown;
+            switch (toolPart.output.type) {
+              case "text":
+              case "json":
+              case "content":
+                resultValue = toolPart.output.value;
+                break;
+              case "error-text":
+              case "error-json":
+                resultValue = {
+                  error: true,
+                  message: toolPart.output.value,
+                };
+                break;
+              case "execution-denied":
+                resultValue = {
+                  error: true,
+                  reason: toolPart.output.reason ?? "execution denied",
+                };
+                break;
             }
-            return "";
-          })
-          .filter(Boolean) // Remove empty strings
-          .join("\n");
-        return { role: "user", content: toolResults };
+
+            return {
+              role: "tool",
+              tool_call_id: toolPart.toolCallId,
+              name: toolPart.toolName,
+              content:
+                typeof resultValue === "string"
+                  ? resultValue
+                  : JSON.stringify(resultValue),
+            };
+          });
 
       default:
         throw new Error(`Unsupported message role: ${(message as any).role}`);
