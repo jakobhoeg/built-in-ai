@@ -40,6 +40,13 @@ export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
     type: "text" | "image" | "audio";
     languages?: string[];
   }>;
+
+  /**
+   * Callback invoked when the model quota is exceeded.
+   * @see [Prompt API Quota Overflow](https://github.com/webmachinelearning/prompt-api?tab=readme-ov-file#tokenization-context-window-length-limits-and-overflow)
+   * @param event
+   */
+  onQuotaOverflow?: (event: Event) => void;
 }
 
 /**

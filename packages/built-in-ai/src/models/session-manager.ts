@@ -14,12 +14,16 @@ export type ProgressCallback = (progress: number) => void;
 /**
  * Custom provider options that extend the standard API
  */
-interface CustomProviderOptions {}
+interface CustomProviderOptions {
+  onQuotaOverflow?: (event: Event) => void;
+}
 
 /**
  * Options for creating a new session
  */
-export interface SessionCreateOptions extends LanguageModelCreateOptions {
+export interface SessionCreateOptions
+  extends LanguageModelCreateOptions,
+    CustomProviderOptions {
   systemMessage?: string;
   expectedInputs?: Array<{ type: "text" | "image" | "audio" }>;
   onDownloadProgress?: ProgressCallback;
@@ -50,7 +54,8 @@ export interface SessionCreateOptions extends LanguageModelCreateOptions {
  */
 export class SessionManager {
   private session: LanguageModel | null = null;
-  private baseOptions: LanguageModelCreateOptions;
+  private baseOptions: LanguageModelCreateOptions &
+    Partial<CustomProviderOptions>;
 
   /**
    * Creates a new SessionManager
@@ -110,6 +115,19 @@ export class SessionManager {
     // Create the session
     this.session = await LanguageModel.create(sessionOptions);
 
+    // Check for onQuotaOverflow in request options first, then fall back to base options
+    const onQuotaOverflow =
+      options?.onQuotaOverflow || this.baseOptions.onQuotaOverflow;
+
+    if (onQuotaOverflow) {
+      this.session.addEventListener("quotaoverflow", onQuotaOverflow);
+    } else {
+      this.session.addEventListener("quotaoverflow", () => {
+        console.warn(
+          "Model quota exceeded. Consider handling 'quotaoverflow' event.",
+        );
+      });
+    }
     return this.session;
   }
 
@@ -203,6 +221,7 @@ export class SessionManager {
         systemMessage,
         expectedInputs,
         onDownloadProgress,
+        onQuotaOverflow,
         ...createOptions
       } = options;
 
