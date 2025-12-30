@@ -86,13 +86,15 @@ function TransformersJSChat({
 
   const chatTransport = useMemo(() => {
     if (useClientSideInference) {
-      const { id, name, ...modelOptions } = modelConfig;
+      const { id, name, supportsWorker, ...modelOptions } = modelConfig;
 
       const model = transformersJS(modelConfig.id, {
         ...modelOptions,
-        worker: new Worker(new URL("./util/worker.ts", import.meta.url), {
-          type: "module",
-        }),
+        worker: supportsWorker
+          ? new Worker(new URL("./util/worker.ts", import.meta.url), {
+            type: "module",
+          })
+          : undefined,
       });
       return new TransformersChatTransport(model); // Client side chat transport
     }
