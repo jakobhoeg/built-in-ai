@@ -6,7 +6,6 @@ export type {
   ParsedResponse,
 } from "./types";
 
-export { buildJsonToolSystemPrompt } from "./build-json-system-prompt";
 export {
   parseJsonFunctionCalls,
   hasJsonFunctionCalls,

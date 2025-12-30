@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { parseJsonFunctionCalls } from "../src/tool-calling/parse-json-function-calls";
-import { buildJsonToolSystemPrompt } from "../src/tool-calling/build-json-system-prompt";
 import { extractSystemPrompt } from "../src/utils/prompt-utils";
 import type { ToolDefinition } from "../src/tool-calling/types";
 
@@ -128,119 +127,6 @@ Done!`;
       array: [1, "two", true],
       null: null,
     });
-  });
-});
-
-describe("buildJsonToolSystemPrompt", () => {
-  it("returns empty string with no tools or prompt", () => {
-    expect(buildJsonToolSystemPrompt(undefined, [])).toBe("");
-  });
-
-  it("returns original prompt when no tools", () => {
-    const prompt = "You are helpful.";
-    expect(buildJsonToolSystemPrompt(prompt, [])).toBe(prompt);
-  });
-
-  it("generates tool instructions with single tool", () => {
-    const tools: ToolDefinition[] = [
-      {
-        name: "get_weather",
-        description: "Get weather info",
-        parameters: {
-          type: "object",
-          properties: { city: { type: "string" } },
-        },
-      },
-    ];
-
-    const result = buildJsonToolSystemPrompt(undefined, tools);
-    expect(result).toContain("get_weather");
-    expect(result).toContain("Get weather info");
-    expect(result).toContain("Available Tools");
-    expect(result).toContain("```tool_call");
-    expect(result).toContain("Only request one tool call at a time");
-  });
-
-  it("includes all tools in prompt", () => {
-    const tools: ToolDefinition[] = [
-      {
-        name: "search",
-        description: "Search",
-        parameters: { type: "object", properties: {} },
-      },
-      {
-        name: "calculate",
-        description: "Calculate",
-        parameters: { type: "object", properties: {} },
-      },
-    ];
-
-    const result = buildJsonToolSystemPrompt(undefined, tools);
-    expect(result).toContain("search");
-    expect(result).toContain("calculate");
-  });
-
-  it("formats tools as valid JSON", () => {
-    const tools: ToolDefinition[] = [
-      {
-        name: "tool1",
-        description: "First",
-        parameters: { type: "object", properties: {} },
-      },
-    ];
-
-    const result = buildJsonToolSystemPrompt(undefined, tools);
-    const jsonMatch = result.match(/\[\s*{[\s\S]*}\s*\]/);
-    expect(jsonMatch).toBeTruthy();
-    const parsed = JSON.parse(jsonMatch![0]);
-    expect(parsed[0].name).toBe("tool1");
-  });
-
-  it("uses default description when missing", () => {
-    const tools: ToolDefinition[] = [
-      {
-        name: "test",
-        description: undefined as any,
-        parameters: { type: "object", properties: {} },
-      },
-    ];
-
-    const result = buildJsonToolSystemPrompt(undefined, tools);
-    expect(result).toContain("No description provided.");
-  });
-
-  it("appends instructions to existing system prompt", () => {
-    const prompt = "You are helpful.";
-    const tools: ToolDefinition[] = [
-      {
-        name: "test",
-        description: "Test",
-        parameters: { type: "object", properties: {} },
-      },
-    ];
-
-    const result = buildJsonToolSystemPrompt(prompt, tools);
-    expect(result).toContain("You are helpful.");
-    expect(result).toContain("Available Tools");
-    expect(result.indexOf("You are helpful.")).toBeLessThan(
-      result.indexOf("Available Tools"),
-    );
-  });
-
-  it("includes tool calling format and instructions", () => {
-    const tools: ToolDefinition[] = [
-      {
-        name: "test",
-        description: "Test",
-        parameters: { type: "object", properties: {} },
-      },
-    ];
-
-    const result = buildJsonToolSystemPrompt(undefined, tools);
-    expect(result).toContain('"name": "tool_name"');
-    expect(result).toContain('"arguments"');
-    expect(result).toContain("```tool_result");
-    expect(result).toContain("Use exact tool and parameter names");
   });
 });
 

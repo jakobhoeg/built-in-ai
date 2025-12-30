@@ -10,19 +10,11 @@ import {
   type ProgressInfo,
 } from "@huggingface/transformers";
 import { decodeGeneratedText } from "./decode-utils";
-import {
-  buildJsonToolSystemPrompt,
-  parseJsonFunctionCalls,
-} from "../tool-calling";
-import {
-  prependSystemPromptToMessages,
-  extractSystemPrompt,
-} from "../utils/prompt-utils";
+import { parseJsonFunctionCalls } from "../tool-calling";
+import { convertToolsToHuggingFaceFormat } from "./convert-tools";
 import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
-
 import type {
   WorkerMessage,
-  WorkerResponse,
   WorkerGlobalScope,
   ModelInstance,
   WorkerLoadOptions,
@@ -153,23 +145,12 @@ export class TransformersJSWorkerHandler {
     const [processor, model] = modelInstance;
     const isVision = this.isVisionModel;
 
-    // Extract system prompt from messages and build combined prompt with tool calling
-    const {
-      systemPrompt: originalSystemPrompt,
-      messages: messagesWithoutSystem,
-    } = extractSystemPrompt(messages);
-
-    const systemPrompt =
+    const hfTools =
       tools && tools.length > 0
-        ? buildJsonToolSystemPrompt(originalSystemPrompt, tools, {
-            allowParallelToolCalls: false,
-          })
-        : originalSystemPrompt || "";
+        ? convertToolsToHuggingFaceFormat(tools)
+        : undefined;
 
-    // Prepend system prompt to messages if not empty
-    const processedMessages = systemPrompt
-      ? prependSystemPromptToMessages(messagesWithoutSystem, systemPrompt)
-      : messagesWithoutSystem;
+    const processedMessages = messages;
 
     // Prepare inputs based on model type
     let inputs: any;
@@ -191,12 +172,14 @@ export class TransformersJSWorkerHandler {
       );
       const text = processor.apply_chat_template(lastMessages as any, {
         add_generation_prompt: true,
+        ...(hfTools ? { tools: hfTools } : {}),
       });
       inputs = await processor(text, images);
     } else {
       inputs = processor.apply_chat_template(processedMessages as any, {
         add_generation_prompt: true,
         return_dict: true,
+        ...(hfTools ? { tools: hfTools } : {}),
       });
     }
 
@@ -214,7 +197,6 @@ export class TransformersJSWorkerHandler {
     const output_callback = (output: string) => {
       accumulatedText += output;
 
-      // Check for tool calls if tools are available
       if (tools && tools.length > 0 && !toolCallDetected) {
         fenceDetector.addChunk(output);
         const result = fenceDetector.detectStreamingFence();
@@ -224,7 +206,6 @@ export class TransformersJSWorkerHandler {
           const { toolCalls } = parseJsonFunctionCalls(result.completeFence);
           if (toolCalls.length > 0) {
             toolCallDetected = true;
-            // Stop generation after tool call
             this.stopping_criteria.interrupt();
           }
         }
@@ -265,7 +246,7 @@ export class TransformersJSWorkerHandler {
 
     const generationOptions = {
       ...defaultOptions,
-      ...userGenerationOptions, // User options override defaults
+      ...userGenerationOptions,
       streamer,
       stopping_criteria: stoppingCriteriaList,
       return_dict_in_generate: true,
@@ -305,7 +286,6 @@ export class TransformersJSWorkerHandler {
 
       this.isVisionModel = options?.isVisionModel || false;
 
-      // Set default model if none provided
       const modelId =
         options?.modelId ||
         (this.isVisionModel
