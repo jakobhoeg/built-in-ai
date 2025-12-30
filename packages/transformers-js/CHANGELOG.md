@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 1.1.0
+
+### Minor Changes
+
+- 6cafaeb: fix(@built-in-ai/transformers-js): use native @huggingface/transformers tool calling
+
 ## 1.0.0
 
 ### Major Changes
