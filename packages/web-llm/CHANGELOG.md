@@ -1,5 +1,11 @@
 # @built-in-ai/web-llm
 
+## 1.0.1
+
+### Patch Changes
+
+- f98286d: fix: WebGPU check on mobile devices when using a web worker
+
 ## 1.0.0
 
 ### Major Changes
