@@ -69,14 +69,27 @@ export interface WebLLMSettings {
   worker?: Worker;
 }
 
+function isMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+}
+
+function checkWebGPU(): boolean {
+  try {
+    return !!globalThis?.navigator?.gpu;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Quick check if the browser might support WebLLM by checking for navigator.gpu.
- * Note: This only checks if navigator.gpu exists. For accurate mobile detection,
- * use the async `availability()` method on the model which performs a full adapter check.
- * @returns true if navigator.gpu exists, false otherwise
+ * Check if the browser supports WebGPU (required for WebLLM).
+ * @returns boolean - true if WebGPU API is available
  */
 export function doesBrowserSupportWebLLM(): boolean {
-  return globalThis?.navigator?.gpu !== undefined;
+  return checkWebGPU();
 }
 
 function extractToolName(content: string): string | null {
@@ -518,36 +531,24 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
   }
 
   /**
-   * Check the availability of the WebLLM model.
-   * The actual WebGPU availability will be determined when the engine initializes in the worker.
-   * @returns Promise resolving to "unavailable", "available", or "downloadable"
-   */
+ * Check the availability of the WebLLM model.
+ * Note: On mobile devices with a worker, WebGPU detection is skipped since it
+ * can't be done reliably. The actual availability will be determined at init.
+ * @returns Promise resolving to "unavailable", "available", or "downloadable"
+ */
   public async availability(): Promise<Availability> {
     if (this.isInitialized) {
       return "available";
     }
 
-    // Let the worker initialization handle the actual GPU detection.
-    if (this.config.options.worker) {
+    // Skip on mobile if using a worker, since detecting GPU is unreliable.
+    // Let worker initialization handle it and return an error if unavailable.
+    if (this.config.options.worker && isMobile()) {
       return "downloadable";
     }
 
-    try {
-      const gpu = navigator.gpu;
-      if (!gpu) {
-        console.log('No gpu')
-        return "unavailable";
-      }
-      const adapter = await gpu.requestAdapter();
-      if (!adapter) {
-        console.log('No adapter')
-        return "unavailable";
-      }
-    } catch {
-      return "unavailable";
-    }
-
-    return "downloadable";
+    const supported = checkWebGPU();
+    return supported ? "downloadable" : "unavailable";
   }
 
   /**
