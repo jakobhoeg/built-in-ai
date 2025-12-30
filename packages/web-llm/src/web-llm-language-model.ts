@@ -72,7 +72,7 @@ export interface WebLLMSettings {
 function isMobile(): boolean {
   if (typeof navigator === "undefined") return false;
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
+    navigator.userAgent,
   );
 }
 
@@ -520,7 +520,8 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
       };
     } catch (error) {
       throw new Error(
-        `WebLLM generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `WebLLM generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     } finally {
@@ -531,11 +532,11 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
   }
 
   /**
- * Check the availability of the WebLLM model.
- * Note: On mobile devices with a worker, WebGPU detection is skipped since it
- * can't be done reliably. The actual availability will be determined at init.
- * @returns Promise resolving to "unavailable", "available", or "downloadable"
- */
+   * Check the availability of the WebLLM model.
+   * Note: On mobile devices with a worker, WebGPU detection is skipped since it
+   * can't be done reliably. The actual availability will be determined at init.
+   * @returns Promise resolving to "unavailable", "available", or "downloadable"
+   */
   public async availability(): Promise<Availability> {
     if (this.isInitialized) {
       return "available";
