@@ -14,6 +14,7 @@ Creates a browser AI model instance for chat.
 - `settings` (optional): Configuration options
   - `temperature?: number` - Controls randomness (0-1)
   - `topK?: number` - Limits vocabulary selection
+  - `onQuotaOverflow?: (event: Event) => void` - Callback for when model quota is exceeded
 
 **Returns:** `BuiltInAIChatLanguageModel`
 
