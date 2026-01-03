@@ -1,7 +1,12 @@
 export {
+  // Standalone utility functions
+  doesBrowserSupportBuiltInAI,
+  checkBuiltInAIAvailability,
+  // SessionManager class and errors
   SessionManager,
   PromptAPINotAvailableError,
   ModelUnavailableError,
+  // Types
   type SessionCreateOptions,
   type ProgressCallback,
 } from "./session-manager";

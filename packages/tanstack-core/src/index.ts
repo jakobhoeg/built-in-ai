@@ -48,11 +48,17 @@ export {
 // ===========================
 
 export {
+  // Standalone utility functions
+  doesBrowserSupportBuiltInAI,
+  checkBuiltInAIAvailability,
+  // SessionManager class and errors
   SessionManager,
   PromptAPINotAvailableError,
   ModelUnavailableError,
+  // Utility functions
   generateId,
   convertMessagesAsync,
+  // Types
   type SessionCreateOptions,
   type ProgressCallback,
   type ConvertedMessages,

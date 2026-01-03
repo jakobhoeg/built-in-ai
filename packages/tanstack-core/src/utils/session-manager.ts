@@ -9,6 +9,59 @@
  */
 export type ProgressCallback = (progress: number) => void;
 
+// ===========================
+// Standalone Utility Functions
+// ===========================
+
+/**
+ * Check if the browser supports the built-in AI Prompt API
+ *
+ * This is a synchronous check that only verifies the API exists,
+ * not whether a model is available for use.
+ */
+export function doesBrowserSupportBuiltInAI(): boolean {
+  return typeof LanguageModel !== "undefined";
+}
+
+/**
+ * Check the availability status of the built-in AI model
+ *
+ * This is a standalone function that doesn't require a SessionManager instance.
+ * Use this for quick availability checks before initializing the full AI system.
+ *
+ * @returns Promise resolving to availability status:
+ *   - "unavailable": Browser doesn't support the API or model is not supported
+ *   - "downloadable": Model needs to be downloaded before use
+ *   - "downloading": Model is currently being downloaded
+ *   - "available": Model is ready to use
+ *
+ * @example
+ * ```typescript
+ * const status = await checkBuiltInAIAvailability();
+ * switch (status) {
+ *   case "available":
+ *     console.log("Ready to use!");
+ *     break;
+ *   case "downloadable":
+ *     console.log("Model needs downloading first");
+ *     break;
+ *   case "unavailable":
+ *     console.log("Not supported in this browser");
+ *     break;
+ * }
+ * ```
+ */
+export async function checkBuiltInAIAvailability(): Promise<Availability> {
+  if (!doesBrowserSupportBuiltInAI()) {
+    return "unavailable";
+  }
+  return LanguageModel.availability();
+}
+
+// ===========================
+// SessionManager
+// ===========================
+
 /**
  * Options for creating a new session
  */
@@ -24,7 +77,7 @@ export class PromptAPINotAvailableError extends Error {
   constructor(message?: string) {
     super(
       message ??
-        "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
+      "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
     );
     this.name = "PromptAPINotAvailableError";
   }
