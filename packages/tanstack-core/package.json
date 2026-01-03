@@ -1,0 +1,68 @@
+{
+  "name": "@built-in-ai/tanstack-core",
+  "version": "0.0.1",
+  "description": "Browser Built-in AI (Prompt API) adapter for TanStack AI SDK",
+  "author": {
+    "name": "Jakob Hoeg Mørk",
+    "url": "https://jakobhoeg.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakobhoeg/built-in-ai.git",
+    "directory": "packages/tanstack-core"
+  },
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "npm run clean && tsup",
+    "build:prod": "tsup",
+    "build:test": "npm run test:run && tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run"
+  },
+  "keywords": [
+    "ai",
+    "tanstack",
+    "browser-ai",
+    "built-in-ai",
+    "chrome",
+    "edge",
+    "prompt-api",
+    "language-model",
+    "adapter"
+  ],
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@tanstack/ai": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tanstack/ai": "^0.2.0",
+    "@types/dom-chromium-ai": "^0.0.10",
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "jsdom": "^26.1.0",
+    "rimraf": "^5.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "zod": "^3.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
