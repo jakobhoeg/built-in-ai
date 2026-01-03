@@ -2,17 +2,27 @@ import { BaseTextAdapter } from '@tanstack/ai/adapters'
 
 import {
   SessionManager,
-  convertMessages,
+  convertMessagesAsync,
   generateId,
   type SessionCreateOptions,
 } from '../utils'
 import type { BuiltInAIMessageMetadataByModality } from '../message-types'
+import {
+  buildJsonToolSystemPrompt,
+  parseJsonFunctionCalls,
+} from '../tool-calling'
+import { ToolCallFenceDetector } from '../streaming'
 
 import type {
   StructuredOutputOptions,
   StructuredOutputResult,
 } from '@tanstack/ai/adapters'
-import type { StreamChunk, TextOptions } from '@tanstack/ai'
+import type {
+  StreamChunk,
+  TextOptions,
+  Tool,
+  ConstrainedModelMessage,
+} from '@tanstack/ai'
 
 /**
  * Built-in AI provider-specific options
@@ -33,31 +43,33 @@ export interface BuiltInAITextAdapterOptions {
 }
 
 /**
- * Default input modalities for Built-in AI
- * Currently text-only, structured for future multimodal support
+ * Input modalities supported by Built-in AI
+ * Text is supported via the Prompt API
  */
-type BuiltInAIInputModalities = readonly ['text']
+export type BuiltInAIInputModalities = readonly ['text']
+
+/**
+ * Properly typed message for use with BuiltInAITextAdapter and chat().
+ *
+ * This type ensures messages are constrained to the input modalities
+ * (text and image) and metadata types that the Built-in AI adapter supports.
+ *
+ */
+export type BuiltInAIModelMessage = ConstrainedModelMessage<{
+  inputModalities: BuiltInAIInputModalities
+  messageMetadataByModality: BuiltInAIMessageMetadataByModality
+}>
 
 /**
  * Built-in AI Text/Chat Adapter for TanStack AI SDK
  *
  * Connects TanStack AI SDK to Chrome/Edge's built-in Prompt API (LanguageModel).
+ * Supports:
+ * - Text inputs
+ * - Tool calling via JSON code fences
+ * - Structured output
+ * - Streaming responses
  *
- * @example
- * ```typescript
- * import { builtInAIText } from '@built-in-ai/tanstack-core'
- *
- * const adapter = builtInAIText()
- *
- * for await (const chunk of adapter.chatStream({
- *   model: 'text',
- *   messages: [{ role: 'user', content: 'Hello!' }],
- * })) {
- *   if (chunk.type === 'content') {
- *     console.log(chunk.delta)
- *   }
- * }
- * ```
  */
 export class BuiltInAITextAdapter<
   TModel extends string = 'text',
@@ -80,8 +92,8 @@ export class BuiltInAITextAdapter<
   /**
    * Streams chat responses from the browser's built-in AI model
    *
-   * @param options - Text generation options including messages, temperature, etc.
-   * @yields StreamChunk objects for content, done, and error events
+   * @param options - Text generation options including messages, temperature, tools, etc.
+   * @yields StreamChunk objects for content, tool_call, done, and error events
    */
   async *chatStream(
     options: TextOptions<BuiltInAIProviderOptions>
@@ -90,18 +102,22 @@ export class BuiltInAITextAdapter<
     const responseId = generateId('msg')
 
     try {
-      // Convert messages to Prompt API format
-      const { systemMessage, messages } = convertMessages(
+      const { systemMessage, messages } = await convertMessagesAsync(
         options.messages,
         options.systemPrompts
       )
 
-      // Get or create session
+      // Build system prompt with tools if provided
+      let enhancedSystemMessage = systemMessage
+      const tools = options.tools as Tool[] | undefined
+      if (tools && tools.length > 0) {
+        enhancedSystemMessage = buildJsonToolSystemPrompt(systemMessage, tools)
+      }
+
       const session = await this.sessionManager.getSession({
-        systemMessage,
+        systemMessage: enhancedSystemMessage,
       })
 
-      // Prepare prompt options (intersection for temperature/topK)
       const promptOptions: LanguageModelPromptOptions &
         LanguageModelCreateCoreOptions = {}
       const modelOptions = options.modelOptions as
@@ -130,6 +146,8 @@ export class BuiltInAITextAdapter<
 
       let accumulatedContent = ''
       let aborted = false
+      const hasTools = tools && tools.length > 0
+      const fenceDetector = hasTools ? new ToolCallFenceDetector() : null
 
       // Set up abort handler to cancel the reader
       const abortHandler = () => {
@@ -149,12 +167,61 @@ export class BuiltInAITextAdapter<
             break
           }
 
-          // value is a delta (new text chunk), not accumulated text
-          // Accumulate it for the full content
           const delta = value
           accumulatedContent += delta
 
-          if (delta) {
+          // If we have tools, use fence detector for streaming
+          if (fenceDetector && delta) {
+            fenceDetector.addChunk(delta)
+
+            while (true) {
+              const result = fenceDetector.detectStreamingFence()
+
+              if (result.safeContent && !result.inFence) {
+                yield {
+                  type: 'content',
+                  id: responseId,
+                  model: options.model,
+                  timestamp,
+                  delta: result.safeContent,
+                  content: accumulatedContent,
+                  role: 'assistant',
+                } as StreamChunk
+              }
+
+              // If we found a complete fence, parse and emit tool calls
+              if (result.completeFence) {
+                const parsed = parseJsonFunctionCalls(result.completeFence)
+
+                for (let i = 0; i < parsed.toolCalls.length; i++) {
+                  const toolCall = parsed.toolCalls[i]
+                  yield {
+                    type: 'tool_call',
+                    id: responseId,
+                    model: options.model,
+                    timestamp,
+                    toolCall: {
+                      type: 'function',
+                      id: toolCall.toolCallId,
+                      function: {
+                        name: toolCall.toolName,
+                        arguments: JSON.stringify(toolCall.args),
+                      },
+                    },
+                    index: i,
+                  } as StreamChunk
+                }
+              }
+
+              if (!result.inFence && !result.safeContent) {
+                break
+              }
+
+              if (!fenceDetector.hasContent()) {
+                break
+              }
+            }
+          } else if (delta) {
             yield {
               type: 'content',
               id: responseId,
@@ -167,17 +234,58 @@ export class BuiltInAITextAdapter<
           }
         }
 
+        // After stream ends, check for any remaining buffered content
+        if (fenceDetector && fenceDetector.hasContent()) {
+          const finalResult = fenceDetector.detectFence()
+
+          if (finalResult.prefixText) {
+            yield {
+              type: 'content',
+              id: responseId,
+              model: options.model,
+              timestamp,
+              delta: finalResult.prefixText,
+              content: accumulatedContent,
+              role: 'assistant',
+            } as StreamChunk
+          }
+
+          if (finalResult.fence) {
+            const parsed = parseJsonFunctionCalls(finalResult.fence)
+            for (let i = 0; i < parsed.toolCalls.length; i++) {
+              const toolCall = parsed.toolCalls[i]
+              yield {
+                type: 'tool_call',
+                id: responseId,
+                model: options.model,
+                timestamp,
+                toolCall: {
+                  type: 'function',
+                  id: toolCall.toolCallId,
+                  function: {
+                    name: toolCall.toolName,
+                    arguments: JSON.stringify(toolCall.args),
+                  },
+                },
+                index: i,
+              } as StreamChunk
+            }
+          }
+        }
+
+        const fullParsed = parseJsonFunctionCalls(accumulatedContent)
+        const hasToolCalls = fullParsed.toolCalls.length > 0
+
         if (!aborted) {
           yield {
             type: 'done',
             id: responseId,
             model: options.model,
             timestamp,
-            finishReason: 'stop',
+            finishReason: hasToolCalls ? 'tool_calls' : 'stop',
           } as StreamChunk
         }
       } finally {
-        // Clean up abort handler
         if (abortSignal) {
           abortSignal.removeEventListener('abort', abortHandler)
         }
@@ -214,7 +322,7 @@ export class BuiltInAITextAdapter<
     const { chatOptions, outputSchema } = options
 
     // Convert messages
-    const { systemMessage, messages } = convertMessages(
+    const { systemMessage, messages } = await convertMessagesAsync(
       chatOptions.messages,
       chatOptions.systemPrompts
     )
@@ -296,7 +404,7 @@ export class BuiltInAITextAdapter<
  * })
  * ```
  */
-export function builtInAIText<TModel extends string = 'text'>(
+export function builtInAI<TModel extends string = 'text'>(
   model: TModel = 'text' as TModel,
   options?: BuiltInAITextAdapterOptions
 ): BuiltInAITextAdapter<TModel> {
@@ -306,4 +414,4 @@ export function builtInAIText<TModel extends string = 'text'>(
 /**
  * Creates a Built-in AI chat adapter (alias for builtInAIText)
  */
-export const createBuiltInAIChat = builtInAIText
+export const createBuiltInAIChat = builtInAI

@@ -6,7 +6,10 @@ export {
   type ProgressCallback,
 } from './session-manager'
 
-export { convertMessages, type ConvertedMessages } from './message-converter'
+export {
+  convertMessagesAsync,
+  type ConvertedMessages,
+} from './message-converter'
 
 /**
  * Generates a unique ID for stream chunks

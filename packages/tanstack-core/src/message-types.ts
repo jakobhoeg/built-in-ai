@@ -1,53 +1,9 @@
 /**
- * Built-in AI (Prompt API) specific metadata types for multimodal content parts.
- * Currently text-only, but structured for future multimodal support.
+ * Built-in AI (Prompt API) specific metadata types for content parts.
+ * This package supports text-only via the browser's Prompt API.
  *
  * @see https://developer.chrome.com/docs/ai/built-in
  */
-
-/**
- * Metadata for image content parts.
- * Placeholder for future image support in the Prompt API.
- */
-export interface BuiltInAIImageMetadata {
-  /**
-   * Optional format hint for the image.
-   */
-  format?: 'jpeg' | 'png' | 'gif' | 'webp'
-}
-
-/**
- * Metadata for audio content parts.
- * Placeholder for future audio support.
- */
-export interface BuiltInAIAudioMetadata {
-  /**
-   * The format of the audio.
-   */
-  format?: 'wav' | 'mp3' | 'ogg'
-}
-
-/**
- * Metadata for video content parts.
- * Placeholder for future video support.
- */
-export interface BuiltInAIVideoMetadata {
-  /**
-   * The format of the video.
-   */
-  format?: 'mp4' | 'webm'
-}
-
-/**
- * Metadata for document content parts.
- * Placeholder for future document support.
- */
-export interface BuiltInAIDocumentMetadata {
-  /**
-   * The MIME type of the document.
-   */
-  mediaType?: 'application/pdf'
-}
 
 /**
  * Metadata for text content parts.
@@ -57,8 +13,40 @@ export interface BuiltInAITextMetadata {
 }
 
 /**
+ * Placeholder metadata for image content parts.
+ * Included for type compatibility with TanStack AI SDK.
+ */
+export interface BuiltInAIImageMetadata {
+  // Not implemented yet.
+}
+
+/**
+ * Placeholder metadata for audio content parts.
+ * Included for type compatibility with TanStack AI SDK.
+ */
+export interface BuiltInAIAudioMetadata {
+  // Not implemented yet.
+}
+
+/**
+ * Placeholder metadata for video content parts (not supported).
+ * Included for type compatibility with TanStack AI SDK.
+ */
+export interface BuiltInAIVideoMetadata {
+  // Not supported 
+}
+
+/**
+ * Placeholder metadata for document content parts (not supported).
+ * Included for type compatibility with TanStack AI SDK.
+ */
+export interface BuiltInAIDocumentMetadata {
+  // Not supported
+}
+
+/**
  * Map of modality types to their Built-in AI specific metadata types.
- * Used for type inference when constructing multimodal messages.
+ * Used for type inference when constructing messages.
  */
 export interface BuiltInAIMessageMetadataByModality {
   text: BuiltInAITextMetadata

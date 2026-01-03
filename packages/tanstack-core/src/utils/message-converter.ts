@@ -1,5 +1,6 @@
 /**
  * Message converter for TanStack AI SDK to Browser Prompt API format
+ * Supports text and tool-related message content
  */
 
 import type { TextOptions } from '@tanstack/ai'
@@ -12,18 +13,29 @@ interface TextContentPart {
   content: string
 }
 
-interface ImageContentPart {
-  type: 'image'
-  source: {
-    type: 'data' | 'url'
-    value: string
-  }
+interface ToolCallPart {
+  type: 'tool-call'
+  toolCallId: string
+  toolName: string
+  args: Record<string, unknown>
 }
 
-type ContentPart = TextContentPart | ImageContentPart | { type: string }
+interface ToolResultPart {
+  type: 'tool-result'
+  toolCallId: string
+  toolName: string
+  result: unknown
+  isError?: boolean
+}
+
+type ContentPart =
+  | TextContentPart
+  | ToolCallPart
+  | ToolResultPart
+  | { type: string }
 
 /**
- * TanStack AI message type (simplified)
+ * TanStack AI message type
  */
 interface TanStackMessage {
   role: 'user' | 'assistant' | 'tool'
@@ -48,16 +60,16 @@ export interface ConvertedMessages {
 }
 
 /**
- * Converts TanStack AI SDK messages to Browser Prompt API format
+ * Async version of convertMessages
  *
  * @param messages - TanStack AI SDK messages
  * @param systemPrompts - Optional system prompts from TextOptions
  * @returns Converted messages in LanguageModelMessage format
  */
-export function convertMessages(
+export async function convertMessagesAsync(
   messages: TextOptions['messages'],
   systemPrompts?: Array<string>
-): ConvertedMessages {
+): Promise<ConvertedMessages> {
   let systemMessage: string | undefined
 
   // Combine system prompts if provided
@@ -79,25 +91,48 @@ export function convertMessages(
       }
 
       case 'assistant': {
-        // For assistant messages, convert to string
-        const textContent = extractTextContent(msg.content)
-        convertedMessages.push({
-          role: 'assistant',
-          content: textContent,
-        } as LanguageModelMessage)
+        if (msg.toolCalls && msg.toolCalls.length > 0) {
+          const textContent = extractTextContent(msg.content)
+          const toolCallsText = msg.toolCalls
+            .map((tc) => {
+              return `\`\`\`tool_call\n${JSON.stringify({ name: tc.function.name, arguments: JSON.parse(tc.function.arguments) })}\n\`\`\``
+            })
+            .join('\n\n')
+
+          const combinedContent = textContent
+            ? `${textContent}\n\n${toolCallsText}`
+            : toolCallsText
+
+          convertedMessages.push({
+            role: 'assistant',
+            content: combinedContent,
+          } as LanguageModelMessage)
+        } else {
+          const textContent = extractTextContent(msg.content)
+          convertedMessages.push({
+            role: 'assistant',
+            content: textContent,
+          } as LanguageModelMessage)
+        }
         break
       }
 
       case 'tool': {
-        // Tool results are sent as user messages with the result content
         const resultContent =
           typeof msg.content === 'string'
             ? msg.content
             : JSON.stringify(msg.content)
 
+        const formattedResult = `\`\`\`tool_result\n${JSON.stringify({
+          id: msg.toolCallId,
+          name: 'tool',
+          result: JSON.parse(resultContent),
+          error: false,
+        })}\n\`\`\``
+
         convertedMessages.push({
           role: 'user',
-          content: `Tool result: ${resultContent}`,
+          content: formattedResult,
         } as LanguageModelMessage)
         break
       }
@@ -108,11 +143,9 @@ export function convertMessages(
 }
 
 /**
- * Converts TanStack content to LanguageModelMessage content format
+ * Converts content to string format for Prompt API
  */
-function convertContent(
-  content: string | null | Array<ContentPart>
-): string | LanguageModelMessageContent[] {
+function convertContent(content: string | null | Array<ContentPart>): string {
   if (content === null) {
     return ''
   }
@@ -121,31 +154,19 @@ function convertContent(
     return content
   }
 
-  // Array of content parts
-  const parts: LanguageModelMessageContent[] = []
-
-  for (const part of content) {
-    if (part.type === 'text') {
-      parts.push({
-        type: 'text',
-        value: (part as TextContentPart).content,
-      } as LanguageModelMessageContent)
-    }
-    // Skip unsupported content types for now
-  }
-
-  // If only one text part, return as string for simplicity
-  if (parts.length === 1 && parts[0].type === 'text') {
-    return (parts[0] as { type: 'text'; value: string }).value
-  }
-
-  return parts
+  // Extract text from content parts (ignore non-text parts)
+  return content
+    .filter((part): part is TextContentPart => part.type === 'text')
+    .map((part) => part.content)
+    .join('')
 }
 
 /**
  * Extracts text content from message content
  */
-function extractTextContent(content: string | null | Array<ContentPart>): string {
+function extractTextContent(
+  content: string | null | Array<ContentPart>
+): string {
   if (content === null) {
     return ''
   }
