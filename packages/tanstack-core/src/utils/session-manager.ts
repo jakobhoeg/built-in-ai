@@ -77,7 +77,7 @@ export class PromptAPINotAvailableError extends Error {
   constructor(message?: string) {
     super(
       message ??
-      "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
+        "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
     );
     this.name = "PromptAPINotAvailableError";
   }
