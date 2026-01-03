@@ -213,7 +213,7 @@ export default function Chat() {
             <div className="flex h-full flex-col items-center justify-center text-center">
               <p className="text-xs">@built-in-ai/core demo</p>
               <h1 className="text-lg font-medium">
-                Using your browser's built-in AI model
+                Vercel AI SDK + Built-in AI models (Chrome/Edge)
               </h1>
               <p className="text-sm max-w-xs">
                 Your browser supports built-in AI models

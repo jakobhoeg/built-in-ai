@@ -183,7 +183,7 @@ function TransformersJSChat({
             <>
               <p className="text-xs">@built-in-ai/transformers-js demo</p>
               <h1 className="text-lg font-medium">
-                Using Transformers.js client-side
+                Vercel AI SDK + Transformers.js client-side
               </h1>
               <p className="text-sm max-w-xs">
                 Switch model at the bottom of this page
@@ -193,7 +193,7 @@ function TransformersJSChat({
             <>
               <p className="text-xs">@built-in-ai/transformers-js demo</p>
               <h1 className="text-lg font-medium">
-                Using server-side TransformersJS
+                Vercel AI SDK + Transformers.js server-side
               </h1>
               <p className="text-sm max-w-xs">
                 Your device doesn&apos;t support client side inference
