@@ -10,44 +10,44 @@
  * Result of fence detection operation
  */
 export interface FenceDetectionResult {
-  fence: string | null
-  prefixText: string
-  remainingText: string
-  overlapLength: number
+  fence: string | null;
+  prefixText: string;
+  remainingText: string;
+  overlapLength: number;
 }
 
 /**
  * Result of streaming fence content detection
  */
 export interface StreamingFenceResult {
-  inFence: boolean
-  safeContent: string
-  completeFence: string | null
-  textAfterFence: string
+  inFence: boolean;
+  safeContent: string;
+  completeFence: string | null;
+  textAfterFence: string;
 }
 
 /**
  * Detects tool call fences in streaming text with support for partial matches
  */
 export class ToolCallFenceDetector {
-  private readonly FENCE_STARTS = ['```tool_call']
-  private readonly FENCE_END = '```'
-  private buffer = ''
+  private readonly FENCE_STARTS = ["```tool_call"];
+  private readonly FENCE_END = "```";
+  private buffer = "";
 
   // Streaming state
-  private inFence = false
-  private fenceStartBuffer = ''
+  private inFence = false;
+  private fenceStartBuffer = "";
 
   addChunk(chunk: string): void {
-    this.buffer += chunk
+    this.buffer += chunk;
   }
 
   getBuffer(): string {
-    return this.buffer
+    return this.buffer;
   }
 
   clearBuffer(): void {
-    this.buffer = ''
+    this.buffer = "";
   }
 
   /**
@@ -63,34 +63,34 @@ export class ToolCallFenceDetector {
    */
   detectFence(): FenceDetectionResult {
     const { index: startIdx, prefix: matchedPrefix } = this.findFenceStart(
-      this.buffer
-    )
+      this.buffer,
+    );
 
     // No fence start found
     if (startIdx === -1) {
       // Compute how much of the buffer end might be a partial fence start
-      const overlap = this.computeOverlapLength(this.buffer, this.FENCE_STARTS)
-      const safeTextLength = this.buffer.length - overlap
+      const overlap = this.computeOverlapLength(this.buffer, this.FENCE_STARTS);
+      const safeTextLength = this.buffer.length - overlap;
 
       const prefixText =
-        safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : ''
-      const remaining = overlap > 0 ? this.buffer.slice(-overlap) : ''
+        safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : "";
+      const remaining = overlap > 0 ? this.buffer.slice(-overlap) : "";
 
-      this.buffer = remaining
+      this.buffer = remaining;
 
       return {
         fence: null,
         prefixText,
-        remainingText: '',
+        remainingText: "",
         overlapLength: overlap,
-      }
+      };
     }
 
-    const prefixText = this.buffer.slice(0, startIdx)
-    this.buffer = this.buffer.slice(startIdx)
+    const prefixText = this.buffer.slice(0, startIdx);
+    this.buffer = this.buffer.slice(startIdx);
 
-    const prefixLength = matchedPrefix?.length ?? 0
-    const closingIdx = this.buffer.indexOf(this.FENCE_END, prefixLength)
+    const prefixLength = matchedPrefix?.length ?? 0;
+    const closingIdx = this.buffer.indexOf(this.FENCE_END, prefixLength);
 
     // Fence not complete yet
     if (closingIdx === -1) {
@@ -98,24 +98,24 @@ export class ToolCallFenceDetector {
       return {
         fence: null,
         prefixText,
-        remainingText: '',
+        remainingText: "",
         overlapLength: 0,
-      }
+      };
     }
 
     // Complete fence found
-    const endPos = closingIdx + this.FENCE_END.length
-    const fence = this.buffer.slice(0, endPos)
-    const remainingText = this.buffer.slice(endPos)
+    const endPos = closingIdx + this.FENCE_END.length;
+    const fence = this.buffer.slice(0, endPos);
+    const remainingText = this.buffer.slice(endPos);
 
-    this.buffer = ''
+    this.buffer = "";
 
     return {
       fence,
       prefixText,
       remainingText,
       overlapLength: 0,
-    }
+    };
   }
 
   /**
@@ -126,21 +126,21 @@ export class ToolCallFenceDetector {
    * @private
    */
   private findFenceStart(text: string): {
-    index: number
-    prefix: string | null
+    index: number;
+    prefix: string | null;
   } {
-    let bestIndex = -1
-    let matchedPrefix: string | null = null
+    let bestIndex = -1;
+    let matchedPrefix: string | null = null;
 
     for (const prefix of this.FENCE_STARTS) {
-      const idx = text.indexOf(prefix)
+      const idx = text.indexOf(prefix);
       if (idx !== -1 && (bestIndex === -1 || idx < bestIndex)) {
-        bestIndex = idx
-        matchedPrefix = prefix
+        bestIndex = idx;
+        matchedPrefix = prefix;
       }
     }
 
-    return { index: bestIndex, prefix: matchedPrefix }
+    return { index: bestIndex, prefix: matchedPrefix };
   }
 
   /**
@@ -152,28 +152,28 @@ export class ToolCallFenceDetector {
    * @private
    */
   private computeOverlapLength(text: string, prefixes: string[]): number {
-    let overlap = 0
+    let overlap = 0;
 
     for (const prefix of prefixes) {
-      const maxLength = Math.min(text.length, prefix.length - 1)
+      const maxLength = Math.min(text.length, prefix.length - 1);
 
       for (let size = maxLength; size > 0; size -= 1) {
         if (prefix.startsWith(text.slice(-size))) {
-          overlap = Math.max(overlap, size)
-          break
+          overlap = Math.max(overlap, size);
+          break;
         }
       }
     }
 
-    return overlap
+    return overlap;
   }
 
   hasContent(): boolean {
-    return this.buffer.length > 0
+    return this.buffer.length > 0;
   }
 
   getBufferSize(): number {
-    return this.buffer.length
+    return this.buffer.length;
   }
 
   /**
@@ -189,109 +189,110 @@ export class ToolCallFenceDetector {
   detectStreamingFence(): StreamingFenceResult {
     if (!this.inFence) {
       const { index: startIdx, prefix: matchedPrefix } = this.findFenceStart(
-        this.buffer
-      )
+        this.buffer,
+      );
 
       if (startIdx === -1) {
         // No fence start found - emit safe text
         const overlap = this.computeOverlapLength(
           this.buffer,
-          this.FENCE_STARTS
-        )
-        const safeTextLength = this.buffer.length - overlap
+          this.FENCE_STARTS,
+        );
+        const safeTextLength = this.buffer.length - overlap;
         const safeContent =
-          safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : ''
-        this.buffer = this.buffer.slice(safeTextLength)
+          safeTextLength > 0 ? this.buffer.slice(0, safeTextLength) : "";
+        this.buffer = this.buffer.slice(safeTextLength);
 
         return {
           inFence: false,
           safeContent,
           completeFence: null,
-          textAfterFence: '',
-        }
+          textAfterFence: "",
+        };
       }
 
       // Found fence start
-      const prefixText = this.buffer.slice(0, startIdx)
-      const fenceStartLength = matchedPrefix?.length ?? 0
+      const prefixText = this.buffer.slice(0, startIdx);
+      const fenceStartLength = matchedPrefix?.length ?? 0;
 
       // Move buffer past the fence start marker
-      this.buffer = this.buffer.slice(startIdx + fenceStartLength)
+      this.buffer = this.buffer.slice(startIdx + fenceStartLength);
 
       // Skip newline after fence start if present
-      if (this.buffer.startsWith('\n')) {
-        this.buffer = this.buffer.slice(1)
+      if (this.buffer.startsWith("\n")) {
+        this.buffer = this.buffer.slice(1);
       }
 
-      this.inFence = true
-      this.fenceStartBuffer = ''
+      this.inFence = true;
+      this.fenceStartBuffer = "";
 
       return {
         inFence: true,
         safeContent: prefixText,
         completeFence: null,
-        textAfterFence: '',
-      }
+        textAfterFence: "",
+      };
     }
 
     // We're inside a fence - look for fence end
-    const closingIdx = this.buffer.indexOf(this.FENCE_END)
+    const closingIdx = this.buffer.indexOf(this.FENCE_END);
 
     if (closingIdx === -1) {
       // No fence end yet - emit safe content (leaving potential fence end marker)
-      const overlap = this.computeOverlapLength(this.buffer, [this.FENCE_END])
-      const safeContentLength = this.buffer.length - overlap
+      const overlap = this.computeOverlapLength(this.buffer, [this.FENCE_END]);
+      const safeContentLength = this.buffer.length - overlap;
 
       if (safeContentLength > 0) {
-        const safeContent = this.buffer.slice(0, safeContentLength)
-        this.fenceStartBuffer += safeContent
-        this.buffer = this.buffer.slice(safeContentLength)
+        const safeContent = this.buffer.slice(0, safeContentLength);
+        this.fenceStartBuffer += safeContent;
+        this.buffer = this.buffer.slice(safeContentLength);
 
         return {
           inFence: true,
           safeContent,
           completeFence: null,
-          textAfterFence: '',
-        }
+          textAfterFence: "",
+        };
       }
 
       return {
         inFence: true,
-        safeContent: '',
+        safeContent: "",
         completeFence: null,
-        textAfterFence: '',
-      }
+        textAfterFence: "",
+      };
     }
 
     // Found fence end
-    const fenceContent = this.buffer.slice(0, closingIdx)
-    this.fenceStartBuffer += fenceContent
+    const fenceContent = this.buffer.slice(0, closingIdx);
+    this.fenceStartBuffer += fenceContent;
 
     // Reconstruct complete fence
-    const completeFence = `${this.FENCE_STARTS[0]}\n${this.fenceStartBuffer}\n${this.FENCE_END}`
+    const completeFence = `${this.FENCE_STARTS[0]}\n${this.fenceStartBuffer}\n${this.FENCE_END}`;
 
     // Get text after fence
-    const textAfterFence = this.buffer.slice(closingIdx + this.FENCE_END.length)
+    const textAfterFence = this.buffer.slice(
+      closingIdx + this.FENCE_END.length,
+    );
 
-    this.inFence = false
-    this.fenceStartBuffer = ''
-    this.buffer = textAfterFence
+    this.inFence = false;
+    this.fenceStartBuffer = "";
+    this.buffer = textAfterFence;
 
     return {
       inFence: false,
       safeContent: fenceContent,
       completeFence,
       textAfterFence,
-    }
+    };
   }
 
   isInFence(): boolean {
-    return this.inFence
+    return this.inFence;
   }
 
   resetStreamingState(): void {
-    this.inFence = false
-    this.fenceStartBuffer = ''
+    this.inFence = false;
+    this.fenceStartBuffer = "";
   }
 }
-

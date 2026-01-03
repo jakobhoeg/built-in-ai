@@ -1,37 +1,37 @@
-import { BaseTextAdapter } from '@tanstack/ai/adapters'
+import { BaseTextAdapter } from "@tanstack/ai/adapters";
 
 import {
   SessionManager,
   convertMessagesAsync,
   generateId,
   type SessionCreateOptions,
-} from '../utils'
-import type { BuiltInAIMessageMetadataByModality } from '../message-types'
+} from "../utils";
+import type { BuiltInAIMessageMetadataByModality } from "../message-types";
 import {
   buildJsonToolSystemPrompt,
   parseJsonFunctionCalls,
-} from '../tool-calling'
-import { ToolCallFenceDetector } from '../streaming'
+} from "../tool-calling";
+import { ToolCallFenceDetector } from "../streaming";
 
 import type {
   StructuredOutputOptions,
   StructuredOutputResult,
-} from '@tanstack/ai/adapters'
+} from "@tanstack/ai/adapters";
 import type {
   StreamChunk,
   TextOptions,
   Tool,
   ConstrainedModelMessage,
-} from '@tanstack/ai'
+} from "@tanstack/ai";
 
 /**
  * Built-in AI provider-specific options
  */
 export interface BuiltInAIProviderOptions {
   /** Sampling temperature (0.0 to 2.0) */
-  temperature?: number
+  temperature?: number;
   /** Top-K sampling parameter */
-  topK?: number
+  topK?: number;
 }
 
 /**
@@ -39,14 +39,14 @@ export interface BuiltInAIProviderOptions {
  */
 export interface BuiltInAITextAdapterOptions {
   /** Base session options */
-  sessionOptions?: SessionCreateOptions
+  sessionOptions?: SessionCreateOptions;
 }
 
 /**
  * Input modalities supported by Built-in AI
  * Text is supported via the Prompt API
  */
-export type BuiltInAIInputModalities = readonly ['text']
+export type BuiltInAIInputModalities = readonly ["text"];
 
 /**
  * Properly typed message for use with BuiltInAITextAdapter and chat().
@@ -56,9 +56,9 @@ export type BuiltInAIInputModalities = readonly ['text']
  *
  */
 export type BuiltInAIModelMessage = ConstrainedModelMessage<{
-  inputModalities: BuiltInAIInputModalities
-  messageMetadataByModality: BuiltInAIMessageMetadataByModality
-}>
+  inputModalities: BuiltInAIInputModalities;
+  messageMetadataByModality: BuiltInAIMessageMetadataByModality;
+}>;
 
 /**
  * Built-in AI Text/Chat Adapter for TanStack AI SDK
@@ -72,21 +72,21 @@ export type BuiltInAIModelMessage = ConstrainedModelMessage<{
  *
  */
 export class BuiltInAITextAdapter<
-  TModel extends string = 'text',
+  TModel extends string = "text",
 > extends BaseTextAdapter<
   TModel,
   BuiltInAIProviderOptions,
   BuiltInAIInputModalities,
   BuiltInAIMessageMetadataByModality
 > {
-  readonly kind = 'text' as const
-  readonly name = 'built-in-ai' as const
+  readonly kind = "text" as const;
+  readonly name = "built-in-ai" as const;
 
-  private sessionManager: SessionManager
+  private sessionManager: SessionManager;
 
   constructor(model: TModel, options?: BuiltInAITextAdapterOptions) {
-    super({}, model)
-    this.sessionManager = new SessionManager(options?.sessionOptions)
+    super({}, model);
+    this.sessionManager = new SessionManager(options?.sessionOptions);
   }
 
   /**
@@ -96,112 +96,112 @@ export class BuiltInAITextAdapter<
    * @yields StreamChunk objects for content, tool_call, done, and error events
    */
   async *chatStream(
-    options: TextOptions<BuiltInAIProviderOptions>
+    options: TextOptions<BuiltInAIProviderOptions>,
   ): AsyncIterable<StreamChunk> {
-    const timestamp = Date.now()
-    const responseId = generateId('msg')
+    const timestamp = Date.now();
+    const responseId = generateId("msg");
 
     try {
       const { systemMessage, messages } = await convertMessagesAsync(
         options.messages,
-        options.systemPrompts
-      )
+        options.systemPrompts,
+      );
 
       // Build system prompt with tools if provided
-      let enhancedSystemMessage = systemMessage
-      const tools = options.tools as Tool[] | undefined
+      let enhancedSystemMessage = systemMessage;
+      const tools = options.tools as Tool[] | undefined;
       if (tools && tools.length > 0) {
-        enhancedSystemMessage = buildJsonToolSystemPrompt(systemMessage, tools)
+        enhancedSystemMessage = buildJsonToolSystemPrompt(systemMessage, tools);
       }
 
       const session = await this.sessionManager.getSession({
         systemMessage: enhancedSystemMessage,
-      })
+      });
 
       const promptOptions: LanguageModelPromptOptions &
-        LanguageModelCreateCoreOptions = {}
+        LanguageModelCreateCoreOptions = {};
       const modelOptions = options.modelOptions as
         | BuiltInAIProviderOptions
-        | undefined
+        | undefined;
 
       if (options.temperature !== undefined) {
-        promptOptions.temperature = options.temperature
+        promptOptions.temperature = options.temperature;
       } else if (modelOptions?.temperature !== undefined) {
-        promptOptions.temperature = modelOptions.temperature
+        promptOptions.temperature = modelOptions.temperature;
       }
 
       if (modelOptions?.topK !== undefined) {
-        promptOptions.topK = modelOptions.topK
+        promptOptions.topK = modelOptions.topK;
       }
 
       // Pass abort signal to the Prompt API if provided
-      const abortSignal = options.abortController?.signal
+      const abortSignal = options.abortController?.signal;
       if (abortSignal) {
-        ; (promptOptions as LanguageModelPromptOptions).signal = abortSignal
+        (promptOptions as LanguageModelPromptOptions).signal = abortSignal;
       }
 
       // Start streaming
-      const stream = session.promptStreaming(messages, promptOptions)
-      const reader = stream.getReader()
+      const stream = session.promptStreaming(messages, promptOptions);
+      const reader = stream.getReader();
 
-      let accumulatedContent = ''
-      let aborted = false
-      const hasTools = tools && tools.length > 0
-      const fenceDetector = hasTools ? new ToolCallFenceDetector() : null
+      let accumulatedContent = "";
+      let aborted = false;
+      const hasTools = tools && tools.length > 0;
+      const fenceDetector = hasTools ? new ToolCallFenceDetector() : null;
 
       // Set up abort handler to cancel the reader
       const abortHandler = () => {
-        aborted = true
-        reader.cancel().catch(() => undefined)
-      }
+        aborted = true;
+        reader.cancel().catch(() => undefined);
+      };
 
       if (abortSignal) {
-        abortSignal.addEventListener('abort', abortHandler)
+        abortSignal.addEventListener("abort", abortHandler);
       }
 
       try {
         while (true) {
-          const { done, value } = await reader.read()
+          const { done, value } = await reader.read();
 
           if (done || aborted) {
-            break
+            break;
           }
 
-          const delta = value
-          accumulatedContent += delta
+          const delta = value;
+          accumulatedContent += delta;
 
           // If we have tools, use fence detector for streaming
           if (fenceDetector && delta) {
-            fenceDetector.addChunk(delta)
+            fenceDetector.addChunk(delta);
 
             while (true) {
-              const result = fenceDetector.detectStreamingFence()
+              const result = fenceDetector.detectStreamingFence();
 
               if (result.safeContent && !result.inFence) {
                 yield {
-                  type: 'content',
+                  type: "content",
                   id: responseId,
                   model: options.model,
                   timestamp,
                   delta: result.safeContent,
                   content: accumulatedContent,
-                  role: 'assistant',
-                } as StreamChunk
+                  role: "assistant",
+                } as StreamChunk;
               }
 
               // If we found a complete fence, parse and emit tool calls
               if (result.completeFence) {
-                const parsed = parseJsonFunctionCalls(result.completeFence)
+                const parsed = parseJsonFunctionCalls(result.completeFence);
 
                 for (let i = 0; i < parsed.toolCalls.length; i++) {
-                  const toolCall = parsed.toolCalls[i]
+                  const toolCall = parsed.toolCalls[i];
                   yield {
-                    type: 'tool_call',
+                    type: "tool_call",
                     id: responseId,
                     model: options.model,
                     timestamp,
                     toolCall: {
-                      type: 'function',
+                      type: "function",
                       id: toolCall.toolCallId,
                       function: {
                         name: toolCall.toolName,
@@ -209,58 +209,58 @@ export class BuiltInAITextAdapter<
                       },
                     },
                     index: i,
-                  } as StreamChunk
+                  } as StreamChunk;
                 }
               }
 
               if (!result.inFence && !result.safeContent) {
-                break
+                break;
               }
 
               if (!fenceDetector.hasContent()) {
-                break
+                break;
               }
             }
           } else if (delta) {
             yield {
-              type: 'content',
+              type: "content",
               id: responseId,
               model: options.model,
               timestamp,
               delta,
               content: accumulatedContent,
-              role: 'assistant',
-            } as StreamChunk
+              role: "assistant",
+            } as StreamChunk;
           }
         }
 
         // After stream ends, check for any remaining buffered content
         if (fenceDetector && fenceDetector.hasContent()) {
-          const finalResult = fenceDetector.detectFence()
+          const finalResult = fenceDetector.detectFence();
 
           if (finalResult.prefixText) {
             yield {
-              type: 'content',
+              type: "content",
               id: responseId,
               model: options.model,
               timestamp,
               delta: finalResult.prefixText,
               content: accumulatedContent,
-              role: 'assistant',
-            } as StreamChunk
+              role: "assistant",
+            } as StreamChunk;
           }
 
           if (finalResult.fence) {
-            const parsed = parseJsonFunctionCalls(finalResult.fence)
+            const parsed = parseJsonFunctionCalls(finalResult.fence);
             for (let i = 0; i < parsed.toolCalls.length; i++) {
-              const toolCall = parsed.toolCalls[i]
+              const toolCall = parsed.toolCalls[i];
               yield {
-                type: 'tool_call',
+                type: "tool_call",
                 id: responseId,
                 model: options.model,
                 timestamp,
                 toolCall: {
-                  type: 'function',
+                  type: "function",
                   id: toolCall.toolCallId,
                   function: {
                     name: toolCall.toolName,
@@ -268,43 +268,43 @@ export class BuiltInAITextAdapter<
                   },
                 },
                 index: i,
-              } as StreamChunk
+              } as StreamChunk;
             }
           }
         }
 
-        const fullParsed = parseJsonFunctionCalls(accumulatedContent)
-        const hasToolCalls = fullParsed.toolCalls.length > 0
+        const fullParsed = parseJsonFunctionCalls(accumulatedContent);
+        const hasToolCalls = fullParsed.toolCalls.length > 0;
 
         if (!aborted) {
           yield {
-            type: 'done',
+            type: "done",
             id: responseId,
             model: options.model,
             timestamp,
-            finishReason: hasToolCalls ? 'tool_calls' : 'stop',
-          } as StreamChunk
+            finishReason: hasToolCalls ? "tool_calls" : "stop",
+          } as StreamChunk;
         }
       } finally {
         if (abortSignal) {
-          abortSignal.removeEventListener('abort', abortHandler)
+          abortSignal.removeEventListener("abort", abortHandler);
         }
       }
     } catch (error) {
       // Don't emit error for abort
-      if (error instanceof Error && error.name === 'AbortError') {
-        return
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
       }
 
       yield {
-        type: 'error',
+        type: "error",
         id: responseId,
         model: options.model,
         timestamp,
         error: {
           message: error instanceof Error ? error.message : String(error),
         },
-      } as StreamChunk
+      } as StreamChunk;
     }
   }
 
@@ -317,57 +317,60 @@ export class BuiltInAITextAdapter<
    * @returns Promise with parsed data and raw text
    */
   async structuredOutput(
-    options: StructuredOutputOptions<BuiltInAIProviderOptions>
+    options: StructuredOutputOptions<BuiltInAIProviderOptions>,
   ): Promise<StructuredOutputResult<unknown>> {
-    const { chatOptions, outputSchema } = options
+    const { chatOptions, outputSchema } = options;
 
     // Convert messages
     const { systemMessage, messages } = await convertMessagesAsync(
       chatOptions.messages,
-      chatOptions.systemPrompts
-    )
+      chatOptions.systemPrompts,
+    );
 
     // Get session
     const session = await this.sessionManager.getSession({
       systemMessage,
-    })
+    });
 
     // Prepare options with response constraint
     const promptOptions: LanguageModelPromptOptions &
-      LanguageModelCreateCoreOptions = {}
+      LanguageModelCreateCoreOptions = {};
     const modelOptions = chatOptions.modelOptions as
       | BuiltInAIProviderOptions
-      | undefined
+      | undefined;
 
     if (chatOptions.temperature !== undefined) {
-      promptOptions.temperature = chatOptions.temperature
+      promptOptions.temperature = chatOptions.temperature;
     } else if (modelOptions?.temperature !== undefined) {
-      promptOptions.temperature = modelOptions.temperature
+      promptOptions.temperature = modelOptions.temperature;
     }
 
     if (modelOptions?.topK !== undefined) {
-      promptOptions.topK = modelOptions.topK
+      promptOptions.topK = modelOptions.topK;
     }
 
     if (outputSchema) {
-      promptOptions.responseConstraint = outputSchema as Record<string, unknown>
+      promptOptions.responseConstraint = outputSchema as Record<
+        string,
+        unknown
+      >;
     }
 
-    const rawText = await session.prompt(messages, promptOptions)
+    const rawText = await session.prompt(messages, promptOptions);
 
-    let parsed: unknown
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(rawText)
+      parsed = JSON.parse(rawText);
     } catch {
       throw new Error(
-        `Failed to parse structured output as JSON. Content: ${rawText.slice(0, 200)}${rawText.length > 200 ? '...' : ''}`
-      )
+        `Failed to parse structured output as JSON. Content: ${rawText.slice(0, 200)}${rawText.length > 200 ? "..." : ""}`,
+      );
     }
 
     return {
       data: parsed,
       rawText,
-    }
+    };
   }
 
   /**
@@ -376,14 +379,14 @@ export class BuiltInAITextAdapter<
    * @returns Promise resolving to availability status
    */
   async availability(): Promise<Availability> {
-    return this.sessionManager.checkAvailability()
+    return this.sessionManager.checkAvailability();
   }
 
   /**
    * Destroy the current session to free resources
    */
   destroySession(): void {
-    this.sessionManager.destroySession()
+    this.sessionManager.destroySession();
   }
 }
 
@@ -404,14 +407,14 @@ export class BuiltInAITextAdapter<
  * })
  * ```
  */
-export function builtInAI<TModel extends string = 'text'>(
-  model: TModel = 'text' as TModel,
-  options?: BuiltInAITextAdapterOptions
+export function builtInAI<TModel extends string = "text">(
+  model: TModel = "text" as TModel,
+  options?: BuiltInAITextAdapterOptions,
 ): BuiltInAITextAdapter<TModel> {
-  return new BuiltInAITextAdapter(model, options)
+  return new BuiltInAITextAdapter(model, options);
 }
 
 /**
  * Creates a Built-in AI chat adapter (alias for builtInAIText)
  */
-export const createBuiltInAIChat = builtInAI
+export const createBuiltInAIChat = builtInAI;

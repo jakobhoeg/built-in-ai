@@ -1,4 +1,4 @@
-import type { ToolResult } from './types'
+import type { ToolResult } from "./types";
 
 /**
  * Builds a JSON-serializable payload for a single tool result.
@@ -12,13 +12,13 @@ function buildResultPayload(result: ToolResult): Record<string, unknown> {
     name: result.toolName,
     result: result.result ?? null,
     error: Boolean(result.isError),
-  }
+  };
 
   if (result.toolCallId) {
-    payload.id = result.toolCallId
+    payload.id = result.toolCallId;
   }
 
-  return payload
+  return payload;
 }
 
 /**
@@ -33,16 +33,16 @@ function buildResultPayload(result: ToolResult): Record<string, unknown> {
  */
 export function formatToolResults(results: ToolResult[]): string {
   if (!results || results.length === 0) {
-    return ''
+    return "";
   }
 
   const payloads = results.map((result) =>
-    JSON.stringify(buildResultPayload(result))
-  )
+    JSON.stringify(buildResultPayload(result)),
+  );
 
   return `\`\`\`tool_result
-${payloads.join('\n')}
-\`\`\``
+${payloads.join("\n")}
+\`\`\``;
 }
 
 /**
@@ -53,6 +53,5 @@ ${payloads.join('\n')}
  * @returns Formatted string with result in tool_result code fence
  */
 export function formatSingleToolResult(result: ToolResult): string {
-  return formatToolResults([result])
+  return formatToolResults([result]);
 }
-

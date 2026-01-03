@@ -33,7 +33,7 @@ export interface BuiltInAIAudioMetadata {
  * Included for type compatibility with TanStack AI SDK.
  */
 export interface BuiltInAIVideoMetadata {
-  // Not supported 
+  // Not supported
 }
 
 /**
@@ -49,9 +49,9 @@ export interface BuiltInAIDocumentMetadata {
  * Used for type inference when constructing messages.
  */
 export interface BuiltInAIMessageMetadataByModality {
-  text: BuiltInAITextMetadata
-  image: BuiltInAIImageMetadata
-  audio: BuiltInAIAudioMetadata
-  video: BuiltInAIVideoMetadata
-  document: BuiltInAIDocumentMetadata
+  text: BuiltInAITextMetadata;
+  image: BuiltInAIImageMetadata;
+  audio: BuiltInAIAudioMetadata;
+  video: BuiltInAIVideoMetadata;
+  document: BuiltInAIDocumentMetadata;
 }

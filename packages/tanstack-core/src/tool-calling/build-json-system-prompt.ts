@@ -1,5 +1,5 @@
-import type { Tool } from '@tanstack/ai'
-import type { ToolDefinition } from './types'
+import type { Tool } from "@tanstack/ai";
+import type { ToolDefinition } from "./types";
 
 /**
  * Builds an enhanced system prompt for JSON-based tool calling.
@@ -11,25 +11,25 @@ import type { ToolDefinition } from './types'
  */
 export function buildJsonToolSystemPrompt(
   originalSystemPrompt: string | undefined,
-  tools: Array<Tool | ToolDefinition>
+  tools: Array<Tool | ToolDefinition>,
 ): string {
   if (!tools || tools.length === 0) {
-    return originalSystemPrompt || ''
+    return originalSystemPrompt || "";
   }
 
   const parallelInstruction =
-    'Only request one tool call at a time. Wait for tool results before asking for another tool.'
+    "Only request one tool call at a time. Wait for tool results before asking for another tool.";
 
   const toolSchemas = tools.map((tool) => {
-    const schema = tool.inputSchema
+    const schema = tool.inputSchema;
     return {
       name: tool.name,
-      description: tool.description ?? 'No description provided.',
-      parameters: schema || { type: 'object', properties: {} },
-    }
-  })
+      description: tool.description ?? "No description provided.",
+      parameters: schema || { type: "object", properties: {} },
+    };
+  });
 
-  const toolsJson = JSON.stringify(toolSchemas, null, 2)
+  const toolsJson = JSON.stringify(toolSchemas, null, 2);
 
   const instructionBody = `You are a helpful AI assistant with access to tools.
 
@@ -55,12 +55,11 @@ Important:
 - Use exact tool and parameter names from the schema above
 - Arguments must be a valid JSON object matching the tool's parameters
 - You can include brief reasoning before or after the tool call
-- If no tool is needed, respond directly without tool_call fences`
+- If no tool is needed, respond directly without tool_call fences`;
 
   if (originalSystemPrompt?.trim()) {
-    return `${originalSystemPrompt.trim()}\n\n${instructionBody}`
+    return `${originalSystemPrompt.trim()}\n\n${instructionBody}`;
   }
 
-  return instructionBody
+  return instructionBody;
 }
-

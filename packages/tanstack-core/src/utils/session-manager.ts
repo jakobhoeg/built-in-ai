@@ -7,14 +7,14 @@
  * Progress callback for model download events
  * @param progress - Download progress from 0 to 1
  */
-export type ProgressCallback = (progress: number) => void
+export type ProgressCallback = (progress: number) => void;
 
 /**
  * Options for creating a new session
  */
 export interface SessionCreateOptions extends LanguageModelCreateOptions {
-  systemMessage?: string
-  onDownloadProgress?: ProgressCallback
+  systemMessage?: string;
+  onDownloadProgress?: ProgressCallback;
 }
 
 /**
@@ -24,9 +24,9 @@ export class PromptAPINotAvailableError extends Error {
   constructor(message?: string) {
     super(
       message ??
-        'Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.'
-    )
-    this.name = 'PromptAPINotAvailableError'
+        "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
+    );
+    this.name = "PromptAPINotAvailableError";
   }
 }
 
@@ -35,8 +35,8 @@ export class PromptAPINotAvailableError extends Error {
  */
 export class ModelUnavailableError extends Error {
   constructor(message?: string) {
-    super(message ?? 'Built-in model is not available in this browser')
-    this.name = 'ModelUnavailableError'
+    super(message ?? "Built-in model is not available in this browser");
+    this.name = "ModelUnavailableError";
   }
 }
 
@@ -63,8 +63,8 @@ export class ModelUnavailableError extends Error {
  * ```
  */
 export class SessionManager {
-  private session: LanguageModel | null = null
-  private baseOptions: LanguageModelCreateOptions
+  private session: LanguageModel | null = null;
+  private baseOptions: LanguageModelCreateOptions;
 
   /**
    * Creates a new SessionManager
@@ -72,7 +72,7 @@ export class SessionManager {
    * @param baseOptions - Base configuration options for all sessions
    */
   constructor(baseOptions: LanguageModelCreateOptions = {}) {
-    this.baseOptions = baseOptions
+    this.baseOptions = baseOptions;
   }
 
   /**
@@ -87,28 +87,28 @@ export class SessionManager {
    */
   async getSession(options?: SessionCreateOptions): Promise<LanguageModel> {
     // Check if LanguageModel API is available
-    if (typeof LanguageModel === 'undefined') {
-      throw new PromptAPINotAvailableError()
+    if (typeof LanguageModel === "undefined") {
+      throw new PromptAPINotAvailableError();
     }
 
     // Return existing session if available
     if (this.session) {
-      return this.session
+      return this.session;
     }
 
     // Check availability before attempting to create
-    const availability = await LanguageModel.availability()
-    if (availability === 'unavailable') {
-      throw new ModelUnavailableError()
+    const availability = await LanguageModel.availability();
+    if (availability === "unavailable") {
+      throw new ModelUnavailableError();
     }
 
     // Prepare session options
-    const sessionOptions = this.prepareSessionOptions(options)
+    const sessionOptions = this.prepareSessionOptions(options);
 
     // Create the session
-    this.session = await LanguageModel.create(sessionOptions)
+    this.session = await LanguageModel.create(sessionOptions);
 
-    return this.session
+    return this.session;
   }
 
   /**
@@ -121,10 +121,10 @@ export class SessionManager {
    * - "available": Model is ready to use
    */
   async checkAvailability(): Promise<Availability> {
-    if (typeof LanguageModel === 'undefined') {
-      return 'unavailable'
+    if (typeof LanguageModel === "undefined") {
+      return "unavailable";
     }
-    return LanguageModel.availability()
+    return LanguageModel.availability();
   }
 
   /**
@@ -133,7 +133,7 @@ export class SessionManager {
    * @returns The current session or null if none exists
    */
   getCurrentSession(): LanguageModel | null {
-    return this.session
+    return this.session;
   }
 
   /**
@@ -143,10 +143,10 @@ export class SessionManager {
    * with different options on the next getSession call.
    */
   destroySession(): void {
-    if (this.session && typeof this.session.destroy === 'function') {
-      this.session.destroy()
+    if (this.session && typeof this.session.destroy === "function") {
+      this.session.destroy();
     }
-    this.session = null
+    this.session = null;
   }
 
   /**
@@ -156,33 +156,33 @@ export class SessionManager {
    * @returns Merged options ready for LanguageModel.create()
    */
   private prepareSessionOptions(
-    options?: SessionCreateOptions
+    options?: SessionCreateOptions,
   ): LanguageModelCreateOptions {
-    const mergedOptions: LanguageModelCreateOptions = { ...this.baseOptions }
+    const mergedOptions: LanguageModelCreateOptions = { ...this.baseOptions };
 
     if (options) {
-      const { systemMessage, onDownloadProgress, ...createOptions } = options
+      const { systemMessage, onDownloadProgress, ...createOptions } = options;
 
       // Merge standard create options
-      Object.assign(mergedOptions, createOptions)
+      Object.assign(mergedOptions, createOptions);
 
       // Handle system message
       if (systemMessage) {
         mergedOptions.initialPrompts = [
-          { role: 'system', content: systemMessage },
-        ]
+          { role: "system", content: systemMessage },
+        ];
       }
 
       // Handle download progress monitoring
       if (onDownloadProgress) {
         mergedOptions.monitor = (m: CreateMonitor) => {
-          m.addEventListener('downloadprogress', (e: ProgressEvent) => {
-            onDownloadProgress(e.loaded) // e.loaded is between 0 and 1
-          })
-        }
+          m.addEventListener("downloadprogress", (e: ProgressEvent) => {
+            onDownloadProgress(e.loaded); // e.loaded is between 0 and 1
+          });
+        };
       }
     }
 
-    return mergedOptions
+    return mergedOptions;
   }
 }
