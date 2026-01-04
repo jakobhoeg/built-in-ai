@@ -91,6 +91,10 @@ for await (const chunk of result.textStream) {
 }
 ```
 
+## Sponsors
+
+This project is proudly sponsored by [Chrome for Developers](https://developer.chrome.com/).
+
 ## Contributing
 
 Contributions are more than welcome! However, please make sure to check out the [contribution guidelines](https://github.com/jakobhoeg/built-in-ai/blob/main/CONTRIBUTING.md) before contributing.
