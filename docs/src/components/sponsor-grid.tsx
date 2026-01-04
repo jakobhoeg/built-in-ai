@@ -24,7 +24,7 @@ export default function SponsorGrid({ sponsors }: { sponsors: Sponsor[] }) {
               rel="noopener sponsored"
               className="flex items-center justify-center gap-3 px-8 py-8 transition-colors bg-background hover:bg-gray-100 dark:hover:bg-zinc-900"
             >
-              <sponsor.logo className="size-10 sm:size-11 shrink-0" />
+              <sponsor.logo className="size-10 sm:size-14 shrink-0" />
               <p className="text-xl sm:text-2xl">{sponsor.name}</p>
             </Link>
           </li>
