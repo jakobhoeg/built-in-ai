@@ -1,4 +1,6 @@
+import { Chrome } from "@/components/chrome-logo";
 import { HomeCodeSection } from "@/components/home-code-section";
+import SponsorGrid from "@/components/sponsor-grid";
 import { TweetCard } from "@/components/tweet-card";
 import { TweetGrid } from "@/components/tweet-grid";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,14 @@ const tweetIds = [
   "1957752385272738170",
   "1957771454839238912",
   "1957762133787082766",
+];
+
+const sponsors = [
+  {
+    name: "Chrome for Developers",
+    href: "https://developer.chrome.com/",
+    logo: Chrome,
+  },
 ];
 
 export default function HomePage() {
@@ -51,7 +61,11 @@ export default function HomePage() {
               variant="secondary"
               className="tracking-tight text-balance flex gap-2"
             >
-              <Link href="https://ai-sdk.dev/docs/introduction">
+              <Link
+                href="https://ai-sdk.dev/docs/introduction"
+                target="_blank"
+                rel="noopener sponsored"
+              >
                 Vercel AI SDK
               </Link>
               <MoveUpRight className="size-3.5" />
@@ -59,23 +73,46 @@ export default function HomePage() {
           </div>
 
           <HomeCodeSection />
-        </div>
+          <div className="relative mt-20 max-w-full">
+            <div className="relative before:absolute before:top-0 before:h-px before:w-[200vw] before:bg-gray-950/5 dark:before:bg-white/10 before:h-px before:w-[200vw] before:bg-gray-950/5 dark:before:bg-white/10 before:-left-[100vw] after:absolute after:bottom-0 after:h-px after:w-[200vw] after:bg-gray-950/5 dark:after:bg-white/10 after:-left-[100vw]">
+              <h2 className="max-w-2xl px-2 text-4xl font-medium tracking-tighter text-balance max-sm:px-4">
+                Backed by the creators
+              </h2>
+            </div>
+            <div className="relative items-center px-2 font-mono text-xs/6 text-black/40 dark:text-white/40 max-sm:px-4 flex after:absolute after:bottom-0 after:h-px after:w-[200vw] after:bg-gray-950/5 dark:after:bg-white/10 after:-left-[100vw]">
+              <p>
+                This project is proudly sponsored by the creators behind the{" "}
+                <a
+                  href="https://developer.chrome.com/docs/ai/built-in"
+                  target="_blank"
+                  rel="noopener sponsored"
+                  className="underline"
+                >
+                  Built-in AI
+                </a>{" "}
+                initiative.
+              </p>
+            </div>
 
-        {/* Testimonials */}
-        <div className="relative max-w-full">
-          <div className="h-4 items-end px-2 font-mono text-xs/6 whitespace-pre text-black/20 max-sm:px-4 flex dark:text-white/25">
-            Testimonials
+            <div className="relative h-10 items-end px-2 font-mono text-xs/6 whitespace-pre text-black/40 dark:text-white/40 max-sm:px-4 flex after:absolute after:bottom-0 after:h-px after:w-[200vw] after:bg-gray-950/5 dark:after:bg-white/10 after:-left-[100vw]"></div>
+            <SponsorGrid sponsors={sponsors} />
           </div>
-          <div className="relative before:absolute before:top-0 before:h-px before:w-[200vw] before:bg-gray-950/5 dark:before:bg-white/10 before:-left-[100vw] after:absolute after:bottom-0 after:h-px">
-            <h2 className="max-w-2xl px-2 text-4xl font-medium tracking-tighter text-balance max-sm:px-4">
-              What developers are saying
-            </h2>
+          {/* Testimonials */}
+          <div className="relative mt-20 max-w-full">
+            <div className="h-4 items-end px-2 font-mono text-xs/6 whitespace-pre text-black/40 dark:text-white/40 max-sm:px-4 flex">
+              Testimonials
+            </div>
+            <div className="relative before:absolute before:top-0 before:h-px before:w-[200vw] before:bg-gray-950/5 dark:before:bg-white/10 before:-left-[100vw] after:absolute after:bottom-0 after:h-px">
+              <h2 className="max-w-2xl px-2 text-4xl font-medium tracking-tighter text-balance max-sm:px-4">
+                What developers are saying
+              </h2>
+            </div>
+            <TweetGrid totalCount={tweetIds.length}>
+              {tweetIds.map((id) => (
+                <TweetCard key={id} id={id} />
+              ))}
+            </TweetGrid>
           </div>
-          <TweetGrid totalCount={tweetIds.length}>
-            {tweetIds.map((id) => (
-              <TweetCard key={id} id={id} />
-            ))}
-          </TweetGrid>
         </div>
       </main>
 
