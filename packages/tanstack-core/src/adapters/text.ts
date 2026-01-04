@@ -44,16 +44,16 @@ export interface BuiltInAITextAdapterOptions {
 
 /**
  * Input modalities supported by Built-in AI
- * Text is supported via the Prompt API
+ * The Prompt API supports text, image, and audio inputs
+ * @see https://github.com/webmachinelearning/prompt-api
  */
-export type BuiltInAIInputModalities = readonly ["text"];
+export type BuiltInAIInputModalities = readonly ["text", "image", "audio"];
 
 /**
  * Properly typed message for use with BuiltInAITextAdapter and chat().
  *
  * This type ensures messages are constrained to the input modalities
- * (text and image) and metadata types that the Built-in AI adapter supports.
- *
+ * (text, image, and audio) and metadata types that the Built-in AI adapter supports.
  */
 export type BuiltInAIModelMessage = ConstrainedModelMessage<{
   inputModalities: BuiltInAIInputModalities;
@@ -65,11 +65,12 @@ export type BuiltInAIModelMessage = ConstrainedModelMessage<{
  *
  * Connects TanStack AI SDK to Chrome/Edge's built-in Prompt API (LanguageModel).
  * Supports:
- * - Text inputs
+ * - Text, image, and audio inputs (multimodal)
  * - Tool calling via JSON code fences
  * - Structured output
  * - Streaming responses
  *
+ * @see https://github.com/webmachinelearning/prompt-api
  */
 export class BuiltInAITextAdapter<
   TModel extends string = "text",

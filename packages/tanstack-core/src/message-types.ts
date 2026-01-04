@@ -1,8 +1,9 @@
 /**
  * Built-in AI (Prompt API) specific metadata types for content parts.
- * This package supports text-only via the browser's Prompt API.
+ * This package supports text, image, and audio via the browser's Prompt API.
  *
  * @see https://developer.chrome.com/docs/ai/built-in
+ * @see https://github.com/webmachinelearning/prompt-api
  */
 
 /**
@@ -13,19 +14,23 @@ export interface BuiltInAITextMetadata {
 }
 
 /**
- * Placeholder metadata for image content parts.
- * Included for type compatibility with TanStack AI SDK.
+ * Metadata for image content parts.
+ * The Prompt API supports image inputs via expectedInputs: [{ type: "image" }]
  */
 export interface BuiltInAIImageMetadata {
-  // Not implemented yet.
+  /** Optional detail level hint (provider-specific, may be ignored) */
+  detail?: "auto" | "low" | "high";
+  /** Optional media type (e.g., "image/jpeg", "image/png") */
+  mediaType?: string;
 }
 
 /**
- * Placeholder metadata for audio content parts.
- * Included for type compatibility with TanStack AI SDK.
+ * Metadata for audio content parts.
+ * The Prompt API supports audio inputs via expectedInputs: [{ type: "audio" }]
  */
 export interface BuiltInAIAudioMetadata {
-  // Not implemented yet.
+  /** Optional media type (e.g., "audio/wav", "audio/mp3") */
+  mediaType?: string;
 }
 
 /**
