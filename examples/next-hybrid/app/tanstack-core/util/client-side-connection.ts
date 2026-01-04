@@ -1,5 +1,3 @@
-"use client";
-
 import { type ConnectionAdapter } from "@tanstack/ai-client";
 import { chat, type Tool } from "@tanstack/ai";
 import {
