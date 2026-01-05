@@ -143,83 +143,6 @@ class CallbackTextStreamer extends TextStreamer {
   }
 }
 
-/**
- * Extract tool name from partial fence content for early emission
- * This allows us to emit tool-input-start as soon as we know the tool name
- * Expects JSON format: {"name":"toolName"
- */
-function extractToolName(content: string): string | null {
-  // For JSON mode: {"name":"toolName"
-  const jsonMatch = content.match(/\{\s*"name"\s*:\s*"([^"]+)"/);
-  if (jsonMatch) {
-    return jsonMatch[1];
-  }
-  return null;
-}
-
-/**
- * Extract the argument section from a streaming tool call fence.
- * Returns the substring after `"arguments":` (best-effort for partial JSON).
- */
-function extractArgumentsContent(content: string): string {
-  const match = content.match(/"arguments"\s*:\s*/);
-  if (!match || match.index === undefined) {
-    return "";
-  }
-
-  const startIndex = match.index + match[0].length;
-  let result = "";
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  let started = false;
-
-  for (let i = startIndex; i < content.length; i++) {
-    const char = content[i];
-    result += char;
-
-    if (!started) {
-      if (!/\s/.test(char)) {
-        started = true;
-        if (char === "{" || char === "[") {
-          depth = 1;
-        }
-      }
-      continue;
-    }
-
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-
-    if (char === "\\") {
-      escaped = true;
-      continue;
-    }
-
-    if (char === '"') {
-      inString = !inString;
-      continue;
-    }
-
-    if (!inString) {
-      if (char === "{" || char === "[") {
-        depth += 1;
-      } else if (char === "}" || char === "]") {
-        if (depth > 0) {
-          depth -= 1;
-          if (depth === 0) {
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  return result;
-}
-
 export class TransformersJSLanguageModel implements LanguageModelV3 {
   readonly specificationVersion = "v3";
   readonly modelId: TransformersJSModelId;
@@ -671,100 +594,43 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       }
 
       const { toolCalls, textContent } = parseJsonFunctionCalls(generatedText);
+      const hasToolCalls = toolCalls.length > 0;
 
-      if (toolCalls.length > 0) {
-        const toolCallsToEmit = toolCalls.slice(0, 1);
-
-        const parts: LanguageModelV3Content[] = [];
-
-        if (textContent) {
-          parts.push({
-            type: "text",
-            text: textContent,
-          });
-        }
-
-        for (const call of toolCallsToEmit) {
-          parts.push({
-            type: "tool-call",
-            toolCallId: call.toolCallId,
-            toolName: call.toolName,
-            input: JSON.stringify(call.args ?? {}),
-          });
-        }
-
-        return {
-          content: parts,
-          finishReason: { unified: "tool-calls", raw: "tool-calls" },
-          usage: isVision
-            ? {
-                inputTokens: {
-                  total: undefined,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: undefined,
-                  text: undefined,
-                  reasoning: undefined,
-                },
-              }
-            : {
-                inputTokens: {
-                  total: inputLength,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: inputLength + generatedText.length,
-                  text: generatedText.length,
-                  reasoning: undefined,
-                },
-              },
-          request: { body: { messages: promptMessages, ...generationOptions } },
-          warnings,
-        };
+      const content: LanguageModelV3Content[] = [];
+      if (textContent) {
+        content.push({ type: "text", text: textContent });
+      } else if (!hasToolCalls) {
+        content.push({ type: "text", text: generatedText });
       }
 
-      const content: LanguageModelV3Content[] = [
-        {
-          type: "text",
-          text: textContent || generatedText,
-        },
-      ];
+      if (hasToolCalls) {
+        const call = toolCalls[0];
+        content.push({
+          type: "tool-call",
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          input: JSON.stringify(call.args ?? {}),
+        });
+      }
 
       return {
         content,
-        finishReason: { unified: "stop", raw: "stop" },
-        usage: isVision
-          ? {
-              inputTokens: {
-                total: undefined,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: undefined,
-                text: undefined,
-                reasoning: undefined,
-              },
-            }
-          : {
-              inputTokens: {
-                total: inputLength,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: inputLength + generatedText.length,
-                text: generatedText.length,
-                reasoning: undefined,
-              },
-            },
+        finishReason: hasToolCalls
+          ? { unified: "tool-calls", raw: "tool-calls" }
+          : { unified: "stop", raw: "stop" },
+        usage: {
+          inputTokens: {
+            total: isVision ? undefined : inputLength,
+            noCache: undefined,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            total: isVision ? undefined : inputLength + generatedText.length,
+            text: isVision ? undefined : generatedText.length,
+            reasoning: undefined,
+          },
+        },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
@@ -826,56 +692,31 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       }
     });
 
-    // Handle tool calls if present
-    if (result.toolCalls && result.toolCalls.length > 0) {
-      const toolCallsToEmit = result.toolCalls.slice(0, 1);
-      const parts: LanguageModelV3Content[] = [];
+    const hasToolCalls = result.toolCalls && result.toolCalls.length > 0;
+    const { textContent } = parseJsonFunctionCalls(result.text);
 
-      // Extract text content from result
-      const { textContent } = parseJsonFunctionCalls(result.text);
-      if (textContent) {
-        parts.push({
-          type: "text",
-          text: textContent,
-        });
-      }
-
-      for (const call of toolCallsToEmit) {
-        parts.push({
-          type: "tool-call",
-          toolCallId: call.toolCallId,
-          toolName: call.toolName,
-          input: JSON.stringify(call.args ?? {}),
-        });
-      }
-
-      return {
-        content: parts,
-        finishReason: { unified: "tool-calls", raw: "tool-calls" },
-        usage: {
-          inputTokens: {
-            total: undefined,
-            noCache: undefined,
-            cacheRead: undefined,
-            cacheWrite: undefined,
-          },
-          outputTokens: {
-            total: undefined,
-            text: undefined,
-            reasoning: undefined,
-          },
-        },
-        request: { body: { messages, ...generationOptions } },
-        warnings,
-      };
+    const content: LanguageModelV3Content[] = [];
+    if (textContent) {
+      content.push({ type: "text", text: textContent });
+    } else if (!hasToolCalls) {
+      content.push({ type: "text", text: result.text });
     }
 
-    const content: LanguageModelV3Content[] = [
-      { type: "text", text: result.text },
-    ];
+    if (hasToolCalls) {
+      const call = result.toolCalls![0];
+      content.push({
+        type: "tool-call",
+        toolCallId: call.toolCallId,
+        toolName: call.toolName,
+        input: JSON.stringify(call.args ?? {}),
+      });
+    }
+
     return {
       content,
-      finishReason: { unified: "stop", raw: "stop" },
+      finishReason: hasToolCalls
+        ? { unified: "tool-calls", raw: "tool-calls" }
+        : { unified: "stop", raw: "stop" },
       usage: {
         inputTokens: {
           total: undefined,
@@ -1107,223 +948,75 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             }) as { input_ids: Tensor; attention_mask?: Tensor };
           }
 
-          let inputLength = isVision ? 0 : inputs.input_ids.data.length;
+          const inputLength = isVision ? 0 : inputs.input_ids.data.length;
           let outputTokens = 0;
+          let toolCallDetected = false;
 
           const fenceDetector = new ToolCallFenceDetector();
-          let accumulatedText = "";
 
-          let currentToolCallId: string | null = null;
-          let toolInputStartEmitted = false;
-          let accumulatedFenceContent = "";
-          let streamedArgumentsLength = 0;
-          let insideFence = false;
-          let toolCallDetected = false;
+          const emitToolCall = (call: ParsedToolCall) => {
+            const argsJson = JSON.stringify(call.args ?? {});
+            controller.enqueue({
+              type: "tool-input-start",
+              id: call.toolCallId,
+              toolName: call.toolName,
+            });
+            if (argsJson) {
+              controller.enqueue({
+                type: "tool-input-delta",
+                id: call.toolCallId,
+                delta: argsJson,
+              });
+            }
+            controller.enqueue({ type: "tool-input-end", id: call.toolCallId });
+            controller.enqueue({
+              type: "tool-call",
+              toolCallId: call.toolCallId,
+              toolName: call.toolName,
+              input: argsJson,
+            });
+          };
 
           const streamCallback = (text: string) => {
             if (aborted || toolCallDetected) return;
-
             outputTokens++;
-            accumulatedText += text;
-
             fenceDetector.addChunk(text);
 
-            // Process buffer using streaming detection
             while (
               fenceDetector.hasContent() &&
               !aborted &&
               !toolCallDetected
             ) {
-              const wasInsideFence = insideFence;
               const result = fenceDetector.detectStreamingFence();
-              insideFence = result.inFence;
 
-              let madeProgress = false;
-
-              if (!wasInsideFence && result.inFence) {
-                if (result.safeContent) {
-                  emitTextDelta(result.safeContent);
-                  madeProgress = true;
-                }
-
-                currentToolCallId = `call_${Date.now()}_${Math.random()
-                  .toString(36)
-                  .slice(2, 9)}`;
-                toolInputStartEmitted = false;
-                accumulatedFenceContent = "";
-                streamedArgumentsLength = 0;
-                insideFence = true;
-
-                continue;
+              // Emit safe text content (not inside a fence)
+              if (!result.inFence && result.safeContent) {
+                emitTextDelta(result.safeContent);
               }
 
+              // Handle complete fence - parse and emit tool call
               if (result.completeFence) {
-                madeProgress = true;
-                if (result.safeContent) {
-                  accumulatedFenceContent += result.safeContent;
-                }
+                const { toolCalls } = parseJsonFunctionCalls(
+                  result.completeFence,
+                );
 
-                if (toolInputStartEmitted && currentToolCallId) {
-                  const argsContent = extractArgumentsContent(
-                    accumulatedFenceContent,
-                  );
-                  if (argsContent.length > streamedArgumentsLength) {
-                    const delta = argsContent.slice(streamedArgumentsLength);
-                    streamedArgumentsLength = argsContent.length;
-                    if (delta.length > 0) {
-                      controller.enqueue({
-                        type: "tool-input-delta",
-                        id: currentToolCallId,
-                        delta,
-                      });
-                    }
-                  }
-                }
-
-                const parsed = parseJsonFunctionCalls(result.completeFence);
-                const parsedToolCalls = parsed.toolCalls;
-                const selectedToolCalls = parsedToolCalls.slice(0, 1);
-
-                if (selectedToolCalls.length === 0) {
+                if (toolCalls.length > 0) {
+                  emitToolCall(toolCalls[0]);
+                  toolCallDetected = true;
+                  self.stoppingCriteria.interrupt();
+                } else {
+                  // Not a valid tool call, emit as text
                   emitTextDelta(result.completeFence);
-                  if (result.textAfterFence) {
-                    emitTextDelta(result.textAfterFence);
-                  }
-
-                  currentToolCallId = null;
-                  toolInputStartEmitted = false;
-                  accumulatedFenceContent = "";
-                  streamedArgumentsLength = 0;
-                  insideFence = false;
-                  continue;
-                }
-
-                if (selectedToolCalls.length > 0 && currentToolCallId) {
-                  selectedToolCalls[0].toolCallId = currentToolCallId;
-                }
-
-                for (const [index, call] of selectedToolCalls.entries()) {
-                  const toolCallId =
-                    index === 0 && currentToolCallId
-                      ? currentToolCallId
-                      : call.toolCallId;
-                  const toolName = call.toolName;
-                  const argsJson = JSON.stringify(call.args ?? {});
-
-                  if (toolCallId === currentToolCallId) {
-                    if (!toolInputStartEmitted) {
-                      controller.enqueue({
-                        type: "tool-input-start",
-                        id: toolCallId,
-                        toolName,
-                      });
-                      toolInputStartEmitted = true;
-                    }
-
-                    const argsContent = extractArgumentsContent(
-                      accumulatedFenceContent,
-                    );
-                    if (argsContent.length > streamedArgumentsLength) {
-                      const delta = argsContent.slice(streamedArgumentsLength);
-                      streamedArgumentsLength = argsContent.length;
-                      if (delta.length > 0) {
-                        controller.enqueue({
-                          type: "tool-input-delta",
-                          id: toolCallId,
-                          delta,
-                        });
-                      }
-                    }
-                  } else {
-                    controller.enqueue({
-                      type: "tool-input-start",
-                      id: toolCallId,
-                      toolName,
-                    });
-                    if (argsJson.length > 0) {
-                      controller.enqueue({
-                        type: "tool-input-delta",
-                        id: toolCallId,
-                        delta: argsJson,
-                      });
-                    }
-                  }
-
-                  controller.enqueue({
-                    type: "tool-input-end",
-                    id: toolCallId,
-                  });
-                  controller.enqueue({
-                    type: "tool-call",
-                    toolCallId,
-                    toolName,
-                    input: JSON.stringify(call.args ?? {}),
-                  });
                 }
 
                 if (result.textAfterFence) {
                   emitTextDelta(result.textAfterFence);
                 }
-
-                madeProgress = true;
-
-                // Stop streaming after tool call detected
-                toolCallDetected = true;
-                self.stoppingCriteria.interrupt();
-
-                currentToolCallId = null;
-                toolInputStartEmitted = false;
-                accumulatedFenceContent = "";
-                streamedArgumentsLength = 0;
-                insideFence = false;
-
                 break;
               }
 
-              if (insideFence) {
-                if (result.safeContent) {
-                  accumulatedFenceContent += result.safeContent;
-                  madeProgress = true;
-
-                  const toolName = extractToolName(accumulatedFenceContent);
-                  if (toolName && !toolInputStartEmitted && currentToolCallId) {
-                    controller.enqueue({
-                      type: "tool-input-start",
-                      id: currentToolCallId,
-                      toolName,
-                    });
-                    toolInputStartEmitted = true;
-                  }
-
-                  if (toolInputStartEmitted && currentToolCallId) {
-                    const argsContent = extractArgumentsContent(
-                      accumulatedFenceContent,
-                    );
-                    if (argsContent.length > streamedArgumentsLength) {
-                      const delta = argsContent.slice(streamedArgumentsLength);
-                      streamedArgumentsLength = argsContent.length;
-                      if (delta.length > 0) {
-                        controller.enqueue({
-                          type: "tool-input-delta",
-                          id: currentToolCallId,
-                          delta,
-                        });
-                      }
-                    }
-                  }
-                }
-
-                continue;
-              }
-
-              if (!insideFence && result.safeContent) {
-                emitTextDelta(result.safeContent);
-                madeProgress = true;
-              }
-
-              if (!madeProgress) {
-                break;
-              }
+              // No more progress possible
+              if (!result.safeContent && !result.completeFence) break;
             }
           };
 
@@ -1343,21 +1036,19 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
             stopping_criteria: stoppingCriteriaList,
           });
 
-          // Emit any remaining buffer content if no tool was detected
+          // Emit any remaining buffer content
           if (fenceDetector.hasContent() && !aborted) {
             emitTextDelta(fenceDetector.getBuffer());
             fenceDetector.clearBuffer();
           }
 
-          // Check if we detected any tool calls
-          const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
-
-          const finishReason: LanguageModelV3FinishReason =
-            toolCalls.length > 0
+          finishStream(
+            toolCallDetected
               ? { unified: "tool-calls", raw: "tool-calls" }
-              : { unified: "stop", raw: "stop" };
-
-          finishStream(finishReason, inputLength, outputTokens);
+              : { unified: "stop", raw: "stop" },
+            inputLength,
+            outputTokens,
+          );
         } catch (error) {
           controller.enqueue({ type: "error", error });
           controller.close();
@@ -1435,52 +1126,38 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           } else if (msg.status === "complete") {
             if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
 
-            // Check for tool calls in the response
-            const finishReason: LanguageModelV3FinishReason =
-              msg.toolCalls && msg.toolCalls.length > 0
-                ? { unified: "tool-calls", raw: "tool-calls" }
-                : { unified: "stop", raw: "stop" };
-
-            // Emit tool calls if present
-            if (msg.toolCalls && msg.toolCalls.length > 0) {
-              const toolCallsToEmit = msg.toolCalls.slice(0, 1);
-
-              for (const call of toolCallsToEmit) {
-                const toolCallId = call.toolCallId;
-                const toolName = call.toolName;
-                const argsJson = JSON.stringify(call.args ?? {});
-
+            const hasToolCalls = msg.toolCalls && msg.toolCalls.length > 0;
+            if (hasToolCalls) {
+              const call = msg.toolCalls[0];
+              const argsJson = JSON.stringify(call.args ?? {});
+              controller.enqueue({
+                type: "tool-input-start",
+                id: call.toolCallId,
+                toolName: call.toolName,
+              });
+              if (argsJson)
                 controller.enqueue({
-                  type: "tool-input-start",
-                  id: toolCallId,
-                  toolName,
+                  type: "tool-input-delta",
+                  id: call.toolCallId,
+                  delta: argsJson,
                 });
-
-                if (argsJson.length > 0) {
-                  controller.enqueue({
-                    type: "tool-input-delta",
-                    id: toolCallId,
-                    delta: argsJson,
-                  });
-                }
-
-                controller.enqueue({
-                  type: "tool-input-end",
-                  id: toolCallId,
-                });
-
-                controller.enqueue({
-                  type: "tool-call",
-                  toolCallId,
-                  toolName,
-                  input: JSON.stringify(call.args ?? {}),
-                });
-              }
+              controller.enqueue({
+                type: "tool-input-end",
+                id: call.toolCallId,
+              });
+              controller.enqueue({
+                type: "tool-call",
+                toolCallId: call.toolCallId,
+                toolName: call.toolName,
+                input: argsJson,
+              });
             }
 
             controller.enqueue({
               type: "finish",
-              finishReason,
+              finishReason: hasToolCalls
+                ? { unified: "tool-calls", raw: "tool-calls" }
+                : { unified: "stop", raw: "stop" },
               usage: {
                 inputTokens: {
                   total: msg.inputLength,
