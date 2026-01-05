@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 1.1.1
+
+### Patch Changes
+
+- ca4444b: refactor: infer types
+
 ## 1.1.0
 
 ### Minor Changes
