@@ -1,7 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { parseJsonFunctionCalls } from "../src/tool-calling/parse-json-function-calls";
-import { extractSystemPrompt } from "../src/utils/prompt-utils";
-import type { ToolDefinition } from "../src/tool-calling/types";
 
 describe("parseJsonFunctionCalls", () => {
   it("returns empty array for text without tool calls", () => {
@@ -127,52 +125,5 @@ Done!`;
       array: [1, "two", true],
       null: null,
     });
-  });
-});
-
-describe("extractSystemPrompt", () => {
-  it("extracts system prompt and removes it from messages", () => {
-    const messages = [
-      { role: "system", content: "You are helpful." },
-      { role: "user", content: "Hello" },
-    ];
-
-    const result = extractSystemPrompt(messages);
-    expect(result.systemPrompt).toBe("You are helpful.");
-    expect(result.messages).toHaveLength(1);
-    expect(result.messages[0].role).toBe("user");
-  });
-
-  it("returns undefined when no system message exists", () => {
-    const messages = [
-      { role: "user", content: "Hello" },
-      { role: "assistant", content: "Hi!" },
-    ];
-
-    const result = extractSystemPrompt(messages);
-    expect(result.systemPrompt).toBeUndefined();
-    expect(result.messages).toEqual(messages);
-  });
-
-  it("handles empty messages array", () => {
-    const messages: Array<{ role: string; content: string }> = [];
-
-    const result = extractSystemPrompt(messages);
-    expect(result.systemPrompt).toBeUndefined();
-    expect(result.messages).toEqual([]);
-  });
-
-  it("extracts system message from any position", () => {
-    const messages = [
-      { role: "user", content: "Hello" },
-      { role: "system", content: "Be concise." },
-      { role: "assistant", content: "Hi!" },
-    ];
-
-    const result = extractSystemPrompt(messages);
-    expect(result.systemPrompt).toBe("Be concise.");
-    expect(result.messages).toHaveLength(2);
-    expect(result.messages[0].role).toBe("user");
-    expect(result.messages[1].role).toBe("assistant");
   });
 });

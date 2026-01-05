@@ -19,7 +19,11 @@ import type {
   ModelInstance,
   WorkerLoadOptions,
   GenerationOptions,
+  WorkerGenerateData,
+  WorkerLoadData,
 } from "./transformers-js-worker-types";
+import type { ToolDefinition, ParsedToolCall } from "../tool-calling/types";
+import type { PretrainedModelOptions } from "@huggingface/transformers";
 
 declare const self: WorkerGlobalScope;
 
@@ -71,7 +75,12 @@ class ModelManager {
 
   private static async createTextModel(
     modelId: string,
-    options: any,
+    options: {
+      dtype?: PretrainedModelOptions["dtype"];
+      device?: PretrainedModelOptions["device"];
+      use_external_data_format?: boolean;
+      progressCallback?: (progress: ProgressInfo) => void;
+    },
   ): Promise<ModelInstance> {
     const [tokenizer, model] = await Promise.all([
       AutoTokenizer.from_pretrained(modelId, {
@@ -90,7 +99,12 @@ class ModelManager {
 
   private static async createVisionModel(
     modelId: string,
-    options: any,
+    options: {
+      dtype?: PretrainedModelOptions["dtype"];
+      device?: PretrainedModelOptions["device"];
+      use_external_data_format?: boolean;
+      progressCallback?: (progress: ProgressInfo) => void;
+    },
   ): Promise<ModelInstance> {
     const [processor, model] = await Promise.all([
       AutoProcessor.from_pretrained(modelId, {
@@ -117,9 +131,9 @@ export class TransformersJSWorkerHandler {
   private currentModelKey = "default";
 
   async generate(
-    messages: Array<{ role: string; content: any }>,
+    messages: WorkerGenerateData[],
     generationOptions?: GenerationOptions,
-    tools?: any[],
+    tools?: ToolDefinition[],
   ) {
     try {
       const modelInstance = await ModelManager.getInstance(
@@ -138,9 +152,9 @@ export class TransformersJSWorkerHandler {
 
   private async runGeneration(
     modelInstance: ModelInstance,
-    messages: Array<{ role: string; content: any }>,
+    messages: WorkerGenerateData[],
     userGenerationOptions?: GenerationOptions,
-    tools?: any[],
+    tools?: ToolDefinition[],
   ) {
     const [processor, model] = modelInstance;
     const isVision = this.isVisionModel;
@@ -153,6 +167,8 @@ export class TransformersJSWorkerHandler {
     const processedMessages = messages;
 
     // Prepare inputs based on model type
+    // Using 'any' here as transformers.js returns various formats depending on model type
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let inputs: any;
     if (isVision) {
       // For vision models, use last message and extract images
@@ -266,7 +282,7 @@ export class TransformersJSWorkerHandler {
     );
 
     // Parse tool calls from the complete response if tools are available
-    let toolCalls: any[] = [];
+    let toolCalls: ParsedToolCall[] = [];
     if (tools && tools.length > 0) {
       const finalText = Array.isArray(decoded) ? decoded[0] : decoded;
       const parsed = parseJsonFunctionCalls(finalText);
@@ -280,7 +296,7 @@ export class TransformersJSWorkerHandler {
     });
   }
 
-  async load(options?: WorkerLoadOptions) {
+  async load(options?: WorkerLoadData) {
     try {
       ModelManager.clearCache();
 
@@ -369,14 +385,19 @@ export class TransformersJSWorkerHandler {
 
   onmessage(e: MessageEvent<WorkerMessage>) {
     try {
-      const { type, data } = e.data || ({} as WorkerMessage);
-      switch (type) {
+      const msg = e.data;
+      if (!msg) {
+        this.sendError("Empty message received");
+        return;
+      }
+
+      switch (msg.type) {
         case "load":
-          this.load(data);
+          this.load(msg.data);
           break;
         case "generate":
           this.stopping_criteria.reset();
-          this.generate(data, e.data.generationOptions, e.data.tools);
+          this.generate(msg.data, msg.generationOptions, msg.tools);
           break;
         case "interrupt":
           this.interrupt();
@@ -385,7 +406,9 @@ export class TransformersJSWorkerHandler {
           this.reset();
           break;
         default:
-          this.sendError(`Unknown message type: ${type}`);
+          this.sendError(
+            `Unknown message type: ${(msg as { type: string }).type}`,
+          );
           break;
       }
     } catch (error) {
