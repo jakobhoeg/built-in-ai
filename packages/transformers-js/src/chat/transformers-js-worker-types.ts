@@ -5,6 +5,7 @@ import type {
   Processor,
   ProgressInfo,
 } from "@huggingface/transformers";
+import type { ToolDefinition, ParsedToolCall } from "../tool-calling/types";
 
 export interface GenerationOptions {
   max_new_tokens?: number;
@@ -20,21 +21,33 @@ export interface GenerationOptions {
 export type { ProgressInfo } from "@huggingface/transformers";
 
 /**
+ * Message content for different worker message types
+ */
+export interface WorkerLoadData {
+  modelId?: string;
+  dtype?: PretrainedModelOptions["dtype"];
+  device?: PretrainedModelOptions["device"];
+  isVisionModel?: boolean;
+}
+
+export interface WorkerGenerateData {
+  role: string;
+  content: string | Array<{ type: string; text?: string; image?: string }>;
+}
+
+/**
  * Message types for worker communication
  */
-export type WorkerMessage = {
-  type: "load" | "generate" | "interrupt" | "reset";
-  data?: any;
-  generationOptions?: {
-    max_new_tokens?: number;
-    temperature?: number;
-    top_k?: number;
-    top_p?: number;
-    do_sample?: boolean;
-    repetition_penalty?: number;
-  };
-  tools?: any[]; // Tool definitions for tool calling
-};
+export type WorkerMessage =
+  | { type: "load"; data?: WorkerLoadData }
+  | {
+      type: "generate";
+      data: WorkerGenerateData[];
+      generationOptions?: GenerationOptions;
+      tools?: ToolDefinition[];
+    }
+  | { type: "interrupt" }
+  | { type: "reset" };
 
 /**
  * Worker response types
@@ -46,7 +59,8 @@ export type WorkerResponse =
       data?: string;
       tps?: number;
       numTokens?: number;
-      toolCalls?: any[]; // Parsed tool calls from the response
+      inputLength?: number;
+      toolCalls?: ParsedToolCall[];
     }
   | ProgressInfo;
 
