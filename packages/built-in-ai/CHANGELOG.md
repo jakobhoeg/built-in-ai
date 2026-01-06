@@ -1,5 +1,11 @@
 # @built-in-ai/core
 
+## 3.0.1
+
+### Patch Changes
+
+- 3ebfcb6: feat: quota overflow event handler
+
 ## 3.0.0
 
 ### Major Changes
