@@ -99,6 +99,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
 
@@ -118,6 +119,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
 
@@ -138,6 +140,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -161,6 +164,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -183,6 +187,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -204,6 +209,7 @@ describe("SessionManager", () => {
       const mockCreate = vi.fn().mockResolvedValue({
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       });
 
       vi.stubGlobal("LanguageModel", {
@@ -231,6 +237,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
       const progressCallback: ProgressCallback = vi.fn();
@@ -251,6 +258,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi.fn().mockResolvedValue(mockSession);
 
@@ -276,6 +284,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
 
       vi.stubGlobal("LanguageModel", {
@@ -296,6 +305,7 @@ describe("SessionManager", () => {
       const mockSession = {
         prompt: vi.fn(),
         destroy: mockDestroy,
+        addEventListener: vi.fn(),
       };
 
       vi.stubGlobal("LanguageModel", {
@@ -315,6 +325,7 @@ describe("SessionManager", () => {
     it("should handle session without destroy method", async () => {
       const mockSession = {
         prompt: vi.fn(),
+        addEventListener: vi.fn(),
       };
 
       vi.stubGlobal("LanguageModel", {
@@ -333,10 +344,12 @@ describe("SessionManager", () => {
       const mockSession1 = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockSession2 = {
         prompt: vi.fn(),
         destroy: vi.fn(),
+        addEventListener: vi.fn(),
       };
       const mockCreate = vi
         .fn()
@@ -355,6 +368,171 @@ describe("SessionManager", () => {
 
       expect(session1).not.toBe(session2);
       expect(mockCreate).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("onQuotaOverflow", () => {
+    it("should attach custom onQuotaOverflow handler from getSession options", async () => {
+      const mockAddEventListener = vi.fn();
+      const mockSession = {
+        prompt: vi.fn(),
+        destroy: vi.fn(),
+        addEventListener: mockAddEventListener,
+      };
+
+      vi.stubGlobal("LanguageModel", {
+        availability: vi.fn().mockResolvedValue("available"),
+        create: vi.fn().mockResolvedValue(mockSession),
+      });
+
+      const onQuotaOverflow = vi.fn();
+      const manager = new SessionManager({});
+      await manager.getSession({ onQuotaOverflow });
+
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        "quotaoverflow",
+        onQuotaOverflow,
+      );
+    });
+
+    it("should attach custom onQuotaOverflow handler from base options", async () => {
+      const mockAddEventListener = vi.fn();
+      const mockSession = {
+        prompt: vi.fn(),
+        destroy: vi.fn(),
+        addEventListener: mockAddEventListener,
+      };
+
+      vi.stubGlobal("LanguageModel", {
+        availability: vi.fn().mockResolvedValue("available"),
+        create: vi.fn().mockResolvedValue(mockSession),
+      });
+
+      const onQuotaOverflow = vi.fn();
+      const manager = new SessionManager({ onQuotaOverflow } as any);
+      await manager.getSession();
+
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        "quotaoverflow",
+        onQuotaOverflow,
+      );
+    });
+
+    it("should prefer request-level onQuotaOverflow over base options", async () => {
+      const mockAddEventListener = vi.fn();
+      const mockSession = {
+        prompt: vi.fn(),
+        destroy: vi.fn(),
+        addEventListener: mockAddEventListener,
+      };
+
+      vi.stubGlobal("LanguageModel", {
+        availability: vi.fn().mockResolvedValue("available"),
+        create: vi.fn().mockResolvedValue(mockSession),
+      });
+
+      const baseOnQuotaOverflow = vi.fn();
+      const requestOnQuotaOverflow = vi.fn();
+      const manager = new SessionManager({
+        onQuotaOverflow: baseOnQuotaOverflow,
+      } as any);
+      await manager.getSession({ onQuotaOverflow: requestOnQuotaOverflow });
+
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        "quotaoverflow",
+        requestOnQuotaOverflow,
+      );
+      expect(mockAddEventListener).not.toHaveBeenCalledWith(
+        "quotaoverflow",
+        baseOnQuotaOverflow,
+      );
+    });
+
+    it("should attach default console.warn handler when no onQuotaOverflow provided", async () => {
+      const mockAddEventListener = vi.fn();
+      const mockSession = {
+        prompt: vi.fn(),
+        destroy: vi.fn(),
+        addEventListener: mockAddEventListener,
+      };
+
+      vi.stubGlobal("LanguageModel", {
+        availability: vi.fn().mockResolvedValue("available"),
+        create: vi.fn().mockResolvedValue(mockSession),
+      });
+
+      const manager = new SessionManager({});
+      await manager.getSession();
+
+      expect(mockAddEventListener).toHaveBeenCalledWith(
+        "quotaoverflow",
+        expect.any(Function),
+      );
+    });
+
+    it("should invoke default handler and log warning when quota overflow event fires", async () => {
+      let capturedHandler: ((event: Event) => void) | null = null;
+      const mockAddEventListener = vi.fn((event, handler) => {
+        if (event === "quotaoverflow") {
+          capturedHandler = handler;
+        }
+      });
+      const mockSession = {
+        prompt: vi.fn(),
+        destroy: vi.fn(),
+        addEventListener: mockAddEventListener,
+      };
+
+      vi.stubGlobal("LanguageModel", {
+        availability: vi.fn().mockResolvedValue("available"),
+        create: vi.fn().mockResolvedValue(mockSession),
+      });
+
+      const consoleWarnSpy = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
+
+      const manager = new SessionManager({});
+      await manager.getSession();
+
+      expect(capturedHandler).not.toBeNull();
+      capturedHandler!(new Event("quotaoverflow"));
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        "Model quota exceeded. Consider handling 'quotaoverflow' event.",
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it("should invoke custom onQuotaOverflow handler when quota overflow event fires", async () => {
+      let capturedHandler: ((event: Event) => void) | null = null;
+      const mockAddEventListener = vi.fn((event, handler) => {
+        if (event === "quotaoverflow") {
+          capturedHandler = handler;
+        }
+      });
+      const mockSession = {
+        prompt: vi.fn(),
+        destroy: vi.fn(),
+        addEventListener: mockAddEventListener,
+      };
+
+      vi.stubGlobal("LanguageModel", {
+        availability: vi.fn().mockResolvedValue("available"),
+        create: vi.fn().mockResolvedValue(mockSession),
+      });
+
+      const onQuotaOverflow = vi.fn();
+      const manager = new SessionManager({});
+      await manager.getSession({ onQuotaOverflow });
+
+      expect(capturedHandler).not.toBeNull();
+      const mockEvent = new Event("quotaoverflow");
+      capturedHandler!(mockEvent);
+
+      expect(onQuotaOverflow).toHaveBeenCalledTimes(1);
+      expect(onQuotaOverflow).toHaveBeenCalledWith(mockEvent);
     });
   });
 });
