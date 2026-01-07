@@ -28,12 +28,21 @@ export const metadata: Metadata = {
     title: "Built-in AI Provider",
     description: "Build local, in-browser AI applications with better DX.",
     siteName: "Built-in AI",
+    images: [
+      {
+        url: "/opengraph-image.jpeg",
+        width: 1280,
+        height: 720,
+        alt: "Built-in AI Provider",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Built-in AI Provider",
     description: "Build local, in-browser AI applications with better DX.",
     creator: "@hoeg_jakob",
+    images: ["/opengraph-image.jpeg"],
   },
 };
 
