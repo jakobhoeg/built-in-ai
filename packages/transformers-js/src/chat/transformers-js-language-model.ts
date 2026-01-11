@@ -16,16 +16,11 @@ import {
   AutoProcessor,
   AutoModelForVision2Seq,
   StoppingCriteria,
-  load_image,
   type PretrainedModelOptions,
   type ProgressInfo,
-  type Tensor,
-  PreTrainedTokenizer,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
 import type { TransformersMessage } from "./convert-to-transformers-message";
-import { convertToolsToHuggingFaceFormat } from "./convert-tools";
-import { decodeSingleSequence } from "./decode-utils";
 import type {
   ModelInstance,
   GenerationOptions,
@@ -41,7 +36,6 @@ import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
 import {
   createMainThreadGenerationStream,
   createWorkerGenerationStream,
-  type GenerationEvent,
 } from "./generation-stream";
 
 declare global {
@@ -573,93 +567,59 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     const { messages, warnings, generationOptions, functionTools } =
       this.getArgs(options);
 
-    // Use worker if provided and in browser environment
-    if (this.config.worker && isBrowserEnvironment()) {
-      return this.doGenerateWithWorker(
-        messages,
-        warnings,
-        generationOptions,
-        options,
-        functionTools,
-      );
+    const useWorker = this.config.worker && isBrowserEnvironment();
+
+    // Initialize worker if needed
+    if (useWorker) {
+      await this.initializeWorker();
     }
 
-    const hfTools =
-      functionTools.length > 0
-        ? convertToolsToHuggingFaceFormat(functionTools)
-        : undefined;
-
-    const promptMessages = messages;
-
-    // Main thread generation (browser without worker or server environment)
-    const [processor, model] = await this.getSession(
-      this.config.initProgressCallback,
-    );
-
     try {
-      const isVision = this.config.isVisionModel;
-      let inputs: {
-        input_ids: Tensor;
-        attention_mask?: Tensor;
-        pixel_values?: Tensor;
-      };
-      let generatedText: string;
-      let inputLength: number = 0;
+      // Create the appropriate generation stream
+      const generationStream = useWorker
+        ? createWorkerGenerationStream({
+            worker: this.config.worker!,
+            messages,
+            generationOptions,
+            tools: functionTools,
+            abortSignal: options.abortSignal,
+          })
+        : createMainThreadGenerationStream({
+            modelInstance: await this.getSession(
+              this.config.initProgressCallback,
+            ),
+            messages,
+            generationOptions,
+            tools: functionTools,
+            isVisionModel: this.config.isVisionModel,
+            stoppingCriteria: this.stoppingCriteria,
+            abortSignal: options.abortSignal,
+          });
 
-      if (isVision) {
-        const text = processor.apply_chat_template(promptMessages as any, {
-          add_generation_prompt: true,
-          ...(hfTools ? { tools: hfTools } : {}),
-        });
-        const imageUrls = promptMessages
-          .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
-          .filter((part) => part.type === "image")
-          .map((part) => part.image);
+      // Collect all generated text
+      let generatedText = "";
+      let lastUsage: { inputTokens?: number; outputTokens?: number } = {};
+      let workerToolCalls: ParsedToolCall[] = [];
 
-        const images = await Promise.all(
-          imageUrls.map((url) => load_image(url)),
-        );
-
-        inputs = await processor(text, images);
-        const outputs = await (model.generate as any)({
-          ...inputs,
-          ...generationOptions,
-        });
-        generatedText = processor.batch_decode(outputs as Tensor, {
-          skip_special_tokens: true,
-        })[0];
-      } else {
-        inputs = processor.apply_chat_template(promptMessages as any, {
-          add_generation_prompt: true,
-          return_dict: true,
-          ...(hfTools ? { tools: hfTools } : {}),
-        }) as { input_ids: Tensor; attention_mask?: Tensor };
-
-        const outputs = await (model.generate as any)({
-          ...inputs,
-          ...generationOptions,
-        });
-        inputLength = inputs.input_ids.data.length;
-
-        // Extract first sequence from outputs
-        const outputsAsAny = outputs as any;
-        const sequences = outputsAsAny.sequences || outputs;
-        const firstSequence = Array.isArray(sequences)
-          ? sequences[0]
-          : sequences;
-
-        generatedText = decodeSingleSequence(
-          processor as PreTrainedTokenizer,
-          firstSequence,
-          inputLength,
-        );
+      for await (const event of generationStream) {
+        if (event.type === "delta") {
+          generatedText += event.delta;
+        } else if (event.type === "complete") {
+          lastUsage = event.usage || {};
+          if (event.toolCalls) {
+            workerToolCalls = event.toolCalls;
+          }
+        }
       }
 
-      const { toolCalls, textContent } = parseJsonFunctionCalls(generatedText);
+      // Parse for tool calls - prefer worker-parsed ones if available
+      const { toolCalls: parsedToolCalls, textContent } =
+        parseJsonFunctionCalls(generatedText);
+      const toolCalls =
+        workerToolCalls.length > 0 ? workerToolCalls : parsedToolCalls;
 
       if (toolCalls.length > 0) {
         const toolCallsToEmit = toolCalls.slice(0, 1);
-
         const parts: LanguageModelV3Content[] = [];
 
         if (textContent) {
@@ -681,34 +641,20 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         return {
           content: parts,
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
-          usage: isVision
-            ? {
-                inputTokens: {
-                  total: undefined,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: undefined,
-                  text: undefined,
-                  reasoning: undefined,
-                },
-              }
-            : {
-                inputTokens: {
-                  total: inputLength,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: inputLength + generatedText.length,
-                  text: generatedText.length,
-                  reasoning: undefined,
-                },
-              },
-          request: { body: { messages: promptMessages, ...generationOptions } },
+          usage: {
+            inputTokens: {
+              total: lastUsage.inputTokens,
+              noCache: undefined,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: lastUsage.outputTokens,
+              text: undefined,
+              reasoning: undefined,
+            },
+          },
+          request: { body: { messages, ...generationOptions } },
           warnings,
         };
       }
@@ -723,34 +669,20 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       return {
         content,
         finishReason: { unified: "stop", raw: "stop" },
-        usage: isVision
-          ? {
-              inputTokens: {
-                total: undefined,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: undefined,
-                text: undefined,
-                reasoning: undefined,
-              },
-            }
-          : {
-              inputTokens: {
-                total: inputLength,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: inputLength + generatedText.length,
-                text: generatedText.length,
-                reasoning: undefined,
-              },
-            },
-        request: { body: { messages: promptMessages, ...generationOptions } },
+        usage: {
+          inputTokens: {
+            total: lastUsage.inputTokens,
+            noCache: undefined,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            total: lastUsage.outputTokens,
+            text: undefined,
+            reasoning: undefined,
+          },
+        },
+        request: { body: { messages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
@@ -760,123 +692,6 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         }`,
       );
     }
-  }
-
-  private async doGenerateWithWorker(
-    messages: TransformersMessage[],
-    warnings: SharedV3Warning[],
-    generationOptions: GenerationOptions,
-    options: LanguageModelV3CallOptions,
-    functionTools: ToolDefinition[],
-  ): Promise<LanguageModelV3GenerateResult> {
-    const worker = this.config.worker!;
-
-    await this.initializeWorker();
-
-    const result = await new Promise<{
-      text: string;
-      toolCalls?: ParsedToolCall[];
-    }>((resolve, reject) => {
-      const onMessage = (e: MessageEvent) => {
-        const msg = e.data;
-        if (!msg) return;
-        if (msg.status === "complete") {
-          worker.removeEventListener("message", onMessage);
-          const text = Array.isArray(msg.output)
-            ? String(msg.output[0] ?? "")
-            : String(msg.output ?? "");
-          resolve({
-            text,
-            toolCalls: msg.toolCalls,
-          });
-        } else if (msg.status === "error") {
-          worker.removeEventListener("message", onMessage);
-          reject(new Error(String(msg.data || "Worker error")));
-        }
-      };
-      worker.addEventListener("message", onMessage);
-      worker.postMessage({
-        type: "generate",
-        data: messages,
-        generationOptions,
-        tools: functionTools.length > 0 ? functionTools : undefined,
-      });
-
-      if (options.abortSignal) {
-        const onAbort = () => {
-          worker.postMessage({ type: "interrupt" });
-          options.abortSignal?.removeEventListener("abort", onAbort);
-        };
-        options.abortSignal.addEventListener("abort", onAbort);
-      }
-    });
-
-    // Handle tool calls if present
-    if (result.toolCalls && result.toolCalls.length > 0) {
-      const toolCallsToEmit = result.toolCalls.slice(0, 1);
-      const parts: LanguageModelV3Content[] = [];
-
-      // Extract text content from result
-      const { textContent } = parseJsonFunctionCalls(result.text);
-      if (textContent) {
-        parts.push({
-          type: "text",
-          text: textContent,
-        });
-      }
-
-      for (const call of toolCallsToEmit) {
-        parts.push({
-          type: "tool-call",
-          toolCallId: call.toolCallId,
-          toolName: call.toolName,
-          input: JSON.stringify(call.args ?? {}),
-        });
-      }
-
-      return {
-        content: parts,
-        finishReason: { unified: "tool-calls", raw: "tool-calls" },
-        usage: {
-          inputTokens: {
-            total: undefined,
-            noCache: undefined,
-            cacheRead: undefined,
-            cacheWrite: undefined,
-          },
-          outputTokens: {
-            total: undefined,
-            text: undefined,
-            reasoning: undefined,
-          },
-        },
-        request: { body: { messages, ...generationOptions } },
-        warnings,
-      };
-    }
-
-    const content: LanguageModelV3Content[] = [
-      { type: "text", text: result.text },
-    ];
-    return {
-      content,
-      finishReason: { unified: "stop", raw: "stop" },
-      usage: {
-        inputTokens: {
-          total: undefined,
-          noCache: undefined,
-          cacheRead: undefined,
-          cacheWrite: undefined,
-        },
-        outputTokens: {
-          total: undefined,
-          text: undefined,
-          reasoning: undefined,
-        },
-      },
-      request: { body: { messages, ...generationOptions } },
-      warnings,
-    };
   }
 
   private async initializeWorker(
