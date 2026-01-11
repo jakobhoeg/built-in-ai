@@ -15,18 +15,12 @@ import {
   AutoModelForCausalLM,
   AutoProcessor,
   AutoModelForVision2Seq,
-  TextStreamer,
   StoppingCriteria,
-  StoppingCriteriaList,
   type PretrainedModelOptions,
   type ProgressInfo,
-  type PreTrainedTokenizer,
-  type Tensor,
 } from "@huggingface/transformers";
 import { convertToTransformersMessages } from "./convert-to-transformers-message";
 import type { TransformersMessage } from "./convert-to-transformers-message";
-import { convertToolsToHuggingFaceFormat } from "./convert-tools";
-import { decodeSingleSequence } from "./decode-utils";
 import type {
   ModelInstance,
   GenerationOptions,
@@ -39,6 +33,10 @@ import {
 } from "../utils/warnings";
 import { isFunctionTool } from "../utils/tool-utils";
 import { ToolCallFenceDetector } from "../streaming/tool-call-detector";
+import {
+  createMainThreadGenerationStream,
+  createWorkerGenerationStream,
+} from "./generation-stream";
 
 declare global {
   interface Navigator {
@@ -124,22 +122,6 @@ class InterruptableStoppingCriteria extends StoppingCriteria {
 
   _call(input_ids: number[][], scores: number[][]): boolean[] {
     return new Array(input_ids.length).fill(this.interrupted);
-  }
-}
-
-class CallbackTextStreamer extends TextStreamer {
-  private cb: (text: string) => void;
-
-  constructor(tokenizer: PreTrainedTokenizer, cb: (text: string) => void) {
-    super(tokenizer, {
-      skip_prompt: true,
-      skip_special_tokens: true,
-    });
-    this.cb = cb;
-  }
-
-  on_finalized_text(text: string): void {
-    this.cb(text);
   }
 }
 
@@ -585,96 +567,59 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
     const { messages, warnings, generationOptions, functionTools } =
       this.getArgs(options);
 
-    // Use worker if provided and in browser environment
-    if (this.config.worker && isBrowserEnvironment()) {
-      return this.doGenerateWithWorker(
-        messages,
-        warnings,
-        generationOptions,
-        options,
-        functionTools,
-      );
+    const useWorker = this.config.worker && isBrowserEnvironment();
+
+    // Initialize worker if needed
+    if (useWorker) {
+      await this.initializeWorker();
     }
 
-    const hfTools =
-      functionTools.length > 0
-        ? convertToolsToHuggingFaceFormat(functionTools)
-        : undefined;
-
-    const promptMessages = messages;
-
-    // Main thread generation (browser without worker or server environment)
-    const [processor, model] = await this.getSession(
-      this.config.initProgressCallback,
-    );
-
     try {
-      const isVision = this.config.isVisionModel;
-      let inputs: {
-        input_ids: Tensor;
-        attention_mask?: Tensor;
-        pixel_values?: Tensor;
-      };
-      let generatedText: string;
-      let inputLength: number = 0;
+      // Create the appropriate generation stream
+      const generationStream = useWorker
+        ? createWorkerGenerationStream({
+            worker: this.config.worker!,
+            messages,
+            generationOptions,
+            tools: functionTools,
+            abortSignal: options.abortSignal,
+          })
+        : createMainThreadGenerationStream({
+            modelInstance: await this.getSession(
+              this.config.initProgressCallback,
+            ),
+            messages,
+            generationOptions,
+            tools: functionTools,
+            isVisionModel: this.config.isVisionModel,
+            stoppingCriteria: this.stoppingCriteria,
+            abortSignal: options.abortSignal,
+          });
 
-      if (isVision) {
-        // Cast to any for vision models since transformers.js supports vision content arrays too
-        // but the type definition is Message[] with content: string
-        const { load_image } = await import("@huggingface/transformers");
-        const text = processor.apply_chat_template(promptMessages as any, {
-          add_generation_prompt: true,
-          ...(hfTools ? { tools: hfTools } : {}),
-        });
-        const imageUrls = promptMessages
-          .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
-          .filter((part) => part.type === "image")
-          .map((part) => part.image);
+      // Collect all generated text
+      let generatedText = "";
+      let lastUsage: { inputTokens?: number; outputTokens?: number } = {};
+      let workerToolCalls: ParsedToolCall[] = [];
 
-        const images = await Promise.all(
-          imageUrls.map((url) => load_image(url)),
-        );
-
-        inputs = await processor(text, images);
-        const outputs = await (model.generate as any)({
-          ...inputs,
-          ...generationOptions,
-        });
-        generatedText = processor.batch_decode(outputs as Tensor, {
-          skip_special_tokens: true,
-        })[0];
-      } else {
-        inputs = processor.apply_chat_template(promptMessages as any, {
-          add_generation_prompt: true,
-          return_dict: true,
-          ...(hfTools ? { tools: hfTools } : {}),
-        }) as { input_ids: Tensor; attention_mask?: Tensor };
-
-        const outputs = await (model.generate as any)({
-          ...inputs,
-          ...generationOptions,
-        });
-        inputLength = inputs.input_ids.data.length;
-
-        // Extract first sequence from outputs
-        const outputsAsAny = outputs as any;
-        const sequences = outputsAsAny.sequences || outputs;
-        const firstSequence = Array.isArray(sequences)
-          ? sequences[0]
-          : sequences;
-
-        generatedText = decodeSingleSequence(
-          processor as PreTrainedTokenizer,
-          firstSequence,
-          inputLength,
-        );
+      for await (const event of generationStream) {
+        if (event.type === "delta") {
+          generatedText += event.delta;
+        } else if (event.type === "complete") {
+          lastUsage = event.usage || {};
+          if (event.toolCalls) {
+            workerToolCalls = event.toolCalls;
+          }
+        }
       }
 
-      const { toolCalls, textContent } = parseJsonFunctionCalls(generatedText);
+      // Parse for tool calls - prefer worker-parsed ones if available
+      const { toolCalls: parsedToolCalls, textContent } =
+        parseJsonFunctionCalls(generatedText);
+      const toolCalls =
+        workerToolCalls.length > 0 ? workerToolCalls : parsedToolCalls;
 
       if (toolCalls.length > 0) {
         const toolCallsToEmit = toolCalls.slice(0, 1);
-
         const parts: LanguageModelV3Content[] = [];
 
         if (textContent) {
@@ -696,34 +641,20 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         return {
           content: parts,
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
-          usage: isVision
-            ? {
-                inputTokens: {
-                  total: undefined,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: undefined,
-                  text: undefined,
-                  reasoning: undefined,
-                },
-              }
-            : {
-                inputTokens: {
-                  total: inputLength,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: inputLength + generatedText.length,
-                  text: generatedText.length,
-                  reasoning: undefined,
-                },
-              },
-          request: { body: { messages: promptMessages, ...generationOptions } },
+          usage: {
+            inputTokens: {
+              total: lastUsage.inputTokens,
+              noCache: undefined,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: lastUsage.outputTokens,
+              text: undefined,
+              reasoning: undefined,
+            },
+          },
+          request: { body: { messages, ...generationOptions } },
           warnings,
         };
       }
@@ -738,34 +669,20 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
       return {
         content,
         finishReason: { unified: "stop", raw: "stop" },
-        usage: isVision
-          ? {
-              inputTokens: {
-                total: undefined,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: undefined,
-                text: undefined,
-                reasoning: undefined,
-              },
-            }
-          : {
-              inputTokens: {
-                total: inputLength,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: inputLength + generatedText.length,
-                text: generatedText.length,
-                reasoning: undefined,
-              },
-            },
-        request: { body: { messages: promptMessages, ...generationOptions } },
+        usage: {
+          inputTokens: {
+            total: lastUsage.inputTokens,
+            noCache: undefined,
+            cacheRead: undefined,
+            cacheWrite: undefined,
+          },
+          outputTokens: {
+            total: lastUsage.outputTokens,
+            text: undefined,
+            reasoning: undefined,
+          },
+        },
+        request: { body: { messages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
@@ -775,123 +692,6 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         }`,
       );
     }
-  }
-
-  private async doGenerateWithWorker(
-    messages: TransformersMessage[],
-    warnings: SharedV3Warning[],
-    generationOptions: GenerationOptions,
-    options: LanguageModelV3CallOptions,
-    functionTools: ToolDefinition[],
-  ): Promise<LanguageModelV3GenerateResult> {
-    const worker = this.config.worker!;
-
-    await this.initializeWorker();
-
-    const result = await new Promise<{
-      text: string;
-      toolCalls?: ParsedToolCall[];
-    }>((resolve, reject) => {
-      const onMessage = (e: MessageEvent) => {
-        const msg = e.data;
-        if (!msg) return;
-        if (msg.status === "complete") {
-          worker.removeEventListener("message", onMessage);
-          const text = Array.isArray(msg.output)
-            ? String(msg.output[0] ?? "")
-            : String(msg.output ?? "");
-          resolve({
-            text,
-            toolCalls: msg.toolCalls,
-          });
-        } else if (msg.status === "error") {
-          worker.removeEventListener("message", onMessage);
-          reject(new Error(String(msg.data || "Worker error")));
-        }
-      };
-      worker.addEventListener("message", onMessage);
-      worker.postMessage({
-        type: "generate",
-        data: messages,
-        generationOptions,
-        tools: functionTools.length > 0 ? functionTools : undefined,
-      });
-
-      if (options.abortSignal) {
-        const onAbort = () => {
-          worker.postMessage({ type: "interrupt" });
-          options.abortSignal?.removeEventListener("abort", onAbort);
-        };
-        options.abortSignal.addEventListener("abort", onAbort);
-      }
-    });
-
-    // Handle tool calls if present
-    if (result.toolCalls && result.toolCalls.length > 0) {
-      const toolCallsToEmit = result.toolCalls.slice(0, 1);
-      const parts: LanguageModelV3Content[] = [];
-
-      // Extract text content from result
-      const { textContent } = parseJsonFunctionCalls(result.text);
-      if (textContent) {
-        parts.push({
-          type: "text",
-          text: textContent,
-        });
-      }
-
-      for (const call of toolCallsToEmit) {
-        parts.push({
-          type: "tool-call",
-          toolCallId: call.toolCallId,
-          toolName: call.toolName,
-          input: JSON.stringify(call.args ?? {}),
-        });
-      }
-
-      return {
-        content: parts,
-        finishReason: { unified: "tool-calls", raw: "tool-calls" },
-        usage: {
-          inputTokens: {
-            total: undefined,
-            noCache: undefined,
-            cacheRead: undefined,
-            cacheWrite: undefined,
-          },
-          outputTokens: {
-            total: undefined,
-            text: undefined,
-            reasoning: undefined,
-          },
-        },
-        request: { body: { messages, ...generationOptions } },
-        warnings,
-      };
-    }
-
-    const content: LanguageModelV3Content[] = [
-      { type: "text", text: result.text },
-    ];
-    return {
-      content,
-      finishReason: { unified: "stop", raw: "stop" },
-      usage: {
-        inputTokens: {
-          total: undefined,
-          noCache: undefined,
-          cacheRead: undefined,
-          cacheWrite: undefined,
-        },
-        outputTokens: {
-          total: undefined,
-          text: undefined,
-          reasoning: undefined,
-        },
-      },
-      request: { body: { messages, ...generationOptions } },
-      warnings,
-    };
   }
 
   private async initializeWorker(
@@ -956,159 +756,55 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
   public async doStream(
     options: LanguageModelV3CallOptions,
   ): Promise<LanguageModelV3StreamResult> {
-    let converted;
-    try {
-      converted = this.getArgs(options);
-    } catch (error) {
-      console.error("[TransformersJS Model doStream] getArgs FAILED:", error);
-      throw error;
+    const { messages, warnings, generationOptions, functionTools } =
+      this.getArgs(options);
+
+    const useWorker = this.config.worker && isBrowserEnvironment();
+
+    // Initialize worker if needed
+    if (useWorker) {
+      await this.initializeWorker();
     }
-
-    const { messages, warnings, generationOptions, functionTools } = converted;
-
-    // Use worker if available and in browser environment
-    if (this.config.worker && isBrowserEnvironment()) {
-      return this.doStreamWithWorker(
-        messages,
-        warnings,
-        generationOptions,
-        options,
-        functionTools,
-      );
-    }
-
-    const hfTools =
-      functionTools.length > 0
-        ? convertToolsToHuggingFaceFormat(functionTools)
-        : undefined;
-
-    const promptMessages = messages;
 
     const self = this;
     const textId = "text-0";
 
     const stream = new ReadableStream<LanguageModelV3StreamPart>({
       async start(controller) {
-        controller.enqueue({
-          type: "stream-start",
-          warnings,
-        });
+        controller.enqueue({ type: "stream-start", warnings });
 
         let textStarted = false;
-        let finished = false;
-        let aborted = false;
-
-        const ensureTextStart = () => {
-          if (!textStarted) {
-            controller.enqueue({
-              type: "text-start",
-              id: textId,
-            });
-            textStarted = true;
-          }
-        };
 
         const emitTextDelta = (delta: string) => {
           if (!delta) return;
-          ensureTextStart();
-          controller.enqueue({
-            type: "text-delta",
-            id: textId,
-            delta,
-          });
+          if (!textStarted) {
+            controller.enqueue({ type: "text-start", id: textId });
+            textStarted = true;
+          }
+          controller.enqueue({ type: "text-delta", id: textId, delta });
         };
-
-        const emitTextEndIfNeeded = () => {
-          if (!textStarted) return;
-          controller.enqueue({
-            type: "text-end",
-            id: textId,
-          });
-          textStarted = false;
-        };
-
-        const finishStream = (
-          finishReason: LanguageModelV3FinishReason,
-          inputLength: number = 0,
-          outputTokens: number = 0,
-        ) => {
-          if (finished) return;
-          finished = true;
-          emitTextEndIfNeeded();
-          controller.enqueue({
-            type: "finish",
-            finishReason,
-            usage: {
-              inputTokens: {
-                total: inputLength,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: inputLength + outputTokens,
-                text: outputTokens,
-                reasoning: undefined,
-              },
-            },
-          });
-          controller.close();
-        };
-
-        const abortHandler = () => {
-          if (aborted) return;
-          aborted = true;
-          self.stoppingCriteria.interrupt();
-        };
-
-        if (options.abortSignal) {
-          options.abortSignal.addEventListener("abort", abortHandler);
-        }
 
         try {
-          const [tokenizer, model] = await self.getSession(
-            self.config.initProgressCallback,
-          );
-
-          const isVision = self.config.isVisionModel;
-
-          // Prepare inputs based on model type
-          let inputs: {
-            input_ids: Tensor;
-            attention_mask?: Tensor;
-            pixel_values?: Tensor;
-          };
-
-          if (isVision) {
-            // For vision models, process images
-            const { load_image } = await import("@huggingface/transformers");
-            const text = tokenizer.apply_chat_template(promptMessages as any, {
-              add_generation_prompt: true,
-              ...(hfTools ? { tools: hfTools } : {}),
-            });
-            const imageUrls = promptMessages
-              .flatMap((msg) => (Array.isArray(msg.content) ? msg.content : []))
-              .filter((part) => part.type === "image")
-              .map((part) => part.image);
-
-            // Load images using load_image
-            const images = await Promise.all(
-              imageUrls.map((url) => load_image(url)),
-            );
-
-            inputs = await tokenizer(text, images);
-          } else {
-            // Cast to any for vision models since transformers.js supports vision content arrays
-            // but the type definition is Message[] with content: string
-            inputs = tokenizer.apply_chat_template(promptMessages as any, {
-              add_generation_prompt: true,
-              return_dict: true,
-              ...(hfTools ? { tools: hfTools } : {}),
-            }) as { input_ids: Tensor; attention_mask?: Tensor };
-          }
-
-          let inputLength = isVision ? 0 : inputs.input_ids.data.length;
-          let outputTokens = 0;
+          // Create the appropriate generation stream
+          const generationStream = useWorker
+            ? createWorkerGenerationStream({
+                worker: self.config.worker!,
+                messages,
+                generationOptions,
+                tools: functionTools,
+                abortSignal: options.abortSignal,
+              })
+            : createMainThreadGenerationStream({
+                modelInstance: await self.getSession(
+                  self.config.initProgressCallback,
+                ),
+                messages,
+                generationOptions,
+                tools: functionTools,
+                isVisionModel: self.config.isVisionModel,
+                stoppingCriteria: self.stoppingCriteria,
+                abortSignal: options.abortSignal,
+              });
 
           const fenceDetector = new ToolCallFenceDetector();
           let accumulatedText = "";
@@ -1120,179 +816,42 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           let insideFence = false;
           let toolCallDetected = false;
 
-          const streamCallback = (text: string) => {
-            if (aborted || toolCallDetected) return;
+          let lastUsage: { inputTokens?: number; outputTokens?: number } = {};
 
-            outputTokens++;
-            accumulatedText += text;
+          for await (const event of generationStream) {
+            if (event.type === "delta") {
+              accumulatedText += event.delta;
+              fenceDetector.addChunk(event.delta);
 
-            fenceDetector.addChunk(text);
+              // Process buffer using streaming detection
+              while (fenceDetector.hasContent() && !toolCallDetected) {
+                const wasInsideFence = insideFence;
+                const result = fenceDetector.detectStreamingFence();
+                insideFence = result.inFence;
 
-            // Process buffer using streaming detection
-            while (
-              fenceDetector.hasContent() &&
-              !aborted &&
-              !toolCallDetected
-            ) {
-              const wasInsideFence = insideFence;
-              const result = fenceDetector.detectStreamingFence();
-              insideFence = result.inFence;
+                let madeProgress = false;
 
-              let madeProgress = false;
-
-              if (!wasInsideFence && result.inFence) {
-                if (result.safeContent) {
-                  emitTextDelta(result.safeContent);
-                  madeProgress = true;
-                }
-
-                currentToolCallId = `call_${Date.now()}_${Math.random()
-                  .toString(36)
-                  .slice(2, 9)}`;
-                toolInputStartEmitted = false;
-                accumulatedFenceContent = "";
-                streamedArgumentsLength = 0;
-                insideFence = true;
-
-                continue;
-              }
-
-              if (result.completeFence) {
-                madeProgress = true;
-                if (result.safeContent) {
-                  accumulatedFenceContent += result.safeContent;
-                }
-
-                if (toolInputStartEmitted && currentToolCallId) {
-                  const argsContent = extractArgumentsContent(
-                    accumulatedFenceContent,
-                  );
-                  if (argsContent.length > streamedArgumentsLength) {
-                    const delta = argsContent.slice(streamedArgumentsLength);
-                    streamedArgumentsLength = argsContent.length;
-                    if (delta.length > 0) {
-                      controller.enqueue({
-                        type: "tool-input-delta",
-                        id: currentToolCallId,
-                        delta,
-                      });
-                    }
-                  }
-                }
-
-                const parsed = parseJsonFunctionCalls(result.completeFence);
-                const parsedToolCalls = parsed.toolCalls;
-                const selectedToolCalls = parsedToolCalls.slice(0, 1);
-
-                if (selectedToolCalls.length === 0) {
-                  emitTextDelta(result.completeFence);
-                  if (result.textAfterFence) {
-                    emitTextDelta(result.textAfterFence);
+                if (!wasInsideFence && result.inFence) {
+                  if (result.safeContent) {
+                    emitTextDelta(result.safeContent);
+                    madeProgress = true;
                   }
 
-                  currentToolCallId = null;
+                  currentToolCallId = `call_${Date.now()}_${Math.random()
+                    .toString(36)
+                    .slice(2, 9)}`;
                   toolInputStartEmitted = false;
                   accumulatedFenceContent = "";
                   streamedArgumentsLength = 0;
-                  insideFence = false;
+                  insideFence = true;
+
                   continue;
                 }
 
-                if (selectedToolCalls.length > 0 && currentToolCallId) {
-                  selectedToolCalls[0].toolCallId = currentToolCallId;
-                }
-
-                for (const [index, call] of selectedToolCalls.entries()) {
-                  const toolCallId =
-                    index === 0 && currentToolCallId
-                      ? currentToolCallId
-                      : call.toolCallId;
-                  const toolName = call.toolName;
-                  const argsJson = JSON.stringify(call.args ?? {});
-
-                  if (toolCallId === currentToolCallId) {
-                    if (!toolInputStartEmitted) {
-                      controller.enqueue({
-                        type: "tool-input-start",
-                        id: toolCallId,
-                        toolName,
-                      });
-                      toolInputStartEmitted = true;
-                    }
-
-                    const argsContent = extractArgumentsContent(
-                      accumulatedFenceContent,
-                    );
-                    if (argsContent.length > streamedArgumentsLength) {
-                      const delta = argsContent.slice(streamedArgumentsLength);
-                      streamedArgumentsLength = argsContent.length;
-                      if (delta.length > 0) {
-                        controller.enqueue({
-                          type: "tool-input-delta",
-                          id: toolCallId,
-                          delta,
-                        });
-                      }
-                    }
-                  } else {
-                    controller.enqueue({
-                      type: "tool-input-start",
-                      id: toolCallId,
-                      toolName,
-                    });
-                    if (argsJson.length > 0) {
-                      controller.enqueue({
-                        type: "tool-input-delta",
-                        id: toolCallId,
-                        delta: argsJson,
-                      });
-                    }
-                  }
-
-                  controller.enqueue({
-                    type: "tool-input-end",
-                    id: toolCallId,
-                  });
-                  controller.enqueue({
-                    type: "tool-call",
-                    toolCallId,
-                    toolName,
-                    input: JSON.stringify(call.args ?? {}),
-                  });
-                }
-
-                if (result.textAfterFence) {
-                  emitTextDelta(result.textAfterFence);
-                }
-
-                madeProgress = true;
-
-                // Stop streaming after tool call detected
-                toolCallDetected = true;
-                self.stoppingCriteria.interrupt();
-
-                currentToolCallId = null;
-                toolInputStartEmitted = false;
-                accumulatedFenceContent = "";
-                streamedArgumentsLength = 0;
-                insideFence = false;
-
-                break;
-              }
-
-              if (insideFence) {
-                if (result.safeContent) {
-                  accumulatedFenceContent += result.safeContent;
+                if (result.completeFence) {
                   madeProgress = true;
-
-                  const toolName = extractToolName(accumulatedFenceContent);
-                  if (toolName && !toolInputStartEmitted && currentToolCallId) {
-                    controller.enqueue({
-                      type: "tool-input-start",
-                      id: currentToolCallId,
-                      toolName,
-                    });
-                    toolInputStartEmitted = true;
+                  if (result.safeContent) {
+                    accumulatedFenceContent += result.safeContent;
                   }
 
                   if (toolInputStartEmitted && currentToolCallId) {
@@ -1311,216 +870,206 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                       }
                     }
                   }
+
+                  const parsed = parseJsonFunctionCalls(result.completeFence);
+                  const parsedToolCalls = parsed.toolCalls;
+                  const selectedToolCalls = parsedToolCalls.slice(0, 1);
+
+                  if (selectedToolCalls.length === 0) {
+                    emitTextDelta(result.completeFence);
+                    if (result.textAfterFence) {
+                      emitTextDelta(result.textAfterFence);
+                    }
+
+                    currentToolCallId = null;
+                    toolInputStartEmitted = false;
+                    accumulatedFenceContent = "";
+                    streamedArgumentsLength = 0;
+                    insideFence = false;
+                    continue;
+                  }
+
+                  if (selectedToolCalls.length > 0 && currentToolCallId) {
+                    selectedToolCalls[0].toolCallId = currentToolCallId;
+                  }
+
+                  for (const [index, call] of selectedToolCalls.entries()) {
+                    const toolCallId =
+                      index === 0 && currentToolCallId
+                        ? currentToolCallId
+                        : call.toolCallId;
+                    const toolName = call.toolName;
+                    const argsJson = JSON.stringify(call.args ?? {});
+
+                    if (toolCallId === currentToolCallId) {
+                      if (!toolInputStartEmitted) {
+                        controller.enqueue({
+                          type: "tool-input-start",
+                          id: toolCallId,
+                          toolName,
+                        });
+                        toolInputStartEmitted = true;
+                      }
+
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
+                      if (argsContent.length > streamedArgumentsLength) {
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
+                        streamedArgumentsLength = argsContent.length;
+                        if (delta.length > 0) {
+                          controller.enqueue({
+                            type: "tool-input-delta",
+                            id: toolCallId,
+                            delta,
+                          });
+                        }
+                      }
+                    } else {
+                      controller.enqueue({
+                        type: "tool-input-start",
+                        id: toolCallId,
+                        toolName,
+                      });
+                      if (argsJson.length > 0) {
+                        controller.enqueue({
+                          type: "tool-input-delta",
+                          id: toolCallId,
+                          delta: argsJson,
+                        });
+                      }
+                    }
+
+                    controller.enqueue({
+                      type: "tool-input-end",
+                      id: toolCallId,
+                    });
+                    controller.enqueue({
+                      type: "tool-call",
+                      toolCallId,
+                      toolName,
+                      input: argsJson,
+                    });
+                  }
+
+                  if (result.textAfterFence) {
+                    emitTextDelta(result.textAfterFence);
+                  }
+
+                  madeProgress = true;
+                  toolCallDetected = true;
+
+                  currentToolCallId = null;
+                  toolInputStartEmitted = false;
+                  accumulatedFenceContent = "";
+                  streamedArgumentsLength = 0;
+                  insideFence = false;
+                  continue;
                 }
 
-                continue;
-              }
+                if (insideFence) {
+                  if (result.safeContent) {
+                    accumulatedFenceContent += result.safeContent;
+                    madeProgress = true;
 
-              if (!insideFence && result.safeContent) {
-                emitTextDelta(result.safeContent);
-                madeProgress = true;
-              }
+                    const toolName = extractToolName(accumulatedFenceContent);
+                    if (
+                      toolName &&
+                      !toolInputStartEmitted &&
+                      currentToolCallId
+                    ) {
+                      controller.enqueue({
+                        type: "tool-input-start",
+                        id: currentToolCallId,
+                        toolName,
+                      });
+                      toolInputStartEmitted = true;
+                    }
 
-              if (!madeProgress) {
-                break;
+                    if (toolInputStartEmitted && currentToolCallId) {
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
+                      if (argsContent.length > streamedArgumentsLength) {
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
+                        streamedArgumentsLength = argsContent.length;
+                        if (delta.length > 0) {
+                          controller.enqueue({
+                            type: "tool-input-delta",
+                            id: currentToolCallId,
+                            delta,
+                          });
+                        }
+                      }
+                    }
+                  }
+
+                  continue;
+                }
+
+                if (!insideFence && result.safeContent) {
+                  emitTextDelta(result.safeContent);
+                  madeProgress = true;
+                }
+
+                if (!madeProgress) {
+                  break;
+                }
               }
+            } else if (event.type === "complete") {
+              lastUsage = event.usage || {};
             }
-          };
+          }
 
-          const streamer = new CallbackTextStreamer(
-            tokenizer as PreTrainedTokenizer,
-            streamCallback,
-          );
-          self.stoppingCriteria.reset();
-
-          const stoppingCriteriaList = new StoppingCriteriaList();
-          stoppingCriteriaList.extend([self.stoppingCriteria]);
-
-          await model.generate({
-            ...inputs,
-            ...generationOptions,
-            streamer,
-            stopping_criteria: stoppingCriteriaList,
-          });
-
-          // Emit any remaining buffer content if no tool was detected
-          if (fenceDetector.hasContent() && !aborted) {
+          // Emit any remaining buffer content
+          if (fenceDetector.hasContent()) {
             emitTextDelta(fenceDetector.getBuffer());
             fenceDetector.clearBuffer();
           }
 
-          // Check if we detected any tool calls
-          const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
+          if (textStarted) {
+            controller.enqueue({ type: "text-end", id: textId });
+          }
 
+          // Determine finish reason
+          const { toolCalls } = parseJsonFunctionCalls(accumulatedText);
           const finishReason: LanguageModelV3FinishReason =
             toolCalls.length > 0
               ? { unified: "tool-calls", raw: "tool-calls" }
               : { unified: "stop", raw: "stop" };
 
-          finishStream(finishReason, inputLength, outputTokens);
+          controller.enqueue({
+            type: "finish",
+            finishReason,
+            usage: {
+              inputTokens: {
+                total: lastUsage.inputTokens,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: lastUsage.outputTokens,
+                text: undefined,
+                reasoning: undefined,
+              },
+            },
+          });
+          controller.close();
         } catch (error) {
           controller.enqueue({ type: "error", error });
           controller.close();
-        } finally {
-          if (options.abortSignal) {
-            options.abortSignal.removeEventListener("abort", abortHandler);
-          }
         }
       },
     });
 
     return {
       stream,
-      request: { body: { messages: promptMessages, ...generationOptions } },
+      request: { body: { messages, ...generationOptions } },
     };
-  }
-
-  private async doStreamWithWorker(
-    messages: TransformersMessage[],
-    warnings: SharedV3Warning[],
-    generationOptions: GenerationOptions,
-    options: LanguageModelV3CallOptions,
-    functionTools: ToolDefinition[],
-  ) {
-    const worker = this.config.worker!;
-
-    await this.initializeWorker();
-
-    const stream = new ReadableStream<LanguageModelV3StreamPart>({
-      start: (controller) => {
-        let isFirst = true;
-        const textId = "text-0";
-        controller.enqueue({ type: "stream-start", warnings });
-
-        // Use fence detector to filter out tool calls from text stream
-        const fenceDetector = new ToolCallFenceDetector();
-
-        const onMessage = (e: MessageEvent) => {
-          const msg = e.data;
-          if (!msg) return;
-          if (msg.status === "start") {
-            // no-op
-          } else if (
-            msg.status === "update" &&
-            typeof msg.output === "string"
-          ) {
-            fenceDetector.addChunk(msg.output);
-
-            while (fenceDetector.hasContent()) {
-              const result = fenceDetector.detectStreamingFence();
-
-              // Only emit non-fence content as text
-              if (!result.inFence && result.safeContent) {
-                if (isFirst) {
-                  controller.enqueue({ type: "text-start", id: textId });
-                  isFirst = false;
-                }
-                controller.enqueue({
-                  type: "text-delta",
-                  id: textId,
-                  delta: result.safeContent,
-                });
-              }
-
-              // If we detect a complete fence, don't emit it as text
-              if (result.completeFence) {
-                // Tool call will be emitted separately in "complete" message
-                break;
-              }
-
-              if (!result.safeContent && !result.completeFence) {
-                break;
-              }
-            }
-          } else if (msg.status === "complete") {
-            if (!isFirst) controller.enqueue({ type: "text-end", id: textId });
-
-            // Check for tool calls in the response
-            const finishReason: LanguageModelV3FinishReason =
-              msg.toolCalls && msg.toolCalls.length > 0
-                ? { unified: "tool-calls", raw: "tool-calls" }
-                : { unified: "stop", raw: "stop" };
-
-            // Emit tool calls if present
-            if (msg.toolCalls && msg.toolCalls.length > 0) {
-              const toolCallsToEmit = msg.toolCalls.slice(0, 1);
-
-              for (const call of toolCallsToEmit) {
-                const toolCallId = call.toolCallId;
-                const toolName = call.toolName;
-                const argsJson = JSON.stringify(call.args ?? {});
-
-                controller.enqueue({
-                  type: "tool-input-start",
-                  id: toolCallId,
-                  toolName,
-                });
-
-                if (argsJson.length > 0) {
-                  controller.enqueue({
-                    type: "tool-input-delta",
-                    id: toolCallId,
-                    delta: argsJson,
-                  });
-                }
-
-                controller.enqueue({
-                  type: "tool-input-end",
-                  id: toolCallId,
-                });
-
-                controller.enqueue({
-                  type: "tool-call",
-                  toolCallId,
-                  toolName,
-                  input: JSON.stringify(call.args ?? {}),
-                });
-              }
-            }
-
-            controller.enqueue({
-              type: "finish",
-              finishReason,
-              usage: {
-                inputTokens: {
-                  total: msg.inputLength,
-                  noCache: undefined,
-                  cacheRead: undefined,
-                  cacheWrite: undefined,
-                },
-                outputTokens: {
-                  total: msg.numTokens,
-                  text: undefined,
-                  reasoning: undefined,
-                },
-              },
-            });
-            worker.removeEventListener("message", onMessage);
-            controller.close();
-          } else if (msg.status === "error") {
-            worker.removeEventListener("message", onMessage);
-            controller.error(new Error(String(msg.data || "Worker error")));
-          }
-        };
-        worker.addEventListener("message", onMessage);
-
-        if (options.abortSignal) {
-          const onAbort = () => {
-            worker.postMessage({ type: "interrupt" });
-            options.abortSignal?.removeEventListener("abort", onAbort);
-          };
-          options.abortSignal.addEventListener("abort", onAbort);
-        }
-
-        worker.postMessage({
-          type: "generate",
-          data: messages,
-          generationOptions,
-          tools: functionTools.length > 0 ? functionTools : undefined,
-        });
-      },
-    });
-
-    return { stream, request: { body: { messages, ...generationOptions } } };
   }
 }

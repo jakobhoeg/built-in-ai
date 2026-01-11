@@ -12,8 +12,16 @@ vi.mock("@huggingface/transformers", () => {
     generate: vi.fn().mockResolvedValue([1, 2, 3]),
   };
   class TextStreamer {
-    constructor(_tokenizer: any, _options?: any) {}
-    on_finalized_text(_text: string): void {}
+    private callback: ((text: string) => void) | undefined;
+    constructor(
+      _tokenizer: any,
+      options?: { callback_function?: (text: string) => void },
+    ) {
+      this.callback = options?.callback_function;
+    }
+    on_finalized_text(text: string): void {
+      this.callback?.(text);
+    }
   }
   class StoppingCriteria {
     _call() {
@@ -67,10 +75,13 @@ describe("TransformersJSLanguageModel", () => {
       input_ids: { data: new Array(5).fill(1) },
     });
 
-    // mock model.generate to return a sequence longer than input_ids so decode sees new tokens
-    const outputIds = new Array(5).fill(1).concat([101, 102, 103]);
-    (modelMock.generate as any).mockResolvedValue({ sequences: [outputIds] });
-    tokenizerMock.decode.mockReturnValue("Hello");
+    // mock model.generate to call streamer callback (unified streaming approach)
+    (modelMock.generate as any).mockImplementation(async (args: any) => {
+      if (args.streamer) {
+        args.streamer.on_finalized_text("Hello");
+      }
+      return Promise.resolve();
+    });
 
     const { text, usage } = await generateText({
       model,
@@ -80,8 +91,8 @@ describe("TransformersJSLanguageModel", () => {
     expect(text).toBe("Hello");
     expect(usage).toMatchObject({
       inputTokens: 5,
-      outputTokens: 10 /* length-based */,
-      totalTokens: 15,
+      outputTokens: 1,
+      totalTokens: 6,
     });
   });
 
@@ -101,9 +112,13 @@ describe("TransformersJSLanguageModel", () => {
     tokenizerMock.apply_chat_template.mockReturnValue({
       input_ids: { data: new Array(3).fill(1) },
     });
-    const outputIds = new Array(3).fill(1).concat([101, 102]);
-    (modelMock.generate as any).mockResolvedValue({ sequences: [outputIds] });
-    tokenizerMock.decode.mockReturnValue("I am a helpful assistant.");
+    // mock model.generate to call streamer callback (unified streaming approach)
+    (modelMock.generate as any).mockImplementation(async (args: any) => {
+      if (args.streamer) {
+        args.streamer.on_finalized_text("I am a helpful assistant.");
+      }
+      return Promise.resolve();
+    });
 
     const { text } = await generateText({
       model,
@@ -131,9 +146,13 @@ describe("TransformersJSLanguageModel", () => {
     tokenizerMock.apply_chat_template.mockReturnValue({
       input_ids: { data: new Array(4).fill(1) },
     });
-    const outputIds = new Array(4).fill(1).concat([201, 202]);
-    (modelMock.generate as any).mockResolvedValue({ sequences: [outputIds] });
-    tokenizerMock.decode.mockReturnValue("I can help you with coding!");
+    // mock model.generate to call streamer callback (unified streaming approach)
+    (modelMock.generate as any).mockImplementation(async (args: any) => {
+      if (args.streamer) {
+        args.streamer.on_finalized_text("I can help you with coding!");
+      }
+      return Promise.resolve();
+    });
 
     const { text } = await generateText({
       model,
@@ -198,9 +217,13 @@ describe("TransformersJSLanguageModel", () => {
     tokenizerMock.apply_chat_template.mockReturnValue({
       input_ids: { data: new Array(1).fill(1) },
     });
-    const outputIds = new Array(1).fill(1).concat([301]);
-    (modelMock.generate as any).mockResolvedValue({ sequences: [outputIds] });
-    tokenizerMock.decode.mockReturnValue("Response");
+    // mock model.generate to call streamer callback (unified streaming approach)
+    (modelMock.generate as any).mockImplementation(async (args: any) => {
+      if (args.streamer) {
+        args.streamer.on_finalized_text("Response");
+      }
+      return Promise.resolve();
+    });
 
     const { text } = await generateText({
       model,
