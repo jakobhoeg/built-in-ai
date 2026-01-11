@@ -12,8 +12,13 @@ vi.mock("@huggingface/transformers", () => {
     generate: vi.fn().mockResolvedValue([1, 2, 3]),
   };
   class TextStreamer {
-    constructor(_tokenizer: any, _options?: any) {}
-    on_finalized_text(_text: string): void {}
+    private callback: ((text: string) => void) | undefined;
+    constructor(_tokenizer: any, options?: { callback_function?: (text: string) => void }) {
+      this.callback = options?.callback_function;
+    }
+    on_finalized_text(text: string): void {
+      this.callback?.(text);
+    }
   }
   class StoppingCriteria {
     _call() {
