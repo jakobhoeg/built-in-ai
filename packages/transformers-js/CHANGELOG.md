@@ -1,5 +1,11 @@
 # @built-in-ai/transformers-js
 
+## 1.1.2
+
+### Patch Changes
+
+- dbd117d: fix(transformers-js): fix tool-call streaming when using worker and unify generation interface
+
 ## 1.1.1
 
 ### Patch Changes
