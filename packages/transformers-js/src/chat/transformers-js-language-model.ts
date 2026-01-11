@@ -683,31 +683,31 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           finishReason: { unified: "tool-calls", raw: "tool-calls" },
           usage: isVision
             ? {
-              inputTokens: {
-                total: undefined,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
-              },
-              outputTokens: {
-                total: undefined,
-                text: undefined,
-                reasoning: undefined,
-              },
-            }
+                inputTokens: {
+                  total: undefined,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: undefined,
+                  text: undefined,
+                  reasoning: undefined,
+                },
+              }
             : {
-              inputTokens: {
-                total: inputLength,
-                noCache: undefined,
-                cacheRead: undefined,
-                cacheWrite: undefined,
+                inputTokens: {
+                  total: inputLength,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: inputLength + generatedText.length,
+                  text: generatedText.length,
+                  reasoning: undefined,
+                },
               },
-              outputTokens: {
-                total: inputLength + generatedText.length,
-                text: generatedText.length,
-                reasoning: undefined,
-              },
-            },
           request: { body: { messages: promptMessages, ...generationOptions } },
           warnings,
         };
@@ -725,37 +725,38 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
         finishReason: { unified: "stop", raw: "stop" },
         usage: isVision
           ? {
-            inputTokens: {
-              total: undefined,
-              noCache: undefined,
-              cacheRead: undefined,
-              cacheWrite: undefined,
-            },
-            outputTokens: {
-              total: undefined,
-              text: undefined,
-              reasoning: undefined,
-            },
-          }
+              inputTokens: {
+                total: undefined,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: undefined,
+                text: undefined,
+                reasoning: undefined,
+              },
+            }
           : {
-            inputTokens: {
-              total: inputLength,
-              noCache: undefined,
-              cacheRead: undefined,
-              cacheWrite: undefined,
+              inputTokens: {
+                total: inputLength,
+                noCache: undefined,
+                cacheRead: undefined,
+                cacheWrite: undefined,
+              },
+              outputTokens: {
+                total: inputLength + generatedText.length,
+                text: generatedText.length,
+                reasoning: undefined,
+              },
             },
-            outputTokens: {
-              total: inputLength + generatedText.length,
-              text: generatedText.length,
-              reasoning: undefined,
-            },
-          },
         request: { body: { messages: promptMessages, ...generationOptions } },
         warnings,
       };
     } catch (error) {
       throw new Error(
-        `TransformersJS generation failed: ${error instanceof Error ? error.message : "Unknown error"
+        `TransformersJS generation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
       );
     }
@@ -972,23 +973,23 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
           // Create the appropriate generation stream
           const generationStream = useWorker
             ? createWorkerGenerationStream({
-              worker: self.config.worker!,
-              messages,
-              generationOptions,
-              tools: functionTools,
-              abortSignal: options.abortSignal,
-            })
+                worker: self.config.worker!,
+                messages,
+                generationOptions,
+                tools: functionTools,
+                abortSignal: options.abortSignal,
+              })
             : createMainThreadGenerationStream({
-              modelInstance: await self.getSession(
-                self.config.initProgressCallback,
-              ),
-              messages,
-              generationOptions,
-              tools: functionTools,
-              isVisionModel: self.config.isVisionModel,
-              stoppingCriteria: self.stoppingCriteria,
-              abortSignal: options.abortSignal,
-            });
+                modelInstance: await self.getSession(
+                  self.config.initProgressCallback,
+                ),
+                messages,
+                generationOptions,
+                tools: functionTools,
+                isVisionModel: self.config.isVisionModel,
+                stoppingCriteria: self.stoppingCriteria,
+                abortSignal: options.abortSignal,
+              });
 
           const fenceDetector = new ToolCallFenceDetector();
           let accumulatedText = "";
@@ -1039,8 +1040,9 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                   }
 
                   if (toolInputStartEmitted && currentToolCallId) {
-                    const argsContent =
-                      extractArgumentsContent(accumulatedFenceContent);
+                    const argsContent = extractArgumentsContent(
+                      accumulatedFenceContent,
+                    );
                     if (argsContent.length > streamedArgumentsLength) {
                       const delta = argsContent.slice(streamedArgumentsLength);
                       streamedArgumentsLength = argsContent.length;
@@ -1094,10 +1096,13 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                         toolInputStartEmitted = true;
                       }
 
-                      const argsContent =
-                        extractArgumentsContent(accumulatedFenceContent);
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
                       if (argsContent.length > streamedArgumentsLength) {
-                        const delta = argsContent.slice(streamedArgumentsLength);
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
                         streamedArgumentsLength = argsContent.length;
                         if (delta.length > 0) {
                           controller.enqueue({
@@ -1169,10 +1174,13 @@ export class TransformersJSLanguageModel implements LanguageModelV3 {
                     }
 
                     if (toolInputStartEmitted && currentToolCallId) {
-                      const argsContent =
-                        extractArgumentsContent(accumulatedFenceContent);
+                      const argsContent = extractArgumentsContent(
+                        accumulatedFenceContent,
+                      );
                       if (argsContent.length > streamedArgumentsLength) {
-                        const delta = argsContent.slice(streamedArgumentsLength);
+                        const delta = argsContent.slice(
+                          streamedArgumentsLength,
+                        );
                         streamedArgumentsLength = argsContent.length;
                         if (delta.length > 0) {
                           controller.enqueue({

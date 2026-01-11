@@ -103,7 +103,9 @@ export async function* createMainThreadGenerationStream(
     resolve = null;
   };
 
-  const pushChunk = (chunk: GenerationEvent | { type: "error"; error: Error }) => {
+  const pushChunk = (
+    chunk: GenerationEvent | { type: "error"; error: Error },
+  ) => {
     chunks.push(chunk);
     resolvePending();
   };
@@ -111,7 +113,9 @@ export async function* createMainThreadGenerationStream(
   const waitForChunk = () =>
     chunks.length > 0 || generationComplete
       ? Promise.resolve()
-      : new Promise<void>((r) => { resolve = r; });
+      : new Promise<void>((r) => {
+          resolve = r;
+        });
 
   const abortHandler = () => {
     aborted = true;
@@ -124,7 +128,9 @@ export async function* createMainThreadGenerationStream(
   const generationPromise = (async () => {
     try {
       const streamer = new TextStreamer(
-        (isVisionModel ? (processor as any).tokenizer : processor) as PreTrainedTokenizer,
+        (isVisionModel
+          ? (processor as any).tokenizer
+          : processor) as PreTrainedTokenizer,
         {
           skip_prompt: true,
           skip_special_tokens: true,
@@ -197,7 +203,9 @@ export async function* createWorkerGenerationStream(
   let resolve: (() => void) | null = null;
   let complete = false;
 
-  const pushChunk = (chunk: GenerationEvent | { type: "error"; error: Error }) => {
+  const pushChunk = (
+    chunk: GenerationEvent | { type: "error"; error: Error },
+  ) => {
     chunks.push(chunk);
     resolve?.();
     resolve = null;
@@ -206,7 +214,9 @@ export async function* createWorkerGenerationStream(
   const waitForChunk = () =>
     chunks.length > 0 || complete
       ? Promise.resolve()
-      : new Promise<void>((r) => { resolve = r; });
+      : new Promise<void>((r) => {
+          resolve = r;
+        });
 
   const onMessage = (e: MessageEvent) => {
     const msg = e.data;
@@ -223,7 +233,10 @@ export async function* createWorkerGenerationStream(
       complete = true;
       worker.removeEventListener("message", onMessage);
     } else if (msg.status === "error") {
-      pushChunk({ type: "error", error: new Error(String(msg.data || "Worker error")) });
+      pushChunk({
+        type: "error",
+        error: new Error(String(msg.data || "Worker error")),
+      });
       complete = true;
       worker.removeEventListener("message", onMessage);
     }
