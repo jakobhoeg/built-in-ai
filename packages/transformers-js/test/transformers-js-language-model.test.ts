@@ -13,7 +13,10 @@ vi.mock("@huggingface/transformers", () => {
   };
   class TextStreamer {
     private callback: ((text: string) => void) | undefined;
-    constructor(_tokenizer: any, options?: { callback_function?: (text: string) => void }) {
+    constructor(
+      _tokenizer: any,
+      options?: { callback_function?: (text: string) => void },
+    ) {
       this.callback = options?.callback_function;
     }
     on_finalized_text(text: string): void {
