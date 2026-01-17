@@ -4,6 +4,7 @@ import {
   SessionManager,
   convertMessagesAsync,
   generateId,
+  getExpectedInputsFromMessages,
   type SessionCreateOptions,
 } from "../utils";
 import type { BuiltInAIMessageMetadataByModality } from "../message-types";
@@ -115,8 +116,12 @@ export class BuiltInAITextAdapter<
         enhancedSystemMessage = buildJsonToolSystemPrompt(systemMessage, tools);
       }
 
+      // Auto-detect multimodal inputs from messages
+      const expectedInputs = getExpectedInputsFromMessages(messages);
+
       const session = await this.sessionManager.getSession({
         systemMessage: enhancedSystemMessage,
+        expectedInputs,
       });
 
       const promptOptions: LanguageModelPromptOptions &
@@ -328,9 +333,11 @@ export class BuiltInAITextAdapter<
       chatOptions.systemPrompts,
     );
 
-    // Get session
+    // Auto-detect multimodal inputs and get session
+    const expectedInputs = getExpectedInputsFromMessages(messages);
     const session = await this.sessionManager.getSession({
       systemMessage,
+      expectedInputs,
     });
 
     // Prepare options with response constraint

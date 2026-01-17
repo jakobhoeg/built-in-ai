@@ -67,6 +67,7 @@ export async function checkBuiltInAIAvailability(): Promise<Availability> {
  */
 export interface SessionCreateOptions extends LanguageModelCreateOptions {
   systemMessage?: string;
+  expectedInputs?: Array<{ type: "text" | "image" | "audio" }>;
   onDownloadProgress?: ProgressCallback;
 }
 
@@ -77,7 +78,7 @@ export class PromptAPINotAvailableError extends Error {
   constructor(message?: string) {
     super(
       message ??
-        "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
+      "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
     );
     this.name = "PromptAPINotAvailableError";
   }
@@ -214,7 +215,7 @@ export class SessionManager {
     const mergedOptions: LanguageModelCreateOptions = { ...this.baseOptions };
 
     if (options) {
-      const { systemMessage, onDownloadProgress, ...createOptions } = options;
+      const { systemMessage, expectedInputs, onDownloadProgress, ...createOptions } = options;
 
       // Merge standard create options
       Object.assign(mergedOptions, createOptions);
@@ -224,6 +225,11 @@ export class SessionManager {
         mergedOptions.initialPrompts = [
           { role: "system", content: systemMessage },
         ];
+      }
+
+      // Handle expected inputs (for multimodal)
+      if (expectedInputs && expectedInputs.length > 0) {
+        mergedOptions.expectedInputs = expectedInputs;
       }
 
       // Handle download progress monitoring
