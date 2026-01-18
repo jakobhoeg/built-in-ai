@@ -70,7 +70,7 @@ export class TransformersChatTransport
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
-    const prompt = convertToModelMessages(messages);
+    const prompt = await convertToModelMessages(messages);
     const model = this.model;
 
     return createUIMessageStream<TransformersUIMessage>({

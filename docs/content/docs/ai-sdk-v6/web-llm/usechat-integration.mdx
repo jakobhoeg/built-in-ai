@@ -69,7 +69,7 @@ export class WebLLMChatTransport implements ChatTransport<WebLLMUIMessage> {
     } & ChatRequestOptions,
   ): Promise<ReadableStream<UIMessageChunk>> {
     const { messages, abortSignal } = options;
-    const prompt = convertToModelMessages(messages);
+    const prompt = await convertToModelMessages(messages);
     const model = this.model;
 
     return createUIMessageStream<WebLLMUIMessage>({
