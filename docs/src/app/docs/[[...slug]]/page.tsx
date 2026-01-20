@@ -1,4 +1,5 @@
-import { getPageImage, source } from "@/lib/source";
+import { PageContextMenu } from "@/components/page-context-menu";
+import { getPageImage, getLLMText, source } from "@/lib/source";
 import {
   DocsBody,
   DocsDescription,
@@ -21,10 +22,14 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
   if (!page) notFound();
 
   const MDX = page.data.body;
+  const markdown = await getLLMText(page);
 
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
-      <DocsTitle>{page.data.title}</DocsTitle>
+      <div className="flex items-center justify-between gap-4">
+        <DocsTitle className="mb-0">{page.data.title}</DocsTitle>
+        <PageContextMenu markdown={markdown} />
+      </div>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
         <MDX components={getMDXComponents()} />

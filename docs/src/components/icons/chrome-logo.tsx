@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 
-const Chrome = (props: SVGProps<SVGSVGElement>) => (
+export const ChromeLogo = (props: SVGProps<SVGSVGElement>) => (
   <svg {...props} preserveAspectRatio="xMidYMid" viewBox="0 0 190.5 190.5">
     <path
       fill="#fff"
@@ -25,4 +25,3 @@ const Chrome = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export { Chrome };
