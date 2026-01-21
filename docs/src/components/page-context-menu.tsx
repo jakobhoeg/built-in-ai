@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { CheckIcon, ArrowUpRightIcon } from "lucide-react";
-import { AnthropicLogo, ChevronIcon, CopyIcon, OpenAILogo } from "./icons";
+import { CheckIcon, ArrowUpRightIcon, CopyIcon, ChevronDownIcon } from "lucide-react";
+import { AnthropicLogo, OpenAILogo } from "./logos";
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -114,7 +114,7 @@ export function PageContextMenu({ markdown }: PageContextMenuProps) {
             aria-label="More options"
             className="flex items-center justify-center w-7 rounded-r-md border border-fd-border bg-fd-background hover:bg-fd-accent hover:text-fd-accent-foreground transition-colors text-fd-muted-foreground"
           >
-            <ChevronIcon className="rotate-90" />
+            <ChevronDownIcon className="w-4 h-4" />
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>

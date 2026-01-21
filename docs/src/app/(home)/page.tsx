@@ -1,4 +1,4 @@
-import { ChromeLogo } from "@/components/icons";
+import { ChromeLogo } from "@/components/logos";
 import { HomeCodeSection } from "@/components/home-code-section";
 import SponsorGrid from "@/components/sponsor-grid";
 import { TweetCard } from "@/components/tweet-card";
