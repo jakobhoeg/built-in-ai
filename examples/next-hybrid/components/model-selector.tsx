@@ -9,11 +9,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDownIcon } from "lucide-react";
 
-const demos = [
+const vercelAiSdkDemos = [
   {
     href: "/",
     label: "@built-in-ai/core",
@@ -28,9 +32,18 @@ const demos = [
   },
 ];
 
+const tanstackAiSdkDemos = [
+  {
+    href: "/tanstack-core",
+    label: "@built-in-ai/tanstack-core",
+  },
+];
+
+const allDemos = [...vercelAiSdkDemos, ...tanstackAiSdkDemos];
+
 export function ModelSelector() {
   const pathname = usePathname();
-  const currentDemo = demos.find((demo) => demo.href === pathname);
+  const currentDemo = allDemos.find((demo) => demo.href === pathname);
 
   return (
     <DropdownMenu>
@@ -46,11 +59,30 @@ export function ModelSelector() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {demos.map((demo) => (
-          <Link href={demo.href} key={demo.href} passHref>
-            <DropdownMenuItem>{demo.label}</DropdownMenuItem>
-          </Link>
-        ))}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Vercel AI SDK</DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              {vercelAiSdkDemos.map((demo) => (
+                <Link href={demo.href} key={demo.href} passHref>
+                  <DropdownMenuItem>{demo.label}</DropdownMenuItem>
+                </Link>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>TanStack AI SDK</DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              {tanstackAiSdkDemos.map((demo) => (
+                <Link href={demo.href} key={demo.href} passHref>
+                  <DropdownMenuItem>{demo.label}</DropdownMenuItem>
+                </Link>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -182,13 +182,12 @@ function WebLLMChat({
             <>
               <p className="text-xs">@built-in-ai/web-llm demo</p>
               <h1 className="text-lg font-medium">
-                Using WebLLM client-side AI model
+                Vercel AI SDK + WebLLM client-side AI
               </h1>
               <p className="text-sm max-w-xs">Your device supports WebGPU</p>
             </>
           ) : (
             <>
-              <h1 className="text-lg font-medium">Using server-side model</h1>
               <p className="text-sm max-w-xs">
                 Your device doesn&apos;t support WebGPU
               </p>
