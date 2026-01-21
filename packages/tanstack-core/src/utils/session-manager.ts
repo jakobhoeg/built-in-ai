@@ -78,7 +78,7 @@ export class PromptAPINotAvailableError extends Error {
   constructor(message?: string) {
     super(
       message ??
-      "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
+        "Prompt API is not available. This library requires Chrome or Edge browser with built-in AI capabilities.",
     );
     this.name = "PromptAPINotAvailableError";
   }
@@ -215,7 +215,12 @@ export class SessionManager {
     const mergedOptions: LanguageModelCreateOptions = { ...this.baseOptions };
 
     if (options) {
-      const { systemMessage, expectedInputs, onDownloadProgress, ...createOptions } = options;
+      const {
+        systemMessage,
+        expectedInputs,
+        onDownloadProgress,
+        ...createOptions
+      } = options;
 
       // Merge standard create options
       Object.assign(mergedOptions, createOptions);
