@@ -27,7 +27,7 @@ For detailed documentation, browser requirements and advanced usage, refer to th
 | `@browser-ai/web-llm`         | ✓ `1.0.0` | ✓ `≥ 2.0.0` |
 
 ```bash
-# For Chrome/Edge built-in AI models
+# For Chrome/Edge built-in browser AI models
 npm i @browser-ai/core
 
 # For open-source models via WebLLM
@@ -41,10 +41,10 @@ npm i @browser-ai/transformers-js
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@browser-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 const result = streamText({
-  model: builtInAI(),
+  model: browserAI(),
   prompt: "Invent a new holiday and describe its traditions.",
 });
 
