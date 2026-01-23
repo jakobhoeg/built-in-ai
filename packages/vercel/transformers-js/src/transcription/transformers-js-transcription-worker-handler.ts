@@ -115,7 +115,7 @@ class TranscriptionModelManager {
  * @example
  * ```typescript
  * // worker.ts
- * import { TransformersJSTranscriptionWorkerHandler } from "@built-in-ai/transformers-js";
+ * import { TransformersJSTranscriptionWorkerHandler } from "@browser-ai/transformers-js";
  *
  * const handler = new TransformersJSTranscriptionWorkerHandler();
  * self.onmessage = (msg: MessageEvent) => {

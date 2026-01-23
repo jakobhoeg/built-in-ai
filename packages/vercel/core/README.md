@@ -11,7 +11,7 @@
 
 </div>
 
-A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) with the AI SDK.
+A TypeScript library that provides access to browser-based AI capabilities with seamless fallback to using server-side models using the [Vercel AI SDK](https://ai-sdk.dev/). This library enables you to leverage **Chrome** and **Edge's** built-in browser AI features ([Prompt API](https://github.com/webmachinelearning/prompt-api)) with the AI SDK.
 
 ## Installation
 
@@ -19,7 +19,7 @@ A TypeScript library that provides access to browser-based AI capabilities with 
 npm i @browser-ai/core
 ```
 
-The `@browser-ai/core` package is the AI SDK provider for your Chrome and Edge browser's built-in AI models. It provides seamless access to both language models and text embeddings through browser-native APIs.
+The `@browser-ai/core` package is the AI SDK provider for your Chrome and Edge browser's built-in browser AI models. It provides seamless access to both language models and text embeddings through browser-native APIs.
 
 ## Documentation
 

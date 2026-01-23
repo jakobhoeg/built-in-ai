@@ -4,45 +4,45 @@ import {
   ProviderV3,
 } from "@ai-sdk/provider";
 import {
-  BuiltInAIChatLanguageModel,
-  BuiltInAIChatModelId,
-  BuiltInAIChatSettings,
-} from "./built-in-ai-language-model";
+  BrowserAIChatLanguageModel,
+  BrowserAIChatModelId,
+  BrowserAIChatSettings,
+} from "./browser-ai-language-model";
 import {
-  BuiltInAIEmbeddingModel,
-  BuiltInAIEmbeddingModelSettings,
-} from "./built-in-ai-embedding-model";
+  BrowserAIEmbeddingModel,
+  BrowserAIEmbeddingModelSettings,
+} from "./browser-ai-embedding-model";
 
-export interface BuiltInAIProvider extends ProviderV3 {
+export interface BrowserAIProvider extends ProviderV3 {
   (
-    modelId?: BuiltInAIChatModelId,
-    settings?: BuiltInAIChatSettings,
-  ): BuiltInAIChatLanguageModel;
+    modelId?: BrowserAIChatModelId,
+    settings?: BrowserAIChatSettings,
+  ): BrowserAIChatLanguageModel;
 
   /**
    * Creates a model for text generation.
    */
   languageModel(
-    modelId: BuiltInAIChatModelId,
-    settings?: BuiltInAIChatSettings,
-  ): BuiltInAIChatLanguageModel;
+    modelId: BrowserAIChatModelId,
+    settings?: BrowserAIChatSettings,
+  ): BrowserAIChatLanguageModel;
 
   /**
    * Creates a model for text generation.
    */
   chat(
-    modelId: BuiltInAIChatModelId,
-    settings?: BuiltInAIChatSettings,
-  ): BuiltInAIChatLanguageModel;
+    modelId: BrowserAIChatModelId,
+    settings?: BrowserAIChatSettings,
+  ): BrowserAIChatLanguageModel;
 
   embedding(
     modelId: "embedding",
-    settings?: BuiltInAIEmbeddingModelSettings,
+    settings?: BrowserAIEmbeddingModelSettings,
   ): EmbeddingModelV3;
 
   embeddingModel: (
     modelId: "embedding",
-    settings?: BuiltInAIEmbeddingModelSettings,
+    settings?: BrowserAIEmbeddingModelSettings,
   ) => EmbeddingModelV3;
 
   // Not implemented
@@ -51,38 +51,38 @@ export interface BuiltInAIProvider extends ProviderV3 {
   transcriptionModel(modelId: string): never;
 }
 
-export interface BuiltInAIProviderSettings {
-  // Currently empty - provider settings are minimal for BuiltInAI
+export interface BrowserAIProviderSettings {
+  // Currently empty - provider settings are minimal for BrowserAI
   // Future provider-level settings can be added here
 }
 
 /**
- * Create a BuiltInAI provider instance.
+ * Create a BrowserAI provider instance.
  */
-export function createBuiltInAI(
-  options: BuiltInAIProviderSettings = {},
-): BuiltInAIProvider {
+export function createBrowserAI(
+  options: BrowserAIProviderSettings = {},
+): BrowserAIProvider {
   const createChatModel = (
-    modelId: BuiltInAIChatModelId,
-    settings?: BuiltInAIChatSettings,
+    modelId: BrowserAIChatModelId,
+    settings?: BrowserAIChatSettings,
   ) => {
-    return new BuiltInAIChatLanguageModel(modelId, settings);
+    return new BrowserAIChatLanguageModel(modelId, settings);
   };
 
   const createEmbeddingModel = (
     modelId: "embedding",
-    settings?: BuiltInAIEmbeddingModelSettings,
+    settings?: BrowserAIEmbeddingModelSettings,
   ) => {
-    return new BuiltInAIEmbeddingModel(settings);
+    return new BrowserAIEmbeddingModel(settings);
   };
 
   const provider = function (
-    modelId: BuiltInAIChatModelId = "text",
-    settings?: BuiltInAIChatSettings,
+    modelId: BrowserAIChatModelId = "text",
+    settings?: BrowserAIChatSettings,
   ) {
     if (new.target) {
       throw new Error(
-        "The BuiltInAI model function cannot be called with the new keyword.",
+        "The BrowserAI model function cannot be called with the new keyword.",
       );
     }
 
@@ -111,6 +111,6 @@ export function createBuiltInAI(
 }
 
 /**
- * Default BuiltInAI provider instance.
+ * Default BrowserAI provider instance.
  */
-export const builtInAI = createBuiltInAI();
+export const browserAI = createBrowserAI();

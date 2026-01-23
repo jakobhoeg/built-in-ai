@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { convertToBuiltInAIMessages } from "../src/convert-to-built-in-ai-messages";
+import { convertToBrowserAIMessages } from "../src/convert-to-browser-ai-messages";
 import {
   LanguageModelV3Prompt,
   LanguageModelV3Message,
   UnsupportedFunctionalityError,
 } from "@ai-sdk/provider";
 
-describe("convertToBuiltInAIMessages", () => {
+describe("convertToBrowserAIMessages", () => {
   describe("text messages", () => {
     it("should convert simple text user message", () => {
       const prompt: LanguageModelV3Prompt = [
@@ -16,7 +16,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.systemMessage).toBeUndefined();
       expect(result.messages).toEqual([
@@ -39,7 +39,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.systemMessage).toBe("You are a helpful assistant.");
       expect(result.messages).toEqual([
@@ -62,7 +62,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages).toEqual([
         {
@@ -94,7 +94,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0].content).toHaveLength(2);
@@ -129,7 +129,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0].content[0]).toEqual({
         type: "image",
@@ -152,7 +152,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0].content[0]).toEqual({
         type: "image",
@@ -178,7 +178,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0].content[1]).toEqual({
         type: "audio",
@@ -201,7 +201,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0].content[0]).toEqual({
         type: "audio",
@@ -232,7 +232,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0].content).toHaveLength(4);
       expect(result.messages[0].content[0]).toEqual({
@@ -275,7 +275,7 @@ describe("convertToBuiltInAIMessages", () => {
         } as LanguageModelV3Message,
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0]).toEqual({
         role: "assistant",
@@ -307,7 +307,7 @@ describe("convertToBuiltInAIMessages", () => {
         } as LanguageModelV3Message,
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0]).toEqual({
         role: "assistant",
@@ -339,7 +339,7 @@ describe("convertToBuiltInAIMessages", () => {
         } as LanguageModelV3Message,
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0].content).toContain('"id":"call_789"');
       expect(result.messages[0].content).toContain('"123-name":"Alice"');
@@ -360,7 +360,7 @@ describe("convertToBuiltInAIMessages", () => {
         } as LanguageModelV3Message,
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages[0].content).toContain('"id":"call_321"');
       expect(result.messages[0].content).toContain(
@@ -389,7 +389,7 @@ describe("convertToBuiltInAIMessages", () => {
         } as LanguageModelV3Message,
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       const content = result.messages[0].content as string;
       expect(content.match(/```tool_call/g)).toHaveLength(1);
@@ -415,7 +415,7 @@ describe("convertToBuiltInAIMessages", () => {
         } as LanguageModelV3Message,
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages).toHaveLength(1);
       const content = result.messages[0].content as string;
@@ -443,7 +443,7 @@ describe("convertToBuiltInAIMessages", () => {
         } as LanguageModelV3Message,
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0]).toMatchObject({ role: "user" });
@@ -470,7 +470,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      expect(() => convertToBuiltInAIMessages(prompt)).toThrow(
+      expect(() => convertToBrowserAIMessages(prompt)).toThrow(
         UnsupportedFunctionalityError,
       );
     });
@@ -488,7 +488,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ] as LanguageModelV3Prompt;
 
-      expect(() => convertToBuiltInAIMessages(prompt)).toThrow(
+      expect(() => convertToBrowserAIMessages(prompt)).toThrow(
         UnsupportedFunctionalityError,
       );
     });
@@ -507,13 +507,13 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      expect(() => convertToBuiltInAIMessages(prompt)).toThrow();
+      expect(() => convertToBrowserAIMessages(prompt)).toThrow();
     });
   });
 
   describe("edge cases", () => {
     it("should handle empty prompt", () => {
-      const result = convertToBuiltInAIMessages([]);
+      const result = convertToBrowserAIMessages([]);
 
       expect(result.systemMessage).toBeUndefined();
       expect(result.messages).toEqual([]);
@@ -527,7 +527,7 @@ describe("convertToBuiltInAIMessages", () => {
         },
       ];
 
-      const result = convertToBuiltInAIMessages(prompt);
+      const result = convertToBrowserAIMessages(prompt);
 
       expect(result.messages).toEqual([
         {

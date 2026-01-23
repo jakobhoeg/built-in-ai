@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { BuiltInAIEmbeddingModel } from "../src/built-in-ai-embedding-model";
+import { BrowserAIEmbeddingModel } from "../src/browser-ai-embedding-model";
 import { TextEmbedder } from "@mediapipe/tasks-text";
 
 vi.mock("@mediapipe/tasks-text", () => ({
@@ -8,7 +8,7 @@ vi.mock("@mediapipe/tasks-text", () => ({
   },
 }));
 
-describe("BuiltInAIEmbeddingModel", () => {
+describe("BrowserAIEmbeddingModel", () => {
   let mockTextEmbedder: any;
 
   beforeEach(() => {
@@ -55,9 +55,9 @@ describe("BuiltInAIEmbeddingModel", () => {
 
   describe("Construction", () => {
     it("should instantiate correctly with default settings", () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
-      expect(model).toBeInstanceOf(BuiltInAIEmbeddingModel);
+      expect(model).toBeInstanceOf(BrowserAIEmbeddingModel);
       expect(model.modelId).toBe("embedding");
       expect(model.provider).toBe("google-mediapipe");
       expect(model.specificationVersion).toBe("v3");
@@ -75,14 +75,14 @@ describe("BuiltInAIEmbeddingModel", () => {
         delegate: "GPU" as const,
       };
 
-      const model = new BuiltInAIEmbeddingModel(customSettings);
-      expect(model).toBeInstanceOf(BuiltInAIEmbeddingModel);
+      const model = new BrowserAIEmbeddingModel(customSettings);
+      expect(model).toBeInstanceOf(BrowserAIEmbeddingModel);
     });
   });
 
   describe("doEmbed", () => {
     it("should generate embeddings for single text", async () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       const result = await model.doEmbed({
         values: ["Hello, world!"],
@@ -99,7 +99,7 @@ describe("BuiltInAIEmbeddingModel", () => {
     });
 
     it("should generate embeddings for multiple texts", async () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       // Mock different embeddings for different texts
       mockTextEmbedder.embed
@@ -134,7 +134,7 @@ describe("BuiltInAIEmbeddingModel", () => {
     });
 
     it("should handle empty embeddings gracefully", async () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       mockTextEmbedder.embed.mockReturnValue({
         embeddings: [],
@@ -149,7 +149,7 @@ describe("BuiltInAIEmbeddingModel", () => {
     });
 
     it("should handle empty values array", async () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       const result = await model.doEmbed({
         values: [],
@@ -163,7 +163,7 @@ describe("BuiltInAIEmbeddingModel", () => {
 
   describe("Abort Signal Handling", () => {
     it("should throw error when signal is already aborted", async () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
       const abortController = new AbortController();
       abortController.abort();
 
@@ -176,7 +176,7 @@ describe("BuiltInAIEmbeddingModel", () => {
     });
 
     it("should work without abort signal", async () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       const result = await model.doEmbed({
         values: ["Test text"],
@@ -193,7 +193,7 @@ describe("BuiltInAIEmbeddingModel", () => {
         new Error("Failed to create embedder"),
       );
 
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       await expect(model.doEmbed({ values: ["test"] })).rejects.toThrow(
         "Failed to create embedder",
@@ -205,7 +205,7 @@ describe("BuiltInAIEmbeddingModel", () => {
         throw new Error("Embedding failed");
       });
 
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       await expect(model.doEmbed({ values: ["test"] })).rejects.toThrow(
         "Embedding failed",
@@ -215,7 +215,7 @@ describe("BuiltInAIEmbeddingModel", () => {
 
   describe("Integration Tests", () => {
     it("should maintain embedder instance across multiple calls", async () => {
-      const model = new BuiltInAIEmbeddingModel();
+      const model = new BrowserAIEmbeddingModel();
 
       await model.doEmbed({ values: ["First call"] });
       await model.doEmbed({ values: ["Second call"] });

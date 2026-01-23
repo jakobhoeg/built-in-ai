@@ -1,25 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { builtInAI, createBuiltInAI } from "../src/built-in-ai-provider";
-import { BuiltInAIChatLanguageModel } from "../src/built-in-ai-language-model";
-import { BuiltInAIEmbeddingModel } from "../src/built-in-ai-embedding-model";
+import { browserAI, createBrowserAI } from "../src/browser-ai-provider";
+import { BrowserAIChatLanguageModel } from "../src/browser-ai-language-model";
+import { BrowserAIEmbeddingModel } from "../src/browser-ai-embedding-model";
 
 // Mock the dependencies
-vi.mock("../src/built-in-ai-language-model", () => ({
-  BuiltInAIChatLanguageModel: vi.fn(),
+vi.mock("../src/browser-ai-language-model", () => ({
+  BrowserAIChatLanguageModel: vi.fn(),
 }));
 
-vi.mock("../src/built-in-ai-embedding-model", () => ({
-  BuiltInAIEmbeddingModel: vi.fn(),
+vi.mock("../src/browser-ai-embedding-model", () => ({
+  BrowserAIEmbeddingModel: vi.fn(),
 }));
 
-describe("BuiltInAI Provider", () => {
+describe("BrowserAI Provider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("createBuiltInAI", () => {
+  describe("createBrowserAI", () => {
     it("should create a provider with all expected methods", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
 
       expect(provider).toBeInstanceOf(Function);
       expect(provider.languageModel).toBeInstanceOf(Function);
@@ -32,60 +32,60 @@ describe("BuiltInAI Provider", () => {
     });
 
     it("should prevent calling with new keyword", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
 
       expect(() => {
         // @ts-expect-error - intentionally testing invalid usage
         new provider("text");
       }).toThrow(
-        "The BuiltInAI model function cannot be called with the new keyword.",
+        "The BrowserAI model function cannot be called with the new keyword.",
       );
     });
   });
 
   describe("Language Model Creation", () => {
     it("should create language model via direct call with explicit model ID", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
       provider("text", { temperature: 0.5 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+      expect(BrowserAIChatLanguageModel).toHaveBeenCalledWith("text", {
         temperature: 0.5,
       });
     });
 
     it("should create language model via direct call with default model ID", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
       provider(undefined, { temperature: 0.5 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+      expect(BrowserAIChatLanguageModel).toHaveBeenCalledWith("text", {
         temperature: 0.5,
       });
     });
 
     it("should create language model via direct call with no parameters", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
       provider();
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith(
+      expect(BrowserAIChatLanguageModel).toHaveBeenCalledWith(
         "text",
         undefined,
       );
     });
 
     it("should create language model via languageModel method", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
       provider.languageModel("text", { temperature: 0.7 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+      expect(BrowserAIChatLanguageModel).toHaveBeenCalledWith("text", {
         temperature: 0.7,
       });
     });
 
     it("should create language model via chat method", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
       provider.chat("text", { temperature: 0.9 });
 
-      expect(BuiltInAIChatLanguageModel).toHaveBeenCalledWith("text", {
+      expect(BrowserAIChatLanguageModel).toHaveBeenCalledWith("text", {
         temperature: 0.9,
       });
     });
@@ -93,37 +93,37 @@ describe("BuiltInAI Provider", () => {
 
   describe("Embedding Model Creation", () => {
     it("should create embedding model via embedding method", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
       const settings = { l2Normalize: true };
       provider.embedding("embedding", settings);
 
-      expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith(settings);
+      expect(BrowserAIEmbeddingModel).toHaveBeenCalledWith(settings);
     });
 
     it("should create embedding model via embeddingModel method", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
       const settings = { quantize: true };
       provider.embeddingModel("embedding", settings);
 
-      expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith(settings);
+      expect(BrowserAIEmbeddingModel).toHaveBeenCalledWith(settings);
     });
   });
 
   describe("Unsupported Model Types", () => {
     it("should throw NoSuchModelError for image models", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
 
       expect(() => provider.imageModel("image")).toThrow();
     });
 
     it("should throw NoSuchModelError for speech models", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
 
       expect(() => provider.speechModel("speech")).toThrow();
     });
 
     it("should throw NoSuchModelError for transcription models", () => {
-      const provider = createBuiltInAI();
+      const provider = createBrowserAI();
 
       expect(() => provider.transcriptionModel("transcribe")).toThrow();
     });
@@ -131,15 +131,15 @@ describe("BuiltInAI Provider", () => {
 
   describe("Default Provider Instance", () => {
     it("should export a default provider instance", () => {
-      expect(builtInAI).toBeInstanceOf(Function);
-      expect(builtInAI.embedding).toBeInstanceOf(Function);
-      expect(builtInAI.chat).toBeInstanceOf(Function);
+      expect(browserAI).toBeInstanceOf(Function);
+      expect(browserAI.embedding).toBeInstanceOf(Function);
+      expect(browserAI.chat).toBeInstanceOf(Function);
     });
 
     it("should work with the new API pattern", () => {
-      builtInAI.embedding("embedding", { l2Normalize: true });
+      browserAI.embedding("embedding", { l2Normalize: true });
 
-      expect(BuiltInAIEmbeddingModel).toHaveBeenCalledWith({
+      expect(BrowserAIEmbeddingModel).toHaveBeenCalledWith({
         l2Normalize: true,
       });
     });

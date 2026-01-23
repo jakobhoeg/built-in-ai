@@ -2,7 +2,7 @@ import { UIMessage } from "ai";
 import { InitProgressReport } from "@mlc-ai/web-llm";
 
 /**
- * UI message type for built-in AI features with custom data parts.
+ * UI message type for Browser AI features with custom data parts.
  *
  * Extends base UIMessage to include specific data part schemas
  * such as model download progress
@@ -11,7 +11,7 @@ import { InitProgressReport } from "@mlc-ai/web-llm";
  * // Import and use with useChat hook from @ai-sdk/react
  * ```typescript
  * import { useChat } from "@ai-sdk/react";
- * import { WebLLMUIMessage } from "@built-in-ai/web-llm";
+ * import { WebLLMUIMessage } from "@browser-ai/web-llm";
  *
  * const { messages, sendMessage } = useChat<WebLLMUIMessage>({
  *   onData: (dataPart) => {

@@ -11,7 +11,7 @@ import {
   LanguageModelV3GenerateResult,
   LanguageModelV3StreamResult,
 } from "@ai-sdk/provider";
-import { convertToBuiltInAIMessages } from "./convert-to-built-in-ai-messages";
+import { convertToBrowserAIMessages } from "./convert-to-browser-ai-messages";
 import {
   buildJsonToolSystemPrompt,
   parseJsonFunctionCalls,
@@ -30,9 +30,9 @@ import { isFunctionTool } from "./utils/tool-utils";
 import { SessionManager } from "./models/session-manager";
 import { ToolCallFenceDetector } from "./streaming/tool-call-detector";
 
-export type BuiltInAIChatModelId = "text";
+export type BrowserAIChatModelId = "text";
 
-export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
+export interface BrowserAIChatSettings extends LanguageModelCreateOptions {
   /**
    * Expected input types for the session, for multimodal inputs.
    */
@@ -50,17 +50,17 @@ export interface BuiltInAIChatSettings extends LanguageModelCreateOptions {
 }
 
 /**
- * Check if the browser supports the built-in AI API
- * @returns true if the browser supports the built-in AI API, false otherwise
+ * Check if the browser supports the browser AI API
+ * @returns true if the browser supports the browser AI API, false otherwise
  */
-export function doesBrowserSupportBuiltInAI(): boolean {
+export function doesBrowserSupportBrowserAI(): boolean {
   return typeof LanguageModel !== "undefined";
 }
 
-type BuiltInAIConfig = {
+type BrowserAIConfig = {
   provider: string;
-  modelId: BuiltInAIChatModelId;
-  options: BuiltInAIChatSettings;
+  modelId: BrowserAIChatModelId;
+  options: BrowserAIChatSettings;
 };
 
 /**
@@ -140,17 +140,17 @@ function extractArgumentsContent(content: string): string {
   return result;
 }
 
-export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
+export class BrowserAIChatLanguageModel implements LanguageModelV3 {
   readonly specificationVersion = "v3";
-  readonly modelId: BuiltInAIChatModelId;
+  readonly modelId: BrowserAIChatModelId;
   readonly provider = "browser-ai";
 
-  private readonly config: BuiltInAIConfig;
+  private readonly config: BrowserAIConfig;
   private readonly sessionManager: SessionManager;
 
   constructor(
-    modelId: BuiltInAIChatModelId,
-    options: BuiltInAIChatSettings = {},
+    modelId: BrowserAIChatModelId,
+    options: BrowserAIChatSettings = {},
   ) {
     this.modelId = modelId;
     this.config = {
@@ -236,7 +236,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
     const hasMultiModalInput = hasMultimodalContent(prompt);
 
     // Convert messages to the DOM API format
-    const { systemMessage, messages } = convertToBuiltInAIMessages(prompt);
+    const { systemMessage, messages } = convertToBrowserAIMessages(prompt);
 
     // Handle response format for Prompt API
     const promptOptions: LanguageModelPromptOptions &
@@ -381,7 +381,7 @@ export class BuiltInAIChatLanguageModel implements LanguageModelV3 {
   }
 
   /**
-   * Check the availability of the built-in AI model
+   * Check the availability of the browser AI model
    * @returns Promise resolving to "unavailable", "available", or "available-after-download"
    */
   public async availability(): Promise<Availability> {

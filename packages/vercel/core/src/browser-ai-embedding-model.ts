@@ -5,7 +5,7 @@ import {
 } from "@ai-sdk/provider";
 import { TextEmbedder } from "@mediapipe/tasks-text";
 
-export interface BuiltInAIEmbeddingModelSettings {
+export interface BrowserAIEmbeddingModelSettings {
   /**
    * An optional base path to specify the directory the Wasm files should be loaded from.
    * @default 'https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/text_wasm_internal.js'
@@ -47,14 +47,14 @@ export interface BuiltInAIEmbeddingModelSettings {
 // See more:
 // - https://github.com/google-ai-edge/mediapipe
 // - https://ai.google.dev/edge/mediapipe/solutions/text/text_embedder/web_js
-export class BuiltInAIEmbeddingModel implements EmbeddingModelV3 {
+export class BrowserAIEmbeddingModel implements EmbeddingModelV3 {
   readonly specificationVersion = "v3";
   readonly provider = "google-mediapipe";
   readonly modelId: string = "embedding";
   readonly supportsParallelCalls = true;
   readonly maxEmbeddingsPerCall = undefined;
 
-  private settings: BuiltInAIEmbeddingModelSettings = {
+  private settings: BrowserAIEmbeddingModelSettings = {
     wasmLoaderPath:
       "https://pub-ddcfe353995744e89b8002f16bf98575.r2.dev/text_wasm_internal.js",
     wasmBinaryPath:
@@ -67,7 +67,7 @@ export class BuiltInAIEmbeddingModel implements EmbeddingModelV3 {
   private modelAssetBuffer!: Promise<ReadableStreamDefaultReader>;
   private textEmbedder!: Promise<TextEmbedder>;
 
-  public constructor(settings: BuiltInAIEmbeddingModelSettings = {}) {
+  public constructor(settings: BrowserAIEmbeddingModelSettings = {}) {
     this.settings = { ...this.settings, ...settings };
     this.modelAssetBuffer = fetch(this.settings.modelAssetPath!).then(
       (response) => response.body!.getReader(),

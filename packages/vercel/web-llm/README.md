@@ -19,7 +19,7 @@
 npm i @browser-ai/web-llm
 ```
 
-The `@browser-ai/web-llm` package is the AI SDK provider for open-source built-in AI models leveraging the [WebLLM](https://github.com/mlc-ai/web-llm) inference engine.
+The `@browser-ai/web-llm` package is the AI SDK provider for open-source built-in browser AI models leveraging the [WebLLM](https://github.com/mlc-ai/web-llm) inference engine.
 
 ## Documentation
 

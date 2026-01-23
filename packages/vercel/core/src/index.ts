@@ -1,20 +1,20 @@
 // Language model
 export {
-  BuiltInAIChatLanguageModel,
-  doesBrowserSupportBuiltInAI,
-} from "./built-in-ai-language-model";
-export type { BuiltInAIChatSettings } from "./built-in-ai-language-model";
+  BrowserAIChatLanguageModel,
+  doesBrowserSupportBrowserAI,
+} from "./browser-ai-language-model";
+export type { BrowserAIChatSettings } from "./browser-ai-language-model";
 
 // Embedding model
-export { BuiltInAIEmbeddingModel } from "./built-in-ai-embedding-model";
-export type { BuiltInAIEmbeddingModelSettings } from "./built-in-ai-embedding-model";
+export { BrowserAIEmbeddingModel } from "./browser-ai-embedding-model";
+export type { BrowserAIEmbeddingModelSettings } from "./browser-ai-embedding-model";
 
 // Provider
-export { builtInAI, createBuiltInAI } from "./built-in-ai-provider";
+export { browserAI, createBrowserAI } from "./browser-ai-provider";
 export type {
-  BuiltInAIProvider,
-  BuiltInAIProviderSettings,
-} from "./built-in-ai-provider";
+  BrowserAIProvider,
+  BrowserAIProviderSettings,
+} from "./browser-ai-provider";
 
 // UI types
-export type { BuiltInAIUIMessage } from "./ui-message-types";
+export type { BrowserAIUIMessage } from "./ui-message-types";

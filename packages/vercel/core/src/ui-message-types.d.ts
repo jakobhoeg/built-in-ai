@@ -1,18 +1,18 @@
 import { UIMessage } from "ai";
 
 /**
- * UI message type for built-in AI features with custom data parts.
+ * UI message type for browser AI features with custom data parts.
  *
  * Extends base UIMessage to include specific data part schemas
- * for built-in AI functionality such as model download progress tracking
+ * for browser AI functionality such as model download progress tracking
  *
  * @example
  * // Import and use with useChat hook from @ai-sdk/react
  * ```typescript
  * import { useChat } from "@ai-sdk/react";
- * import { BuiltInAIUIMessage } from "@built-in-ai/core";
+ * import { BrowserAIUIMessage } from "@browser-ai/core";
  *
- * const { messages, sendMessage } = useChat<BuiltInAIUIMessage>({
+ * const { messages, sendMessage } = useChat<BrowserAIUIMessage>({
  *   onData: (dataPart) => {
  *     if (dataPart.type === 'data-modelDownloadProgress') {
  *       console.log(`Download: ${dataPart.data.progress}%`);
@@ -26,7 +26,7 @@ import { UIMessage } from "ai";
  *
  * @see {@link https://v5.ai-sdk.dev/docs/reference/ai-sdk-ui/use-chat | useChat hook documentation}
  */
-export type BuiltInAIUIMessage = UIMessage<
+export type BrowserAIUIMessage = UIMessage<
   never, // No custom metadata type
   {
     /**

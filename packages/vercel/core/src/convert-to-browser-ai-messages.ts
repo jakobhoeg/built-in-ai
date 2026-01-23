@@ -13,8 +13,8 @@ export interface ConvertedMessages {
 }
 
 /**
- * Convert base64 string to Uint8Array for built-in AI compatibility
- * Built-in AI supports BufferSource (including Uint8Array) for image/audio data
+ * Convert base64 string to Uint8Array for browser AI compatibility
+ * Browser AI supports BufferSource (including Uint8Array) for image/audio data
  */
 function convertBase64ToUint8Array(base64: string): Uint8Array {
   try {
@@ -30,8 +30,8 @@ function convertBase64ToUint8Array(base64: string): Uint8Array {
 }
 
 /**
- * Convert file data to the appropriate format for built-in AI
- * Built-in AI supports: Blob, BufferSource (Uint8Array), URLs
+ * Convert file data to the appropriate format for browser AI
+ * Browser AI supports: Blob, BufferSource (Uint8Array), URLs
  */
 function convertFileData(
   data: URL | Uint8Array | string,
@@ -132,10 +132,10 @@ function toToolResult(part: LanguageModelV3ToolResultPart): ToolResult {
 }
 
 /**
- * Convert Vercel AI SDK prompt format to built-in AI Prompt API format
+ * Convert Vercel AI SDK prompt format to browser AI Prompt API format
  * Returns system message (for initialPrompts) and regular messages (for prompt method)
  */
-export function convertToBuiltInAIMessages(
+export function convertToBrowserAIMessages(
   prompt: LanguageModelV3Prompt,
 ): ConvertedMessages {
   const normalizedPrompt = prompt.slice();

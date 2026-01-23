@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
-  BuiltInAIChatLanguageModel,
-  BuiltInAIChatSettings,
-} from "../src/built-in-ai-language-model";
+  BrowserAIChatLanguageModel,
+  BrowserAIChatSettings,
+} from "../src/browser-ai-language-model";
 
 import { generateText, streamText, generateObject, streamObject } from "ai";
 import { LanguageModelV3StreamPart, LoadSettingError } from "@ai-sdk/provider";
 import { z } from "zod";
 
-describe("BuiltInAIChatLanguageModel", () => {
+describe("BrowserAIChatLanguageModel", () => {
   let mockSession: any;
   let mockPrompt: any;
   let mockPromptStreaming: any;
@@ -39,8 +39,8 @@ describe("BuiltInAIChatLanguageModel", () => {
   });
 
   it("should instantiate correctly", () => {
-    const model = new BuiltInAIChatLanguageModel("text");
-    expect(model).toBeInstanceOf(BuiltInAIChatLanguageModel);
+    const model = new BrowserAIChatLanguageModel("text");
+    expect(model).toBeInstanceOf(BrowserAIChatLanguageModel);
     expect(model.modelId).toBe("text");
     expect(model.provider).toBe("browser-ai");
     expect(model.specificationVersion).toBe("v3");
@@ -50,7 +50,7 @@ describe("BuiltInAIChatLanguageModel", () => {
 
     await expect(() =>
       generateText({
-        model: new BuiltInAIChatLanguageModel("text"),
+        model: new BrowserAIChatLanguageModel("text"),
         prompt: "test",
       }),
     ).rejects.toThrow(LoadSettingError);
@@ -62,7 +62,7 @@ describe("BuiltInAIChatLanguageModel", () => {
 
     await expect(() =>
       generateText({
-        model: new BuiltInAIChatLanguageModel("text"),
+        model: new BrowserAIChatLanguageModel("text"),
         prompt: "test",
       }),
     ).rejects.toThrow(LoadSettingError);
@@ -72,7 +72,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     mockPrompt.mockResolvedValue("Hello, world!");
 
     const result = await generateText({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       prompt: "Say hello",
     });
 
@@ -92,7 +92,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     mockPrompt.mockResolvedValue("I am a helpful assistant.");
 
     const result = await generateText({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       messages: [
         { role: "system", content: "You are a helpful assistant." },
         { role: "user", content: "Who are you?" },
@@ -114,7 +114,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     mockPrompt.mockResolvedValue("I can help you with that!");
 
     const result = await generateText({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       messages: [
         { role: "user", content: "Can you help me?" },
         { role: "assistant", content: "Of course! What do you need?" },
@@ -155,7 +155,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     mockPromptStreaming.mockReturnValue(mockStream);
 
     const result = await streamText({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       prompt: "Say hello",
     });
 
@@ -188,7 +188,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     const { object } = await generateObject({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       schema,
       prompt: "Create a person",
     });
@@ -225,7 +225,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     const { object } = await generateObject({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       schema,
       prompt: "List some users",
     });
@@ -278,7 +278,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     });
 
     const { object } = await generateObject({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       schema,
       prompt: "Create a user list",
     });
@@ -296,7 +296,7 @@ describe("BuiltInAIChatLanguageModel", () => {
     mockPrompt.mockResolvedValue("Response");
 
     const result = await generateText({
-      model: new BuiltInAIChatLanguageModel("text"),
+      model: new BrowserAIChatLanguageModel("text"),
       messages: [
         {
           role: "user",
@@ -327,7 +327,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       mockPrompt.mockResolvedValue("I can see an image.");
 
       const result = await generateText({
-        model: new BuiltInAIChatLanguageModel("text"),
+        model: new BrowserAIChatLanguageModel("text"),
         messages: [
           {
             role: "user",
@@ -347,7 +347,7 @@ describe("BuiltInAIChatLanguageModel", () => {
 
       // Verify that the session was created with expected inputs for image
       expect(LanguageModel.create).toHaveBeenCalledWith(
-        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+        expect.objectContaining<Partial<BrowserAIChatSettings>>({
           expectedInputs: [{ type: "image" }],
         }),
       );
@@ -357,7 +357,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       mockPrompt.mockResolvedValue("I can hear the audio.");
 
       const result = await generateText({
-        model: new BuiltInAIChatLanguageModel("text"),
+        model: new BrowserAIChatLanguageModel("text"),
         messages: [
           {
             role: "user",
@@ -377,7 +377,7 @@ describe("BuiltInAIChatLanguageModel", () => {
 
       // Verify that the session was created with expected inputs for audio
       expect(LanguageModel.create).toHaveBeenCalledWith(
-        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+        expect.objectContaining<Partial<BrowserAIChatSettings>>({
           expectedInputs: [{ type: "audio" }],
         }),
       );
@@ -387,7 +387,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       mockPrompt.mockResolvedValue("I can see and hear the content.");
 
       const result = await generateText({
-        model: new BuiltInAIChatLanguageModel("text"),
+        model: new BrowserAIChatLanguageModel("text"),
         messages: [
           {
             role: "user",
@@ -413,7 +413,7 @@ describe("BuiltInAIChatLanguageModel", () => {
 
       // Verify that the session was created with expected inputs for both image and audio
       expect(LanguageModel.create).toHaveBeenCalledWith(
-        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+        expect.objectContaining<Partial<BrowserAIChatSettings>>({
           expectedInputs: expect.arrayContaining([
             { type: "image" },
             { type: "audio" },
@@ -426,7 +426,7 @@ describe("BuiltInAIChatLanguageModel", () => {
       mockPrompt.mockResolvedValue("I can see the image from the URL.");
 
       const result = await generateText({
-        model: new BuiltInAIChatLanguageModel("text"),
+        model: new BrowserAIChatLanguageModel("text"),
         messages: [
           {
             role: "user",
@@ -445,7 +445,7 @@ describe("BuiltInAIChatLanguageModel", () => {
 
       // Verify that the session was created with expected inputs for image
       expect(LanguageModel.create).toHaveBeenCalledWith(
-        expect.objectContaining<Partial<BuiltInAIChatSettings>>({
+        expect.objectContaining<Partial<BrowserAIChatSettings>>({
           expectedInputs: [{ type: "image" }],
         }),
       );
@@ -460,7 +460,7 @@ describe("BuiltInAIChatLanguageModel", () => {
 \`\`\`
 Running the tool now.`);
 
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
 
       const response = await model.doGenerate({
         prompt: [
@@ -519,7 +519,7 @@ Running the tool now.`);
 I'll follow up once I have the results.`,
       );
 
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
 
       const response = await model.doGenerate({
         prompt: [
@@ -583,7 +583,7 @@ Running the tool now.`;
         }),
       );
 
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
 
       const { stream } = await model.doStream({
         prompt: [
@@ -683,7 +683,7 @@ Running the tool now.`;
         }),
       );
 
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
 
       const { stream } = await model.doStream({
         prompt: [
@@ -756,7 +756,7 @@ Running the tool now.`;
         }),
       );
 
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
 
       const { stream } = await model.doStream({
         prompt: [
@@ -884,7 +884,7 @@ Running the tool now.`;
     });
 
     it("should create a session without progress callback", async () => {
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
       const session = await model.createSessionWithProgress();
 
       expect(session).toBe(mockSession);
@@ -896,7 +896,7 @@ Running the tool now.`;
     });
 
     it("should create a session with progress callback and forward progress events", async () => {
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
       const progressCallback = vi.fn();
 
       // Mock LanguageModel.create to simulate progress events
@@ -947,7 +947,7 @@ Running the tool now.`;
     });
 
     it("should reuse existing session on subsequent calls", async () => {
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
 
       // First call should create a new session
       const session1 = await model.createSessionWithProgress();
@@ -963,7 +963,7 @@ Running the tool now.`;
 
     it("should throw LoadSettingError when LanguageModel is unavailable", async () => {
       vi.stubGlobal("LanguageModel", undefined);
-      const model = new BuiltInAIChatLanguageModel("text");
+      const model = new BrowserAIChatLanguageModel("text");
 
       await expect(model.createSessionWithProgress()).rejects.toThrow(
         LoadSettingError,

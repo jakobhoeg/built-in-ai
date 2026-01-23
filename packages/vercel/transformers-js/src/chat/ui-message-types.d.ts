@@ -10,7 +10,7 @@ import { UIMessage } from "ai";
  * // Import and use with useChat hook from @ai-sdk/react
  * ```typescript
  * import { useChat } from "@ai-sdk/react";
- * import { TransformersUIMessage } from "@built-in-ai/transformers-js";
+ * import { TransformersUIMessage } from "@browser-ai/transformers-js";
  *
  * const { messages, sendMessage } = useChat<TransformersUIMessage>({
  *   onData: (dataPart) => {
