@@ -1,4 +1,4 @@
-# Contributing to @built-in-ai
+# Contributing to @browser-ai
 
 First off, huge thank you for considering contributing to this repository! We're incredibly grateful for your interest in making this project even better.
 
@@ -31,7 +31,7 @@ To set up the repository locally, follow these steps:
 1. Fork the repository.
 2. Clone the repository to your local machine.
 3. Install dependencies from the root folder: `npm install`
-4. Build the project: `npm run build`. Once built, the `dist` folder is updated and the new code is picked up in the example applications. It is here referenced in the `package.json` with: `"@built-in-ai/core": "*"` etc.
+4. Build the project: `npm run build`. Once built, the `dist` folder is updated and the new code is picked up in the example applications. It is here referenced in the `package.json` with: `"@browser-ai/core": "*"` etc.
 
 You can then run `npm run dev` which will run the local development server and rebuild packages automatically as you make changes.
 
@@ -47,8 +47,8 @@ To open a PR with changes, do the following:
 4. Fix prettier issues. We use prettier to format code files. Please make sure to run `npm run format` and commit any changes.
 5. Open the Pull Request. Make sure to link any related issues your PR resolves. Please use a conventional format for the title and include package/example:
 
-- `feat(@built-in-ai/core): description`
-- `fix(@built-in-ai/core): description`
+- `feat(@browser-ai/core): description`
+- `fix(@browser-ai/core): description`
 - `chore(examples/next-hybrid): description`
 
 Thank you so much in advance!

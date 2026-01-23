@@ -1,5 +1,5 @@
 {
-  "name": "built-in-ai",
+  "name": "browser-ai",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -28,6 +28,7 @@
   "workspaces": [
     "docs",
     "examples/*",
-    "packages/*"
+    "packages/*",
+    "packages/*/*"
   ]
 }
