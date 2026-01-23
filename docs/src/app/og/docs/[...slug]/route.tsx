@@ -18,7 +18,7 @@ export async function GET(
       <DefaultImage
         title={page.data.title}
         description={page.data.description}
-        site="@built-in-ai"
+        site="@browser-ai"
       />
     ),
     {

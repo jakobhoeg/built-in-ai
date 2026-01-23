@@ -15,17 +15,17 @@ import type { PackageId } from "./home-code-section";
 const packages: { id: PackageId; name: string; description: string }[] = [
   {
     id: "core",
-    name: "@built-in-ai/core",
+    name: "@browser-ai/core",
     description: "Chrome & Edge built-in AI",
   },
   {
     id: "transformers-js",
-    name: "@built-in-ai/transformers-js",
+    name: "@browser-ai/transformers-js",
     description: "Transformers.js models",
   },
   {
     id: "web-llm",
-    name: "@built-in-ai/web-llm",
+    name: "@browser-ai/web-llm",
     description: "WebLLM models",
   },
 ];
@@ -39,7 +39,7 @@ const codeExamples: Record<
       language: "typescript",
       filename: "example.ts",
       code: `import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 
 const result = streamText({
   model: builtInAI(),
@@ -56,7 +56,7 @@ for await (const chunk of result.textStream) {
       language: "typescript",
       filename: "example.ts",
       code: `import { streamText } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 const result = streamText({
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
@@ -73,7 +73,7 @@ for await (const chunk of result.textStream) {
       language: "typescript",
       filename: "example.ts",
       code: `import { streamText } from "ai";
-import { webLLM } from "@built-in-ai/web-llm";
+import { webLLM } from "@browser-ai/web-llm";
 
 const result = streamText({
   model: webLLM("Qwen3-0.6B-q0f16-MLC"),

@@ -1,6 +1,6 @@
 ---
 title: Usage
-description: Features and usage examples for @built-in-ai/core with AI SDK v6
+description: Features and usage examples for @browser-ai/core with AI SDK v6
 ---
 
 ## Basic Text Generation
@@ -9,7 +9,7 @@ description: Features and usage examples for @built-in-ai/core with AI SDK v6
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 
 const result = streamText({
   model: builtInAI(),
@@ -25,7 +25,7 @@ for await (const textPart of result.textStream) {
 
 ```typescript
 import { generateText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 
 const result = await generateText({
   model: builtInAI(),
@@ -41,7 +41,7 @@ Generate text embeddings using browser-native embedding capabilities:
 
 ```typescript
 import { embed, embedMany } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 
 // Single embedding
 const { embedding, usage } = await embed({
@@ -58,11 +58,11 @@ const { embedding, usage } = await embedMany({
 
 ## Download Progress Tracking
 
-When using built-in AI models for the first time, the model needs to be downloaded. Track progress to improve UX:
+When using browser AI models for the first time, the model needs to be downloaded. Track progress to improve UX:
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 
 const model = builtInAI();
 const availability = await model.availability();
@@ -91,7 +91,7 @@ The Prompt API supports both images and audio files (currently only Chrome):
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 
 const result = streamText({
   model: builtInAI(),
@@ -121,7 +121,7 @@ The `builtInAI` model supports tool calling with multi-step execution:
 
 ```typescript
 import { streamText, stepCountIs } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const result = await streamText({
@@ -149,7 +149,7 @@ It also supports [tool execution approval (`needsApproval`)](https://ai-sdk.dev/
 
 ```ts
 import { Output, ToolLoopAgent, tool } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const agent = new ToolLoopAgent({
@@ -185,7 +185,7 @@ Generate structured JSON output with schema validation:
 
 ```typescript
 import { generateText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const { output } = await generateText({
@@ -209,7 +209,7 @@ const { output } = await generateText({
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const { partialOutputStream } = streamText({

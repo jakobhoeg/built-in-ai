@@ -1,6 +1,6 @@
 ---
 title: Usage
-description: Features and usage examples for @built-in-ai/transformers-js with AI SDK v6
+description: Features and usage examples for @browser-ai/transformers-js with AI SDK v6
 ---
 
 ## Basic Text Generation
@@ -9,7 +9,7 @@ description: Features and usage examples for @built-in-ai/transformers-js with A
 
 ```typescript
 import { streamText } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 const result = streamText({
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
@@ -25,7 +25,7 @@ for await (const textPart of result.textStream) {
 
 ```typescript
 import { generateText } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 const result = await generateText({
   model: transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct"),
@@ -42,7 +42,7 @@ Generate text embeddings using Transformers.js embedding models:
 
 ```typescript
 import { embed, embedMany } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 // Single embedding
 const { embedding, usage } = await embed({
@@ -63,7 +63,7 @@ When using models for the first time, they need to be downloaded. Track progress
 
 ```typescript
 import { streamText } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct");
 const availability = await model.availability();
@@ -92,7 +92,7 @@ Process images with vision-capable models:
 
 ```typescript
 import { streamText } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 const result = streamText({
   model: transformersJS("HuggingFaceTB/SmolVLM-256M-Instruct", {
@@ -121,7 +121,7 @@ Transcribe audio using Whisper models:
 
 ```typescript
 import { experimental_transcribe as transcribe } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 const transcript = await transcribe({
   model: transformersJS.transcription("Xenova/whisper-base"),
@@ -142,7 +142,7 @@ The `transformersJS` model supports tool calling with multi-step execution:
 
 ```typescript
 import { streamText, tool, stepCountIs } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 import { z } from "zod";
 
 const result = await streamText({
@@ -170,7 +170,7 @@ It also supports [tool execution approval (`needsApproval`)](https://ai-sdk.dev/
 
 ```ts
 import { Output, ToolLoopAgent, tool } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 import { z } from "zod";
 
 const agent = new ToolLoopAgent({
@@ -206,7 +206,7 @@ Generate structured JSON output with schema validation:
 
 ```typescript
 import { generateText, Output } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 import { z } from "zod";
 
 const { output } = await generateText({
@@ -230,7 +230,7 @@ const { output } = await generateText({
 
 ```typescript
 import { streamText, Output } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 import { z } from "zod";
 
 const { partialOutputStream } = streamText({
@@ -257,7 +257,7 @@ For better performance, run models off the main thread:
 ### 1. Create worker.ts
 
 ```typescript
-import { TransformersJSWorkerHandler } from "@built-in-ai/transformers-js";
+import { TransformersJSWorkerHandler } from "@browser-ai/transformers-js";
 
 const handler = new TransformersJSWorkerHandler();
 self.onmessage = (msg: MessageEvent) => {
@@ -269,7 +269,7 @@ self.onmessage = (msg: MessageEvent) => {
 
 ```typescript
 import { streamText } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
   worker: new Worker(new URL("./worker.ts", import.meta.url), {
@@ -291,7 +291,7 @@ Transformers.js allows running the in-browser models on the server too:
 ```typescript
 // In a Next.js API route (app/api/chat/route.ts)
 import { streamText } from "ai";
-import { transformersJS } from "@built-in-ai/transformers-js";
+import { transformersJS } from "@browser-ai/transformers-js";
 
 export async function POST(req: Request) {
   const { messages } = await req.json();

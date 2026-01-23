@@ -6,9 +6,9 @@ import { HomeCodeBlock } from "./home-code-block";
 import { CornerPlus } from "./ui/corner-plus";
 
 const PACKAGES = [
-  { id: "core", label: "@built-in-ai/core" },
-  { id: "transformers-js", label: "@built-in-ai/transformers-js" },
-  { id: "web-llm", label: "@built-in-ai/web-llm" },
+  { id: "core", label: "@browser-ai/core" },
+  { id: "transformers-js", label: "@browser-ai/transformers-js" },
+  { id: "web-llm", label: "@browser-ai/web-llm" },
 ] as const;
 
 export type PackageId = (typeof PACKAGES)[number]["id"];

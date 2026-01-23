@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: Introduction to the @built-in-ai packages and Vercel AI SDK v6
+description: Introduction to the @browser-ai packages and Vercel AI SDK v6
 ---
 
 If you've been experimenting with running local language models directly in the browser using Transformers.js, WebLLM, or the new Prompt API in Chrome/Edge, you're likely familiar with the challenges:
@@ -21,7 +21,7 @@ Besides these API differences, it's also tricky to easily fall back to server-si
 
 ## Solution
 
-The `@built-in-ai` library bridges this gap by providing a unified solution that lets you:
+The `@browser-ai` library bridges this gap by providing a unified solution that lets you:
 
 - Experiment with in-browser AI models using familiar patterns
 - Seamlessly fall back to server-side models when needed
@@ -32,9 +32,9 @@ Use the different engines in the same reliable way:
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
-// or: import { transformersJS } from "@built-in-ai/transformers-js";
-// or: import { webLLM } from "@built-in-ai/web-llm";
+import { builtInAI } from "@browser-ai/core";
+// or: import { transformersJS } from "@browser-ai/transformers-js";
+// or: import { webLLM } from "@browser-ai/web-llm";
 
 const result = streamText({
   model: builtInAI(), // change model provider here

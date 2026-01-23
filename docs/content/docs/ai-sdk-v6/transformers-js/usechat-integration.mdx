@@ -1,6 +1,6 @@
 ---
 title: useChat Integration
-description: Integrate @built-in-ai/transformers-js with the useChat hook in AI SDK v6
+description: Integrate @browser-ai/transformers-js with the useChat hook in AI SDK v6
 ---
 
 ## Overview
@@ -24,7 +24,7 @@ import {
 import {
   TransformersJSLanguageModel,
   TransformersUIMessage,
-} from "@built-in-ai/transformers-js";
+} from "@browser-ai/transformers-js";
 import z from "zod";
 
 export const createTools = () => ({
@@ -167,7 +167,7 @@ import {
 import {
   TransformersJSLanguageModel,
   TransformersUIMessage,
-} from "@built-in-ai/transformers-js";
+} from "@browser-ai/transformers-js";
 
 // This class won't stream back data parts with the download progress if
 // the model hasn't yet been downloaded
@@ -215,7 +215,7 @@ export class SimpleTransformersChatTransport
 You can then use the `useChat()` hook in your components:
 
 ```ts
-import { transformersJS, TransformersUIMessage } from "@built-in-ai/transformers-js";
+import { transformersJS, TransformersUIMessage } from "@browser-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
   device: "webgpu",
@@ -240,7 +240,7 @@ import {
   transformersJS,
   TransformersUIMessage,
   doesBrowserSupportTransformersJS,
-} from "@built-in-ai/transformers-js";
+} from "@browser-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
   device: "webgpu",

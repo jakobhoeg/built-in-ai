@@ -1,17 +1,17 @@
 ---
 title: Installation
-description: Setup @built-in-ai/web-llm for AI SDK v6
+description: Setup @browser-ai/web-llm for AI SDK v6
 ---
 
 ## Package Installation
 
 ```bash
-npm i @built-in-ai/web-llm
+npm i @browser-ai/web-llm
 ```
 
 ## Version Compatibility
 
-| @built-in-ai/web-llm | AI SDK | Notes |
+| @browser-ai/web-llm | AI SDK | Notes |
 |----------------------|--------|-------|
 | v1.0.0 and above | v6.x | Current stable for AI SDK v6 |
 | v0.3.2 and below | v5.x | Use for AI SDK v5 |
@@ -25,7 +25,7 @@ npm i @built-in-ai/web-llm
 After installation, you can verify browser support:
 
 ```typescript
-import { doesBrowserSupportWebLLM } from "@built-in-ai/web-llm";
+import { doesBrowserSupportWebLLM } from "@browser-ai/web-llm";
 
 if (doesBrowserSupportWebLLM()) {
   console.log("Browser supports WebLLM!");

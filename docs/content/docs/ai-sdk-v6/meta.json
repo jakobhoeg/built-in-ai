@@ -1,6 +1,6 @@
 {
   "title": "AI SDK v6",
-  "description": "Using @built-in-ai with Vercel AI SDK v6",
+  "description": "Using @browser-ai with Vercel AI SDK v6",
   "root": true,
   "pages": [
     "index",

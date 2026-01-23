@@ -14,18 +14,18 @@ import type { PackageId } from "./home-code-section";
 const commands: { id: PackageId; label: string; code: string }[] = [
   {
     id: "core",
-    label: "@built-in-ai/core",
-    code: "npm i @built-in-ai/core",
+    label: "@browser-ai/core",
+    code: "npm i @browser-ai/core",
   },
   {
     id: "transformers-js",
-    label: "@built-in-ai/transformers-js",
-    code: "npm i @built-in-ai/transformers-js",
+    label: "@browser-ai/transformers-js",
+    code: "npm i @browser-ai/transformers-js",
   },
   {
     id: "web-llm",
-    label: "@built-in-ai/web-llm",
-    code: "npm i @built-in-ai/web-llm",
+    label: "@browser-ai/web-llm",
+    code: "npm i @browser-ai/web-llm",
   },
 ];
 

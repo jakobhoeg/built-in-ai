@@ -1,6 +1,6 @@
 {
-  "title": "@built-in-ai/core",
-  "description": "Browser Built-in AI provider (Chrome & Edge)",
+  "title": "@browser-ai/core",
+  "description": "Browser AI provider (Chrome & Edge)",
   "icon": "Cpu",
   "pages": [
     "index",

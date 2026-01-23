@@ -1,6 +1,6 @@
 ---
 title: useChat Integration
-description: Integrate @built-in-ai/web-llm with the useChat hook in AI SDK v6
+description: Integrate @browser-ai/web-llm with the useChat hook in AI SDK v6
 ---
 
 ## Overview
@@ -25,7 +25,7 @@ import {
   WebLLMProgress,
   WebLLMUIMessage,
   WebLLMLanguageModel,
-} from "@built-in-ai/web-llm";
+} from "@browser-ai/web-llm";
 import z from "zod";
 
 export const createTools = () => ({
@@ -164,7 +164,7 @@ import {
 import {
   WebLLMLanguageModel,
   WebLLMUIMessage,
-} from "@built-in-ai/web-llm";
+} from "@browser-ai/web-llm";
 
 // This class won't stream back data parts with the download progress if
 // the model hasn't yet been downloaded
@@ -212,7 +212,7 @@ export class SimpleWebLLMChatTransport
 You can then use the `useChat()` hook in your components:
 
 ```ts
-import { webLLM, WebLLMUIMessage } from "@built-in-ai/web-llm";
+import { webLLM, WebLLMUIMessage } from "@browser-ai/web-llm";
 
 const model = webLLM("Qwen3-0.6B-q0f16-MLC", {
   worker: new Worker(new URL("./worker.ts", import.meta.url), {
@@ -236,7 +236,7 @@ import {
   webLLM,
   WebLLMUIMessage,
   doesBrowserSupportWebLLM,
-} from "@built-in-ai/web-llm";
+} from "@browser-ai/web-llm";
 
 const model = webLLM("Qwen3-0.6B-q0f16-MLC", {
   worker: new Worker(new URL("./worker.ts", import.meta.url), {
