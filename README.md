@@ -12,6 +12,8 @@
 
 </div>
 
+> Formerly named @built-in-ai
+
 TypeScript libraries that provide access to in-browser AI model providers with seamless fallback to using server-side models.
 
 ## Documentation
