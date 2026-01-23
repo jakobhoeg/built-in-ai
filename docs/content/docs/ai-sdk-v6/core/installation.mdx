@@ -44,12 +44,12 @@ For more information, check out [Chrome's official guide](https://developer.chro
 After installation, you can verify browser support:
 
 ```typescript
-import { doesBrowserSupportBuiltInAI } from "@browser-ai/core";
+import { doesBrowserSupportBrowserAI } from "@browser-ai/core";
 
-if (doesBrowserSupportBuiltInAI()) {
-  console.log("Browser supports built-in AI!");
+if (doesBrowserSupportBrowserAI()) {
+  console.log("Browser supports browser AI!");
 } else {
-  console.log("Built-in AI not available, use server fallback");
+  console.log("Browser AI not available, use server fallback");
 }
 ```
 

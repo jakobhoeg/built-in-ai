@@ -32,12 +32,12 @@ Use the different engines in the same reliable way:
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@browser-ai/core";
+import { browserAI } from "@browser-ai/core";
 // or: import { transformersJS } from "@browser-ai/transformers-js";
 // or: import { webLLM } from "@browser-ai/web-llm";
 
 const result = streamText({
-  model: builtInAI(), // change model provider here
+  model: browserAI(), // change model provider here
   prompt: "Why is the sky blue?",
 });
 ```

@@ -14,7 +14,7 @@ description: Introduction to using @browser-ai packages with Vercel AI SDK v6
 ## Installation
 
 ```bash
-# For Chrome/Edge Built-in AI (Prompt API)
+# For Chrome/Edge built-in browser AI (Prompt API)
 npm i @browser-ai/core
 
 # For Transformers.js (Hugging Face models)
@@ -28,7 +28,7 @@ npm i @browser-ai/web-llm
 
 ### @browser-ai/core
 
-Access Chrome and Edge's built-in AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). The provider will automatically work in all browsers that support the Prompt API since the browser handles model orchestration. For instance, if your client uses Edge, it will use [Phi4-mini](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api#the-phi-4-mini-model), and for Chrome it will use [Gemini Nano](https://developer.chrome.com/docs/ai/prompt-api#model_download).
+Access Chrome and Edge's built-in browser AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). The provider will automatically work in all browsers that support the Prompt API since the browser handles model orchestration. For instance, if your client uses Edge, it will use [Phi4-mini](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api#the-phi-4-mini-model), and for Chrome it will use [Gemini Nano](https://developer.chrome.com/docs/ai/prompt-api#model_download).
 
 - **Language Models**: Text generation with Gemini Nano (Chrome) or Phi Mini (Edge)
 - **Text Embeddings**: Generate embeddings using browser-native models
@@ -67,12 +67,12 @@ High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-
 One of the biggest advantages is the ability to seamlessly fall back to server-side models:
 
 ```typescript
-import { builtInAI, doesBrowserSupportBuiltInAI } from "@browser-ai/core";
+import { browserAI, doesBrowserSupportBrowserAI } from "@browser-ai/core";
 
 // Prioritize local inference, fall back to cloud when needed
 const { messages, sendMessage } = useChat({
-  transport: doesBrowserSupportBuiltInAI()
-    ? new ClientSideChatTransport(builtInAI())
+  transport: doesBrowserSupportBrowserAI()
+    ? new ClientSideChatTransport(browserAI())
     : new DefaultChatTransport({ api: "/api/chat" }),
 });
 ```

@@ -16,7 +16,7 @@ const packages: { id: PackageId; name: string; description: string }[] = [
   {
     id: "core",
     name: "@browser-ai/core",
-    description: "Chrome & Edge built-in AI",
+    description: "Chrome & Edge browser AI",
   },
   {
     id: "transformers-js",
@@ -39,10 +39,10 @@ const codeExamples: Record<
       language: "typescript",
       filename: "example.ts",
       code: `import { streamText } from "ai";
-import { builtInAI } from "@browser-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 const result = streamText({
-  model: builtInAI(),
+  model: browserAI(),
   prompt: 'Hello, how are you',
 });
 

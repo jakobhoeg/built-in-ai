@@ -9,11 +9,11 @@ Create an agent that can search the web and analyze content:
 
 ```typescript
 import { ToolLoopAgent, stepCountIs, tool } from 'ai';
-import { builtInAI } from "@browser-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { z } from 'zod';
 
 const weatherAgent = new ToolLoopAgent({
-  model: builtInAI(),
+  model: browserAI(),
   instructions: 'You are a weather assistant.',
   tools: {
     weather: tool({

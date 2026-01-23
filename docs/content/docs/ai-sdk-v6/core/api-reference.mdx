@@ -5,7 +5,7 @@ description: Complete API documentation for @browser-ai/core with AI SDK v6
 
 ## Provider Functions
 
-### `builtInAI(modelId?, settings?)`
+### `browserAI(modelId?, settings?)`
 
 Creates a browser AI model instance for chat.
 
@@ -16,9 +16,9 @@ Creates a browser AI model instance for chat.
   - `topK?: number` - Limits vocabulary selection
   - `onQuotaOverflow?: (event: Event) => void` - Callback for when model quota is exceeded
 
-**Returns:** `BuiltInAIChatLanguageModel`
+**Returns:** `BrowserAIChatLanguageModel`
 
-### `builtInAI.textEmbedding(modelId, settings?)`
+### `browserAI.textEmbedding(modelId, settings?)`
 
 Creates an embedding model instance.
 
@@ -32,15 +32,15 @@ Creates an embedding model instance.
   - `quantize?: boolean` - Quantize embeddings to bytes (default: false)
   - `delegate?: 'CPU' | 'GPU'` - Backend for inference
 
-**Returns:** `BuiltInAIEmbeddingModel`
+**Returns:** `BrowserAIEmbeddingModel`
 
 ---
 
 ## Utility Functions
 
-### `doesBrowserSupportBuiltInAI()`
+### `doesBrowserSupportBrowserAI()`
 
-Quick check if the browser supports the built-in AI API. Useful for component-level decisions and feature flags.
+Quick check if the browser supports the browser AI API. Useful for component-level decisions and feature flags.
 
 **Returns:** `boolean` - `true` if browser supports the Prompt API, `false` otherwise
 
@@ -48,9 +48,9 @@ Quick check if the browser supports the built-in AI API. Useful for component-le
 
 ## Model Methods
 
-### `BuiltInAIChatLanguageModel.availability()`
+### `BrowserAIChatLanguageModel.availability()`
 
-Checks the current availability status of the built-in AI model.
+Checks the current availability status of the browser AI model.
 
 **Returns:** `Promise<"unavailable" | "downloadable" | "downloading" | "available">`
 
@@ -61,7 +61,7 @@ Checks the current availability status of the built-in AI model.
 | `"downloading"` | Model is currently being downloaded |
 | `"available"` | Model is ready to use |
 
-### `BuiltInAIChatLanguageModel.createSessionWithProgress(onProgress?)`
+### `BrowserAIChatLanguageModel.createSessionWithProgress(onProgress?)`
 
 Creates a language model session with optional download progress monitoring.
 
@@ -74,12 +74,12 @@ Creates a language model session with optional download progress monitoring.
 
 ## Types
 
-### `BuiltInAIUIMessage`
+### `BrowserAIUIMessage`
 
-Extended UI message type for use with the `useChat` hook that includes custom data parts for built-in AI functionality.
+Extended UI message type for use with the `useChat` hook that includes custom data parts for browser AI functionality.
 
 ```typescript
-type BuiltInAIUIMessage = UIMessage<
+type BrowserAIUIMessage = UIMessage<
   never,
   {
     modelDownloadProgress: {
