@@ -50,7 +50,7 @@ import {
   doesBrowserSupportTransformersJS,
   transformersJS,
   TransformersUIMessage,
-} from "@built-in-ai/transformers-js";
+} from "@browser-ai/transformers-js";
 import { ModelConfig, MODELS } from "./util/models-config";
 import {
   Tool,
@@ -181,7 +181,7 @@ function TransformersJSChat({
         <div className="flex h-full flex-col items-center justify-center text-center">
           {useClientSideInference ? (
             <>
-              <p className="text-xs">@built-in-ai/transformers-js demo</p>
+              <p className="text-xs">@browser-ai/transformers-js demo</p>
               <h1 className="text-lg font-medium">
                 Using Transformers.js client-side
               </h1>
@@ -191,7 +191,7 @@ function TransformersJSChat({
             </>
           ) : (
             <>
-              <p className="text-xs">@built-in-ai/transformers-js demo</p>
+              <p className="text-xs">@browser-ai/transformers-js demo</p>
               <h1 className="text-lg font-medium">
                 Using server-side TransformersJS
               </h1>

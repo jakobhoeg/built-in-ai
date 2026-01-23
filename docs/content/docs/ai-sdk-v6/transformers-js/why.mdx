@@ -1,6 +1,6 @@
 ---
 title: Why?
-description: Why use @built-in-ai/transformers-js instead of just Transformers.js
+description: Why use @browser-ai/transformers-js instead of just Transformers.js
 ---
 
 ## The Problem
@@ -164,10 +164,10 @@ self.addEventListener("message", async (e) => {
 
 **That's ~130 lines of complex code** just for the worker. And you still need to write the component code to handle all the message passing, state management, etc.!
 
-## After: With @built-in-ai/transformers-js
+## After: With @browser-ai/transformers-js
 
 ```typescript title="worker.ts"
-import { TransformersJSWorkerHandler } from "@built-in-ai/transformers-js"
+import { TransformersJSWorkerHandler } from "@browser-ai/transformers-js"
 
 const handler = new TransformersJSWorkerHandler()
 self.onmessage = (msg: MessageEvent) => {
@@ -289,11 +289,11 @@ function App() {
 
 **~100+ lines** of state management and event handling.
 
-### After: With @built-in-ai/transformers-js
+### After: With @browser-ai/transformers-js
 
 ```typescript title="App.tsx"
 import { useChat } from "ai/react";
-import { transformersJS, TransformersUIMessage } from "@built-in-ai/transformers-js";
+import { transformersJS, TransformersUIMessage } from "@browser-ai/transformers-js";
 
 const model = transformersJS("HuggingFaceTB/SmolLM2-360M-Instruct", {
   device: "webgpu",

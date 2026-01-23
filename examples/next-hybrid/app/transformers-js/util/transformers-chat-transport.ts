@@ -13,7 +13,7 @@ import {
 import {
   TransformersJSLanguageModel,
   TransformersUIMessage,
-} from "@built-in-ai/transformers-js";
+} from "@browser-ai/transformers-js";
 import z from "zod";
 
 export const createTools = () => ({
@@ -81,9 +81,7 @@ export const createTools = () => ({
  *
  * @implements {ChatTransport<TransformersUIMessage>}
  */
-export class TransformersChatTransport
-  implements ChatTransport<TransformersUIMessage>
-{
+export class TransformersChatTransport implements ChatTransport<TransformersUIMessage> {
   private readonly model: TransformersJSLanguageModel;
   private tools: ReturnType<typeof createTools>;
 

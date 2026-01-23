@@ -39,7 +39,7 @@ import {
   doesBrowserSupportWebLLM,
   webLLM,
   WebLLMUIMessage,
-} from "@built-in-ai/web-llm";
+} from "@browser-ai/web-llm";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
@@ -180,7 +180,7 @@ function WebLLMChat({
         <div className="flex h-full flex-col items-center justify-center text-center">
           {browserSupportsWebLLM ? (
             <>
-              <p className="text-xs">@built-in-ai/web-llm demo</p>
+              <p className="text-xs">@browser-ai/web-llm demo</p>
               <h1 className="text-lg font-medium">
                 Using WebLLM client-side AI model
               </h1>

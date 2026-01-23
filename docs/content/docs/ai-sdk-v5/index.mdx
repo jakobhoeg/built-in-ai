@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: Introduction to using @built-in-ai packages with Vercel AI SDK v5
+description: Introduction to using @browser-ai packages with Vercel AI SDK v5
 ---
 
 <Callout type="info">
@@ -9,37 +9,37 @@ description: Introduction to using @built-in-ai packages with Vercel AI SDK v5
 
 ## Package Versions for AI SDK v5
 
-| Package | Version Range | Latest v5 Compatible |
-|---------|---------------|---------------------|
-| `@built-in-ai/core` | ≤ 2.1.0 | 2.1.0 |
-| `@built-in-ai/transformers-js` | ≤ 0.3.4 | 0.3.4 |
-| `@built-in-ai/web-llm` | ≤ 0.3.2 | 0.3.2 |
+| Package                       | AI SDK v5 | 
+| ----------------------------- | :-------: | 
+| `@browser-ai/core`            | ✓ `1.0.0` |
+| `@browser-ai/transformers-js` | ✓ `1.0.0` | 
+| `@browser-ai/web-llm`         | ✓ `1.0.0` | 
 
 ## Installation
 
 ```bash
-# For Chrome/Edge Built-in AI (Prompt API)
-npm i @built-in-ai/core@2.1.0
+# For Chrome/Edge built-in browser AI (Prompt API)
+npm i @browser-ai/core@2.1.0
 
 # For Transformers.js (Hugging Face models)
-npm i @built-in-ai/transformers-js@0.3.4
+npm i @browser-ai/transformers-js@0.3.4
 
 # For WebLLM (MLC models)
-npm i @built-in-ai/web-llm@0.3.2
+npm i @browser-ai/web-llm@0.3.2
 ```
 
 ## Available Packages
 
-### @built-in-ai/core
+### @browser-ai/core
 
-Access Chrome and Edge's built-in AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). This package provides:
+Access Chrome and Edge's built-in browser AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). This package provides:
 
 - **Language Models**: Text generation with Gemini Nano (Chrome) or Phi Mini (Edge)
 - **Text Embeddings**: Generate embeddings using browser-native models
 - **Multimodal Support**: Image and audio input
 - **Tool Calling**: Function calling support
 
-### @built-in-ai/transformers-js
+### @browser-ai/transformers-js
 
 Run [Hugging Face Transformers](https://github.com/huggingface/transformers.js) models directly in the browser or server-side:
 
@@ -50,7 +50,7 @@ Run [Hugging Face Transformers](https://github.com/huggingface/transformers.js) 
 - **Transcription**: Whisper models for speech-to-text
 - **Tool Calling**: Function calling support
 
-### @built-in-ai/web-llm
+### @browser-ai/web-llm
 
 High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-ai/web-llm) with WebGPU:
 
@@ -61,14 +61,14 @@ High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-
 
 ## Quick Start Example
 
-Here's a simple example using `@built-in-ai/core` with the AI SDK:
+Here's a simple example using `@browser-ai/core` with the AI SDK:
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 const result = streamText({
-  model: builtInAI(),
+  model: browserAI(),
   messages: [{ role: "user", content: "Hello, how are you?" }],
 });
 

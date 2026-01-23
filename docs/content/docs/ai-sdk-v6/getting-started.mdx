@@ -1,34 +1,34 @@
 ---
 title: Getting Started
-description: Introduction to using @built-in-ai packages with Vercel AI SDK v6
+description: Introduction to using @browser-ai packages with Vercel AI SDK v6
 ---
 
 ## Package Versions for AI SDK v6
 
-| Package | Version Range | Minimum v6 Compatible |
-|---------|---------------|----------------------|
-| `@built-in-ai/core` | ≥ 3.0.0 | 3.0.0 |
-| `@built-in-ai/transformers-js` | ≥ 1.0.0 | 1.0.0 |
-| `@built-in-ai/web-llm` | ≥ 1.0.0 | 1.0.0 |
+| Package                       | AI SDK v6  |
+| ----------------------------- | :---------: |
+| `@browser-ai/core`            | ✓ `≥ 2.0.0` |
+| `@browser-ai/transformers-js` | ✓ `≥ 2.0.0` |
+| `@browser-ai/web-llm`         | ✓ `≥ 2.0.0` |
 
 ## Installation
 
 ```bash
-# For Chrome/Edge Built-in AI (Prompt API)
-npm i @built-in-ai/core
+# For Chrome/Edge built-in browser AI (Prompt API)
+npm i @browser-ai/core
 
 # For Transformers.js (Hugging Face models)
-npm i @built-in-ai/transformers-js
+npm i @browser-ai/transformers-js
 
 # For WebLLM (MLC models)
-npm i @built-in-ai/web-llm
+npm i @browser-ai/web-llm
 ```
 
 ## Available Packages
 
-### @built-in-ai/core
+### @browser-ai/core
 
-Access Chrome and Edge's built-in AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). The provider will automatically work in all browsers that support the Prompt API since the browser handles model orchestration. For instance, if your client uses Edge, it will use [Phi4-mini](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api#the-phi-4-mini-model), and for Chrome it will use [Gemini Nano](https://developer.chrome.com/docs/ai/prompt-api#model_download).
+Access Chrome and Edge's built-in browser AI capabilities through the experimental [Prompt API](https://github.com/webmachinelearning/prompt-api). The provider will automatically work in all browsers that support the Prompt API since the browser handles model orchestration. For instance, if your client uses Edge, it will use [Phi4-mini](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api#the-phi-4-mini-model), and for Chrome it will use [Gemini Nano](https://developer.chrome.com/docs/ai/prompt-api#model_download).
 
 - **Language Models**: Text generation with Gemini Nano (Chrome) or Phi Mini (Edge)
 - **Text Embeddings**: Generate embeddings using browser-native models
@@ -38,7 +38,7 @@ Access Chrome and Edge's built-in AI capabilities through the experimental [Prom
 
 [View Core Documentation →](/docs/ai-sdk-v6/core)
 
-### @built-in-ai/transformers-js
+### @browser-ai/transformers-js
 
 Run [Hugging Face Transformers](https://huggingface.co/models) models directly in the browser or server-side with WebGPU/WASM acceleration:
 
@@ -51,7 +51,7 @@ Run [Hugging Face Transformers](https://huggingface.co/models) models directly i
 
 [View Transformers.js Documentation →](/docs/ai-sdk-v6/transformers-js)
 
-### @built-in-ai/web-llm
+### @browser-ai/web-llm
 
 High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-ai/web-llm) with WebGPU. Allows using a ton of popular open-source models such as **Llama3** and **Qwen3**:
 
@@ -67,12 +67,12 @@ High-performance in-browser LLM inference using [WebLLM](https://github.com/mlc-
 One of the biggest advantages is the ability to seamlessly fall back to server-side models:
 
 ```typescript
-import { builtInAI, doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
+import { browserAI, doesBrowserSupportBrowserAI } from "@browser-ai/core";
 
 // Prioritize local inference, fall back to cloud when needed
 const { messages, sendMessage } = useChat({
-  transport: doesBrowserSupportBuiltInAI()
-    ? new ClientSideChatTransport(builtInAI())
+  transport: doesBrowserSupportBrowserAI()
+    ? new ClientSideChatTransport(browserAI())
     : new DefaultChatTransport({ api: "/api/chat" }),
 });
 ```

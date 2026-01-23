@@ -1,6 +1,6 @@
 ---
 title: Usage
-description: Features and usage examples for @built-in-ai/core with AI SDK v6
+description: Features and usage examples for @browser-ai/core with AI SDK v6
 ---
 
 ## Basic Text Generation
@@ -9,10 +9,10 @@ description: Features and usage examples for @built-in-ai/core with AI SDK v6
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 const result = streamText({
-  model: builtInAI(),
+  model: browserAI(),
   prompt: 'Invent a new holiday and describe its traditions.',
 });
 
@@ -25,10 +25,10 @@ for await (const textPart of result.textStream) {
 
 ```typescript
 import { generateText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 const result = await generateText({
-  model: builtInAI(),
+  model: browserAI(),
   prompt: 'Invent a new holiday and describe its traditions.',
 });
 
@@ -41,30 +41,30 @@ Generate text embeddings using browser-native embedding capabilities:
 
 ```typescript
 import { embed, embedMany } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 // Single embedding
 const { embedding, usage } = await embed({
-  model: builtInAI.embedding("embedding"),
+  model: browserAI.embedding("embedding"),
   value: "Hello, world!",
 });
 
 // Multiple embeddings
 const { embedding, usage } = await embedMany({
-  model: builtInAI.embedding("embedding"),
+  model: browserAI.embedding("embedding"),
   values: ["Hello", "World", "AI"],
 });
 ```
 
 ## Download Progress Tracking
 
-When using built-in AI models for the first time, the model needs to be downloaded. Track progress to improve UX:
+When using browser AI models for the first time, the model needs to be downloaded. Track progress to improve UX:
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 
-const model = builtInAI();
+const model = browserAI();
 const availability = await model.availability();
 
 if (availability === "unavailable") {
@@ -91,10 +91,10 @@ The Prompt API supports both images and audio files (currently only Chrome):
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 const result = streamText({
-  model: builtInAI(),
+  model: browserAI(),
   messages: [
     { // Image
       role: "user",
@@ -117,15 +117,15 @@ for await (const chunk of result.textStream) {
 
 ## Tool Calling
 
-The `builtInAI` model supports tool calling with multi-step execution:
+The `browserAI` model supports tool calling with multi-step execution:
 
 ```typescript
 import { streamText, stepCountIs } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const result = await streamText({
-  model: builtInAI(),
+  model: browserAI(),
   messages: [{ role: "user", content: "What's the weather in San Francisco?" }],
   tools: {
     weather: tool({
@@ -149,11 +149,11 @@ It also supports [tool execution approval (`needsApproval`)](https://ai-sdk.dev/
 
 ```ts
 import { Output, ToolLoopAgent, tool } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const agent = new ToolLoopAgent({
-  model: builtInAI(),
+  model: browserAI(),
   tools: {
     weather: tool({
       description: "Get the weather in a location",
@@ -185,11 +185,11 @@ Generate structured JSON output with schema validation:
 
 ```typescript
 import { generateText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const { output } = await generateText({
-  model: builtInAI(),
+  model: browserAI(),
   output: Output.object({
     schema: z.object({
       recipe: z.object({
@@ -209,11 +209,11 @@ const { output } = await generateText({
 
 ```typescript
 import { streamText } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { z } from "zod";
 
 const { partialOutputStream } = streamText({
-  model: builtInAI(),
+  model: browserAI(),
   output: Output.object({
     schema: z.object({
       recipe: z.object({
