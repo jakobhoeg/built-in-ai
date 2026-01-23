@@ -1,6 +1,6 @@
 {
-  "name": "@built-in-ai/web-llm",
-  "version": "1.0.1",
+  "name": "@browser-ai/web-llm",
+  "version": "1.0.0",
   "description": "WebLLM provider for Vercel AI SDK v5+ (High-performance in-browser LLM inference)",
   "author": {
     "name": "Jakob Hoeg Mørk",
@@ -8,8 +8,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jakobhoeg/built-in-ai.git",
-    "directory": "packages/web-llm"
+    "url": "https://github.com/jakobhoeg/browser-ai.git",
+    "directory": "packages/vercel/web-llm"
   },
   "sideEffects": false,
   "main": "dist/index.js",
@@ -47,7 +47,8 @@
     "webgpu",
     "language-model",
     "llm",
-    "inference"
+    "inference",
+    "built-in-ai"
   ],
   "license": "Apache License",
   "peerDependencies": {

@@ -1,15 +1,15 @@
 {
-  "name": "@built-in-ai/core",
-  "version": "3.0.1",
-  "description": "Browser Built-in AI API provider for Vercel AI SDK v5+ (Chrome & Edge)",
+  "name": "@browser-ai/core",
+  "version": "1.0.0",
+  "description": "Browser Built-in AI model provider for Vercel AI SDK (Chrome & Edge)",
   "author": {
     "name": "Jakob Hoeg Mørk",
     "url": "https://jakobhoeg.dev"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jakobhoeg/built-in-ai.git",
-    "directory": "packages/built-in-ai"
+    "url": "https://github.com/jakobhoeg/browser-ai.git",
+    "directory": "packages/vercel/browser-ai"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

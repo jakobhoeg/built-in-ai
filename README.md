@@ -7,7 +7,7 @@
 <div align="center">
 
 [![NPM Downloads](https://img.shields.io/npm/dm/%40browser-ai%2Fcore)](https://www.npmjs.com/package/@browser-ai/core)
-[![NPM Downloads](https://img.shields.io/npm/dm/%40browser-ai%2Fweb-llm)](https://www.npmjs.com/package/@browser-ai/web-llm) 
+[![NPM Downloads](https://img.shields.io/npm/dm/%40browser-ai%2Fweb-llm)](https://www.npmjs.com/package/@browser-ai/web-llm)
 [![NPM Downloads](https://img.shields.io/npm/dm/%40browser-ai%2Ftransformers-js)](https://www.npmjs.com/package/@browser-ai/transformers-js)
 
 </div>
@@ -16,15 +16,15 @@ TypeScript libraries that provide access to in-browser AI model providers with s
 
 ## Documentation
 
-For detailed documentation, browser requirements and advanced usage, refer to the [official documentation](https://browser-ai.dev/docs).
+For detailed documentation, browser requirements and advanced usage, refer to the [official documentation site](https://browser-ai.dev/docs).
 
 ### Package Versions
 
-| Package | AI SDK v5 | AI SDK v6 |
-| --- | :---: | :---: |
-| `@browser-ai/core` | ✓ `1.0.0` | ✓ `≥ 2.0.0` |
+| Package                       | AI SDK v5 |  AI SDK v6  |
+| ----------------------------- | :-------: | :---------: |
+| `@browser-ai/core`            | ✓ `1.0.0` | ✓ `≥ 2.0.0` |
 | `@browser-ai/transformers-js` | ✓ `1.0.0` | ✓ `≥ 2.0.0` |
-| `@browser-ai/web-llm` | ✓ `1.0.0` | ✓ `≥ 2.0.0` |
+| `@browser-ai/web-llm`         | ✓ `1.0.0` | ✓ `≥ 2.0.0` |
 
 ```bash
 # For Chrome/Edge built-in AI models
@@ -33,7 +33,7 @@ npm i @browser-ai/core
 # For open-source models via WebLLM
 npm i @browser-ai/web-llm
 
-# For 🤗 Transformers.js models (browser and server)
+# For 🤗 Transformers.js models
 npm i @browser-ai/transformers-js
 ```
 
