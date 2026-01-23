@@ -81,8 +81,7 @@ export const createTools = () => ({
  *
  * @implements {ChatTransport<TransformersUIMessage>}
  */
-export class TransformersChatTransport
-  implements ChatTransport<TransformersUIMessage> {
+export class TransformersChatTransport implements ChatTransport<TransformersUIMessage> {
   private readonly model: TransformersJSLanguageModel;
   private tools: ReturnType<typeof createTools>;
 

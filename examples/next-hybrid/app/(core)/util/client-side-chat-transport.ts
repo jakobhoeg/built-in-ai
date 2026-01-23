@@ -9,9 +9,9 @@ import {
   stepCountIs,
 } from "ai";
 import {
-  builtInAI,
-  BuiltInAIChatLanguageModel,
-  BuiltInAIUIMessage,
+  browserAI,
+  BrowserAIChatLanguageModel,
+  BrowserAIUIMessage,
 } from "@browser-ai/core";
 import z from "zod";
 
@@ -89,18 +89,17 @@ export interface ClientSideChatTransportOptions {
  * Client-side chat transport AI SDK implementation that handles AI model communication
  * with in-browser AI capabilities.
  *
- * @implements {ChatTransport<BuiltInAIUIMessage>}
+ * @implements {ChatTransport<BrowserAIUIMessage>}
  */
-export class ClientSideChatTransport
-  implements ChatTransport<BuiltInAIUIMessage> {
+export class ClientSideChatTransport implements ChatTransport<BrowserAIUIMessage> {
   private tools: ReturnType<typeof createTools>;
   private onQuotaOverflow?: (event: Event) => void;
-  private model: BuiltInAIChatLanguageModel;
+  private model: BrowserAIChatLanguageModel;
 
   constructor(options: ClientSideChatTransportOptions = {}) {
     this.tools = createTools();
     this.onQuotaOverflow = options.onQuotaOverflow;
-    this.model = builtInAI("text", {
+    this.model = browserAI("text", {
       expectedInputs: [{ type: "text" }, { type: "image" }, { type: "audio" }],
       onQuotaOverflow: this.onQuotaOverflow,
     });
@@ -109,7 +108,7 @@ export class ClientSideChatTransport
   async sendMessages(
     options: {
       chatId: string;
-      messages: BuiltInAIUIMessage[];
+      messages: BrowserAIUIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
       trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
@@ -119,7 +118,7 @@ export class ClientSideChatTransport
     const { messages, abortSignal } = options;
     const prompt = await convertToModelMessages(messages);
 
-    return createUIMessageStream<BuiltInAIUIMessage>({
+    return createUIMessageStream<BrowserAIUIMessage>({
       execute: async ({ writer }) => {
         let downloadProgressId: string | undefined;
         const availability = await this.model.availability();

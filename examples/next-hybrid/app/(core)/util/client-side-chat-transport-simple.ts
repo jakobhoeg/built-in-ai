@@ -6,7 +6,7 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
 } from "ai";
-import { builtInAI } from "@browser-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 // This class won't stream back data parts with the download progress if
 // the Prompt API model hasn't yet been downloaded
@@ -24,7 +24,7 @@ export class SimpleClientSideChatTransport implements ChatTransport<UIMessage> {
     const prompt = await convertToModelMessages(options.messages);
 
     const result = streamText({
-      model: builtInAI(),
+      model: browserAI(),
       messages: prompt,
       abortSignal: options.abortSignal,
     });
