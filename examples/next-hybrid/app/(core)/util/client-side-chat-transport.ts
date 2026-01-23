@@ -12,7 +12,7 @@ import {
   builtInAI,
   BuiltInAIChatLanguageModel,
   BuiltInAIUIMessage,
-} from "@built-in-ai/core";
+} from "@browser-ai/core";
 import z from "zod";
 
 export const createTools = () => ({
@@ -92,8 +92,7 @@ export interface ClientSideChatTransportOptions {
  * @implements {ChatTransport<BuiltInAIUIMessage>}
  */
 export class ClientSideChatTransport
-  implements ChatTransport<BuiltInAIUIMessage>
-{
+  implements ChatTransport<BuiltInAIUIMessage> {
   private tools: ReturnType<typeof createTools>;
   private onQuotaOverflow?: (event: Event) => void;
   private model: BuiltInAIChatLanguageModel;

@@ -12,9 +12,9 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.0",
     "@ai-sdk/react": "^3.0.1",
-    "@built-in-ai/core": "*",
-    "@built-in-ai/transformers-js": "*",
-    "@built-in-ai/web-llm": "*",
+    "@browser-ai/core": "*",
+    "@browser-ai/transformers-js": "*",
+    "@browser-ai/web-llm": "*",
     "@icons-pack/react-simple-icons": "^13.7.0",
     "@modelcontextprotocol/sdk": "^1.10.2",
     "@radix-ui/react-avatar": "^1.1.10",

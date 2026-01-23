@@ -8,7 +8,7 @@ export function BrowserSupportInstructions() {
     <div className="flex h-full flex-col items-center justify-center text-center max-w-lg mx-auto">
       <h1 className="text-lg font-medium mb-4">Using server-side model</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Your device doesn&apos;t support built-in AI models
+        Your device doesn&apos;t support browser AI models
       </p>
 
       <div className="bg-accent/50 border rounded-lg p-4 text-left mb-4 w-full">

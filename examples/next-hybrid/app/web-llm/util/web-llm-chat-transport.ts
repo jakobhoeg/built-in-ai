@@ -14,7 +14,7 @@ import {
   WebLLMProgress,
   WebLLMUIMessage,
   WebLLMLanguageModel,
-} from "@built-in-ai/web-llm";
+} from "@browser-ai/web-llm";
 import z from "zod";
 
 export const createTools = () => ({

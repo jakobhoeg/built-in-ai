@@ -6,7 +6,7 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
 } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { builtInAI } from "@browser-ai/core";
 
 // This class won't stream back data parts with the download progress if
 // the Prompt API model hasn't yet been downloaded

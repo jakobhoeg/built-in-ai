@@ -51,14 +51,14 @@ import {
 } from "@/components/ai-elements/tool";
 import { useState, useEffect, useRef } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
+import { doesBrowserSupportBuiltInAI } from "@browser-ai/core";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   UIMessage,
 } from "ai";
 import { toast } from "sonner";
-import { BuiltInAIUIMessage } from "@built-in-ai/core";
+import { BuiltInAIUIMessage } from "@browser-ai/core";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
@@ -99,11 +99,11 @@ export default function Chat() {
   } = useChat<BuiltInAIUIMessage>({
     transport: doesBrowserSupportModel
       ? new ClientSideChatTransport({
-          onQuotaOverflow: () => setQuotaOverflow(true),
-        })
+        onQuotaOverflow: () => setQuotaOverflow(true),
+      })
       : new DefaultChatTransport<UIMessage>({
-          api: "/api/chat",
-        }),
+        api: "/api/chat",
+      }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
     onError(error) {
       toast.error(error.message);
@@ -188,7 +188,7 @@ export default function Chat() {
           <ModelSelector />
           <div className="flex gap-2 items-center">
             <Link
-              href="https://github.com/jakobhoeg/built-in-ai"
+              href="https://github.com/jakobhoeg/browser-ai"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80 transition-opacity"
@@ -211,7 +211,7 @@ export default function Chat() {
         <>
           {browserSupportsModel ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
-              <p className="text-xs">@built-in-ai/core demo</p>
+              <p className="text-xs">@browser-ai/core demo</p>
               <h1 className="text-lg font-medium">
                 Using your browser's built-in AI model
               </h1>
