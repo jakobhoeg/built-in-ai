@@ -12,7 +12,11 @@
 
 </div>
 
-> Formerly named @built-in-ai
+<div align="center">
+
+> Formerly known as `@built-in-ai`
+
+</div>
 
 TypeScript libraries that provide access to in-browser AI model providers with seamless fallback to using server-side models.
 
