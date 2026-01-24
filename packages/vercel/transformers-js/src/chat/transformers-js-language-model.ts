@@ -46,8 +46,10 @@ declare global {
 
 export type TransformersJSModelId = string;
 
-export interface TransformersJSModelSettings
-  extends Pick<PretrainedModelOptions, "device" | "dtype"> {
+export interface TransformersJSModelSettings extends Pick<
+  PretrainedModelOptions,
+  "device" | "dtype"
+> {
   /**
    * Progress callback for model initialization
    */

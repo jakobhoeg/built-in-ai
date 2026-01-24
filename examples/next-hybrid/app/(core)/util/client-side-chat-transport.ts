@@ -91,9 +91,7 @@ export interface ClientSideChatTransportOptions {
  *
  * @implements {ChatTransport<BrowserAIUIMessage>}
  */
-export class ClientSideChatTransport
-  implements ChatTransport<BrowserAIUIMessage>
-{
+export class ClientSideChatTransport implements ChatTransport<BrowserAIUIMessage> {
   private tools: ReturnType<typeof createTools>;
   private onQuotaOverflow?: (event: Event) => void;
   private model: BrowserAIChatLanguageModel;
