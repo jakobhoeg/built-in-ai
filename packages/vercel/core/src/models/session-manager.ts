@@ -22,7 +22,8 @@ interface CustomProviderOptions {
  * Options for creating a new session
  */
 export interface SessionCreateOptions
-  extends LanguageModelCreateOptions, CustomProviderOptions {
+  extends LanguageModelCreateOptions,
+    CustomProviderOptions {
   systemMessage?: string;
   expectedInputs?: Array<{ type: "text" | "image" | "audio" }>;
   onDownloadProgress?: ProgressCallback;

@@ -31,10 +31,8 @@ export function isServerEnvironment(): boolean {
   return typeof window === "undefined" && typeof process !== "undefined";
 }
 
-export interface TransformersJSEmbeddingSettings extends Pick<
-  PretrainedModelOptions,
-  "device" | "dtype"
-> {
+export interface TransformersJSEmbeddingSettings
+  extends Pick<PretrainedModelOptions, "device" | "dtype"> {
   /**
    * Progress callback for model initialization
    */

@@ -82,10 +82,8 @@ export type ModelInstance =
 /**
  * Configuration options for worker model loading
  */
-export interface WorkerLoadOptions extends Pick<
-  PretrainedModelOptions,
-  "dtype" | "device"
-> {
+export interface WorkerLoadOptions
+  extends Pick<PretrainedModelOptions, "dtype" | "device"> {
   modelId?: string;
   use_external_data_format?: boolean;
   isVisionModel?: boolean;

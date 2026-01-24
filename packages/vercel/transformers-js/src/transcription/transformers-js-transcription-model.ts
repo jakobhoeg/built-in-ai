@@ -19,10 +19,8 @@ import {
 
 export type TransformersJSTranscriptionModelId = string;
 
-export interface TransformersJSTranscriptionSettings extends Pick<
-  PretrainedModelOptions,
-  "device" | "dtype"
-> {
+export interface TransformersJSTranscriptionSettings
+  extends Pick<PretrainedModelOptions, "device" | "dtype"> {
   /**
    * Progress callback for model initialization
    */

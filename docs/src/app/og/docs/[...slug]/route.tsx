@@ -14,11 +14,13 @@ export async function GET(
   if (!page) notFound();
 
   return new ImageResponse(
-    <DefaultImage
-      title={page.data.title}
-      description={page.data.description}
-      site="@browser-ai"
-    />,
+    (
+      <DefaultImage
+        title={page.data.title}
+        description={page.data.description}
+        site="@browser-ai"
+      />
+    ),
     {
       width: 1200,
       height: 630,
