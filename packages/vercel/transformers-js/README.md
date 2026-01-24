@@ -1,7 +1,9 @@
 # Transformers.js provider for Vercel AI SDK
 
 <div align="center">
-<img src="./hero.png">
+
+![Hero](https://raw.githubusercontent.com/jakobhoeg/browser-ai/main/packages/vercel/transformers-js/hero.png)
+
 </div>
 
 <div align="center">
