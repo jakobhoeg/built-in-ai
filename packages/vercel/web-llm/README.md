@@ -1,7 +1,9 @@
 # WebLLM provider for Vercel AI SDK
 
 <div align="center">
-<img src="./hero.png">
+
+![Hero](https://raw.githubusercontent.com/jakobhoeg/browser-ai/main/packages/vercel/web-llm/hero.png)
+
 </div>
 
 <div align="center">
