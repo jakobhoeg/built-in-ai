@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { CheckIcon, ArrowUpRightIcon, CopyIcon, ChevronDownIcon } from "lucide-react";
-import { AnthropicLogo, OpenAILogo } from "./logos";
+import {
+  CheckIcon,
+  ArrowUpRightIcon,
+  CopyIcon,
+  ChevronDownIcon,
+} from "lucide-react";
+import { ClaudeLogo, OpenAILogo } from "./logos";
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -34,9 +39,7 @@ function MenuItem({
         </span>
         <span className="text-xs text-fd-muted-foreground">{description}</span>
       </div>
-      {showCheck && (
-        <CheckIcon className="w-4 h-4 text-green-500 shrink-0" />
-      )}
+      {showCheck && <CheckIcon className="w-4 h-4 text-green-500 shrink-0" />}
     </>
   );
 
@@ -83,7 +86,7 @@ export function PageContextMenu({ markdown }: PageContextMenuProps) {
   const getClaudeUrl = () => {
     const pageUrl = getPageUrl();
     const prompt = encodeURIComponent(
-      `Read from ${pageUrl} so I can ask questions about it`
+      `Read from ${pageUrl} so I can ask questions about it`,
     );
     return `https://claude.ai/new?q=${prompt}`;
   };
@@ -91,7 +94,7 @@ export function PageContextMenu({ markdown }: PageContextMenuProps) {
   const getChatGPTUrl = () => {
     const pageUrl = getPageUrl();
     const prompt = encodeURIComponent(
-      `Read from ${pageUrl} so I can ask questions about it`
+      `Read from ${pageUrl} so I can ask questions about it`,
     );
     return `https://chatgpt.com/?prompt=${prompt}`;
   };
@@ -104,7 +107,11 @@ export function PageContextMenu({ markdown }: PageContextMenuProps) {
         aria-label="Copy page"
         className="flex items-center gap-1.5 rounded-l-md px-2.5 text-xs font-medium text-fd-muted-foreground border border-r-0 border-fd-border bg-fd-background hover:bg-fd-accent hover:text-fd-accent-foreground transition-colors"
       >
-        {copied ? <CheckIcon className="w-3.5 h-3.5" /> : <CopyIcon className="w-3.5 h-3.5" />}
+        {copied ? (
+          <CheckIcon className="w-3.5 h-3.5" />
+        ) : (
+          <CopyIcon className="w-3.5 h-3.5" />
+        )}
         <span>{copied ? "Copied!" : "Copy page"}</span>
       </button>
       <DropdownMenu.Root>
@@ -137,7 +144,7 @@ export function PageContextMenu({ markdown }: PageContextMenuProps) {
               href={getChatGPTUrl()}
             />
             <MenuItem
-              icon={<AnthropicLogo className="w-4 h-4" />}
+              icon={<ClaudeLogo className="w-4 h-4" />}
               title="Open in Claude"
               description="Ask questions about this page"
               href={getClaudeUrl()}
