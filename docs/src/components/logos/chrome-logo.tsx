@@ -24,4 +24,3 @@ export const ChromeLogo = (props: SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-
