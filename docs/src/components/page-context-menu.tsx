@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   CheckIcon,
@@ -74,29 +74,22 @@ interface PageContextMenuProps {
 
 export function PageContextMenu({ markdown }: PageContextMenuProps) {
   const [copied, setCopied] = useState(false);
+  const [claudeUrl, setClaudeUrl] = useState<string>();
+  const [chatGptUrl, setChatGptUrl] = useState<string>();
+
+  useEffect(() => {
+    const pageUrl = window.location.href;
+    const prompt = encodeURIComponent(
+      `Read from ${pageUrl} so I can ask questions about it`,
+    );
+    setClaudeUrl(`https://claude.ai/new?q=${prompt}`);
+    setChatGptUrl(`https://chatgpt.com/?prompt=${prompt}`);
+  }, []);
 
   const copy = () => {
     navigator.clipboard.writeText(markdown);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getPageUrl = () => window.location.href;
-
-  const getClaudeUrl = () => {
-    const pageUrl = getPageUrl();
-    const prompt = encodeURIComponent(
-      `Read from ${pageUrl} so I can ask questions about it`,
-    );
-    return `https://claude.ai/new?q=${prompt}`;
-  };
-
-  const getChatGPTUrl = () => {
-    const pageUrl = getPageUrl();
-    const prompt = encodeURIComponent(
-      `Read from ${pageUrl} so I can ask questions about it`,
-    );
-    return `https://chatgpt.com/?prompt=${prompt}`;
   };
 
   return (
@@ -141,13 +134,13 @@ export function PageContextMenu({ markdown }: PageContextMenuProps) {
               icon={<OpenAILogo className="w-4 h-4" />}
               title="Open in ChatGPT"
               description="Ask questions about this page"
-              href={getChatGPTUrl()}
+              href={chatGptUrl}
             />
             <MenuItem
               icon={<ClaudeLogo className="w-4 h-4" />}
               title="Open in Claude"
               description="Ask questions about this page"
-              href={getClaudeUrl()}
+              href={claudeUrl}
             />
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
