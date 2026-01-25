@@ -1,4 +1,4 @@
-import { Chrome } from "@/components/chrome-logo";
+import { ChromeLogo } from "@/components/logos";
 import { HomeCodeSection } from "@/components/home-code-section";
 import SponsorGrid from "@/components/sponsor-grid";
 import { TweetCard } from "@/components/tweet-card";
@@ -24,7 +24,7 @@ const sponsors = [
   {
     name: "Chrome for Developers",
     href: "https://developer.chrome.com/",
-    logo: Chrome,
+    logo: ChromeLogo,
   },
 ];
 
