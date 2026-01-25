@@ -1,5 +1,5 @@
 {
-  "title": "@built-in-ai/transformers-js",
+  "title": "@browser-ai/transformers-js",
   "description": "Hugging Face Transformers models in the browser",
   "icon": "Sparkles",
   "pages": [

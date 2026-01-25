@@ -1,6 +1,6 @@
 ---
 title: Agents
-description: Build autonomous AI agents with @built-in-ai/core and AI SDK v6
+description: Build autonomous AI agents with @browser-ai/core and AI SDK v6
 ---
 
 ## Basic Agent Example
@@ -9,11 +9,11 @@ Create an agent that can search the web and analyze content:
 
 ```typescript
 import { ToolLoopAgent, stepCountIs, tool } from 'ai';
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 import { z } from 'zod';
 
 const weatherAgent = new ToolLoopAgent({
-  model: builtInAI(),
+  model: browserAI(),
   instructions: 'You are a weather assistant.',
   tools: {
     weather: tool({

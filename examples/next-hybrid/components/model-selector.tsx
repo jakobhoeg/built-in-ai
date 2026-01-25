@@ -16,15 +16,15 @@ import { ChevronDownIcon } from "lucide-react";
 const demos = [
   {
     href: "/",
-    label: "@built-in-ai/core",
+    label: "@browser-ai/core",
   },
   {
     href: "/web-llm",
-    label: "@built-in-ai/web-llm",
+    label: "@browser-ai/web-llm",
   },
   {
     href: "/transformers-js",
-    label: "@built-in-ai/transformers-js",
+    label: "@browser-ai/transformers-js",
   },
 ];
 

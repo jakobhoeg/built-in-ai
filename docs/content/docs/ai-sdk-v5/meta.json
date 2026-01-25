@@ -1,6 +1,11 @@
 {
   "title": "AI SDK v5",
-  "description": "Using @built-in-ai with Vercel AI SDK v5",
+  "description": "Using @browser-ai with Vercel AI SDK v5",
   "root": true,
-  "pages": ["index", "core", "transformers-js", "web-llm"]
+  "pages": [
+    "index",
+    "core",
+    "transformers-js",
+    "web-llm"
+  ]
 }

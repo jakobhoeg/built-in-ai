@@ -8,11 +8,9 @@ import {
 import {
   TransformersJSLanguageModel,
   TransformersUIMessage,
-} from "@built-in-ai/transformers-js";
+} from "@browser-ai/transformers-js";
 
-export class SimpleTransformersChatTransport
-  implements ChatTransport<TransformersUIMessage>
-{
+export class SimpleTransformersChatTransport implements ChatTransport<TransformersUIMessage> {
   private readonly model: TransformersJSLanguageModel;
 
   constructor(model: TransformersJSLanguageModel) {

@@ -1,0 +1,72 @@
+{
+  "name": "@browser-ai/transformers-js",
+  "version": "2.0.1",
+  "description": "Transformers.js provider for Vercel AI SDK - Run 🤗 Transformers directly in the browser.",
+  "author": {
+    "name": "Jakob Hoeg Mørk",
+    "url": "https://jakobhoeg.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakobhoeg/browser-ai.git",
+    "directory": "packages/vercel/transformers-js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "npm run clean && tsup",
+    "build:prod": "tsup",
+    "build:test": "npm run test:run && tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run"
+  },
+  "keywords": [
+    "ai",
+    "ai-sdk",
+    "vercel",
+    "transformers",
+    "transformers.js",
+    "huggingface",
+    "onnx",
+    "webgpu",
+    "browser",
+    "machine-learning",
+    "language-model",
+    "embedding",
+    "text-generation",
+    "browser-ai",
+    "built-in-ai"
+  ],
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@huggingface/transformers": "^3.7.0",
+    "ai": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "jsdom": "^26.1.0",
+    "rimraf": "^5.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "zod": "^3.22.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

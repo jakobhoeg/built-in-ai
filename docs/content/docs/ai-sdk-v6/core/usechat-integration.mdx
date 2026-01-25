@@ -1,6 +1,6 @@
 ---
 title: useChat Integration
-description: Integrate @built-in-ai/core with the useChat hook in AI SDK v6
+description: Integrate @browser-ai/core with the useChat hook in AI SDK v6
 ---
 
 ## Overview
@@ -22,10 +22,10 @@ import {
   stepCountIs,
 } from "ai";
 import { 
-  builtInAI,
-  BuiltInAIChatLanguageModel,
-  BuiltInAIUIMessage 
-} from "@built-in-ai/core";
+  browserAI,
+  BrowserAIChatLanguageModel,
+  BrowserAIUIMessage 
+} from "@browser-ai/core";
 import z from "zod";
 
 export const createTools = () => ({
@@ -48,17 +48,17 @@ export const createTools = () => ({
  * Client-side chat transport AI SDK implementation that handles AI model communication
  * with in-browser AI capabilities.
  *
- * @implements {ChatTransport<BuiltInAIUIMessage>}
+ * @implements {ChatTransport<BrowserAIUIMessage>}
  */
 export class ClientSideChatTransport
-  implements ChatTransport<BuiltInAIUIMessage>
+  implements ChatTransport<BrowserAIUIMessage>
 {
   private tools: ReturnType<typeof createTools>;
-  private model: BuiltInAIChatLanguageModel;
+  private model: BrowserAIChatLanguageModel;
 
   constructor() {
     this.tools = createTools();
-    this.model = builtInAI("text", {
+    this.model = browserAI("text", {
       expectedInputs: [{ type: "text" }, { type: "image" }, { type: "audio" }],
     });
   }
@@ -66,7 +66,7 @@ export class ClientSideChatTransport
   async sendMessages(
     options: {
       chatId: string;
-      messages: BuiltInAIUIMessage[];
+      messages: BrowserAIUIMessage[];
       abortSignal: AbortSignal | undefined;
     } & {
       trigger: "submit-message" | "submit-tool-result" | "regenerate-message";
@@ -76,7 +76,7 @@ export class ClientSideChatTransport
     const { messages, abortSignal } = options;
     const prompt = await convertToModelMessages(messages);
 
-    return createUIMessageStream<BuiltInAIUIMessage>({
+    return createUIMessageStream<BrowserAIUIMessage>({
       execute: async ({ writer }) => {
         let downloadProgressId: string | undefined;
         const availability = await this.model.availability();
@@ -166,7 +166,7 @@ import {
   convertToModelMessages,
   ChatRequestOptions,
 } from "ai";
-import { builtInAI } from "@built-in-ai/core";
+import { browserAI } from "@browser-ai/core";
 
 // This class won't stream back data parts with the download progress if
 // the Prompt API model hasn't yet been downloaded
@@ -184,7 +184,7 @@ export class SimpleClientSideChatTransport implements ChatTransport<UIMessage> {
     const prompt = await convertToModelMessages(options.messages);
 
     const result = streamText({
-      model: builtInAI(),
+      model: browserAI(),
       messages: prompt,
       abortSignal: options.abortSignal,
     });
@@ -211,7 +211,7 @@ const {
     messages,
     stop,
     addToolApprovalResponse,
-  } = useChat<BuiltInAIUIMessage>({
+  } = useChat<BrowserAIUIMessage>({
     transport: new ClientSideChatTransport(), // Pass custom transport
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
 ```
@@ -219,15 +219,15 @@ const {
 In case the device is incompatible with local in-browser LLMs, and we want to use a server-side AI model, we can simply use the utility function from the package first:
 
 ```ts
-import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
+import { doesBrowserSupportBrowserAI } from "@browser-ai/core";
 
 const {
   sendMessage,
     messages,
     stop,
     addToolApprovalResponse,
-  } = useChat<BuiltInAIUIMessage>({
-    transport: doesBrowserSupportBuiltInAI() // check for device compatibility
+  } = useChat<BrowserAIUIMessage>({
+    transport: doesBrowserSupportBrowserAI() // check for device compatibility
       ? new ClientSideChatTransport()
       : new DefaultChatTransport<UIMessage>({ 
           api: "/api/chat",

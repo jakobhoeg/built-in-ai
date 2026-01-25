@@ -51,14 +51,14 @@ import {
 } from "@/components/ai-elements/tool";
 import { useState, useEffect, useRef } from "react";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { doesBrowserSupportBuiltInAI } from "@built-in-ai/core";
+import { doesBrowserSupportBrowserAI } from "@browser-ai/core";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   UIMessage,
 } from "ai";
 import { toast } from "sonner";
-import { BuiltInAIUIMessage } from "@built-in-ai/core";
+import { BrowserAIUIMessage } from "@browser-ai/core";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { AudioFileDisplay } from "@/components/audio-file-display";
@@ -69,7 +69,7 @@ import Link from "next/link";
 import { BrowserSupportInstructions } from "@/components/browser-support-instructions";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
-const doesBrowserSupportModel = doesBrowserSupportBuiltInAI();
+const doesBrowserSupportModel = doesBrowserSupportBrowserAI();
 
 export default function Chat() {
   const [browserSupportsModel, setBrowserSupportsModel] = useState<
@@ -85,7 +85,7 @@ export default function Chat() {
   // Check browser support only on client side
   useEffect(() => {
     setIsClient(true);
-    setBrowserSupportsModel(doesBrowserSupportBuiltInAI());
+    setBrowserSupportsModel(doesBrowserSupportBrowserAI());
   }, []);
 
   const {
@@ -96,7 +96,7 @@ export default function Chat() {
     regenerate,
     stop,
     addToolApprovalResponse,
-  } = useChat<BuiltInAIUIMessage>({
+  } = useChat<BrowserAIUIMessage>({
     transport: doesBrowserSupportModel
       ? new ClientSideChatTransport({
           onQuotaOverflow: () => setQuotaOverflow(true),
@@ -188,7 +188,7 @@ export default function Chat() {
           <ModelSelector />
           <div className="flex gap-2 items-center">
             <Link
-              href="https://github.com/jakobhoeg/built-in-ai"
+              href="https://github.com/jakobhoeg/browser-ai"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80 transition-opacity"
@@ -211,12 +211,12 @@ export default function Chat() {
         <>
           {browserSupportsModel ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
-              <p className="text-xs">@built-in-ai/core demo</p>
+              <p className="text-xs">@browser-ai/core demo</p>
               <h1 className="text-lg font-medium">
-                Using your browser's built-in AI model
+                Using your browser's AI model
               </h1>
               <p className="text-sm max-w-xs">
-                Your browser supports built-in AI models
+                Your browser supports browser AI models
               </p>
             </div>
           ) : (
