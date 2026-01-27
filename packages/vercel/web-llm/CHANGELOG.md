@@ -1,5 +1,11 @@
 # @browser-ai/web-llm
 
+## 2.0.2
+
+### Patch Changes
+
+- b20ac86: fix: structured output
+
 ## 2.0.1
 
 ### Patch Changes
