@@ -168,87 +168,11 @@ It also supports [tool execution approval (`needsApproval`)](https://ai-sdk.dev/
 
 ## Tool Calling with Structured Output
 
-```ts
-import { Output, ToolLoopAgent, tool } from "ai";
-import { transformersJS } from "@browser-ai/transformers-js";
-import { z } from "zod";
-
-const agent = new ToolLoopAgent({
-  model: transformersJS("onnx-community/Qwen3-0.6B-ONNX"),
-  tools: {
-    weather: tool({
-      description: "Get the weather in a location",
-      inputSchema: z.object({ city: z.string() }),
-      execute: async ({ city }) => {
-        // ...
-      },
-    }),
-  },
-  output: Output.object({
-    schema: z.object({
-      summary: z.string(),
-      temperature: z.number(),
-      recommendation: z.string(),
-    }),
-  }),
-});
-
-const { output } = await agent.generate({
-  prompt: "What is the weather in San Francisco and what should I wear?",
-});
-```
+Not yet implemented.
 
 ## Structured Output
 
-Generate structured JSON output with schema validation:
-
-### Using generateText
-
-```typescript
-import { generateText, Output } from "ai";
-import { transformersJS } from "@browser-ai/transformers-js";
-import { z } from "zod";
-
-const { output } = await generateText({
-  model: transformersJS("onnx-community/Qwen3-0.6B-ONNX"),
-  output: Output.object({
-    schema: z.object({
-      recipe: z.object({
-        name: z.string(),
-        ingredients: z.array(
-          z.object({ name: z.string(), amount: z.string() }),
-        ),
-        steps: z.array(z.string()),
-      }),
-    }),
-  }),
-  prompt: "Generate a lasagna recipe.",
-});
-```
-
-### Using streamText
-
-```typescript
-import { streamText, Output } from "ai";
-import { transformersJS } from "@browser-ai/transformers-js";
-import { z } from "zod";
-
-const { partialOutputStream } = streamText({
-  model: transformersJS("onnx-community/Qwen3-0.6B-ONNX"),
-  output: Output.object({
-    schema: z.object({
-      recipe: z.object({
-        name: z.string(),
-        ingredients: z.array(
-          z.object({ name: z.string(), amount: z.string() }),
-        ),
-        steps: z.array(z.string()),
-      }),
-    }),
-  }),
-  prompt: 'Generate a lasagna recipe.',
-});
-```
+Not yet implemented.
 
 ## Web Worker Usage
 
