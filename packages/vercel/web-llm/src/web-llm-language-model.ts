@@ -366,7 +366,12 @@ export class WebLLMLanguageModel implements LanguageModelV3 {
 
     // Handle response format
     if (responseFormat?.type === "json") {
-      requestOptions.response_format = { type: "json_object" };
+      requestOptions.response_format = {
+        type: "json_object",
+        ...(responseFormat.schema && {
+          schema: JSON.stringify(responseFormat.schema),
+        }),
+      };
     }
 
     return {
